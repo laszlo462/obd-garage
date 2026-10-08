@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · OBD app shell</title>
+<!--
+  PROTOTYPE, throwaway. Question: what should a shared Reports + Drive logs app look like?
+  Three shell variants, switchable via ?variant=A|B|C and the floating bar (or ← →):
+    A  Top tabs       B  Library sidebar       C  Day timeline + open-document tabs
+  The panes are the real built viewers (report_viewer.html, viewer_*.html) in an iframe. Serve this
+  folder over http so the shell can drive them: python -m http.server 8765 (from egr-p0401/analysis).
+  "Add file" is a stub. Nothing is saved. Delete this file once a variant is picked.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+    --border: rgba(11,11,11,0.10); --s1: #2a78d6; --band: rgba(11,11,11,0.06); --band2: rgba(11,11,11,0.14);
+    --bad: #c9362f; --warn: #b8740a; --bad-t: rgba(214,59,59,0.12); --warn-t: rgba(217,147,14,0.14); --s1-t: rgba(42,120,214,0.12);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+    --border: rgba(255,255,255,0.10); --s1: #3987e5; --band: rgba(255,255,255,0.06); --band2: rgba(255,255,255,0.15);
+    --bad: #ef6b63; --warn: #e5a93a; --bad-t: rgba(239,107,99,0.16); --warn-t: rgba(229,169,58,0.16); --s1-t: rgba(57,135,229,0.18);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, input { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  button:hover { background: var(--band); }
+  button.primary { background: var(--s1); color: #fff; border-color: transparent; }
+  iframe { border: 0; width: 100%; height: 100%; display: block; background: var(--page); }
+  .muted { color: var(--muted); } .ink2 { color: var(--ink2); }
+  .tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 9px; background: var(--band); color: var(--ink2); white-space: nowrap; }
+  .tag.bad { background: var(--bad-t); color: var(--bad); } .tag.warn { background: var(--warn-t); color: var(--warn); }
+  .brand { font-weight: 650; font-size: 15px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .brand svg { width: 22px; height: 22px; flex: none; }
+  .toast { position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%); background: var(--ink); color: var(--page);
+           padding: 8px 14px; border-radius: 8px; z-index: 60; max-width: calc(100vw - 32px); }
+
+  /* ---------- A: top tabs ---------- */
+  .A { display: flex; flex-direction: column; height: 100dvh; }
+  .A .top { display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+  .A .tabs { display: flex; gap: 2px; align-self: stretch; }
+  .A .tabs button { border: 0; border-radius: 0; background: none; padding: 12px 14px 10px; border-bottom: 2px solid transparent; color: var(--ink2); font-weight: 550; }
+  .A .tabs button[aria-selected=true] { color: var(--ink); border-bottom-color: var(--s1); }
+  .A .tabs .n { font-size: 11px; color: var(--muted); margin-left: 4px; font-weight: 400; }
+  .A .right { margin-left: auto; display: flex; gap: 8px; padding: 8px 0; }
+  .A .strip { display: flex; gap: 6px; padding: 8px 16px; overflow-x: auto; border-bottom: 1px solid var(--border); scrollbar-width: thin; }
+  .A .chip { flex: none; text-align: left; padding: 5px 10px; line-height: 1.3; }
+  .A .chip[aria-pressed=true] { background: var(--s1-t); border-color: var(--s1); }
+  .A .chip b { display: block; font-weight: 550; } .A .chip span { font-size: 11px; color: var(--muted); }
+  .A .pane { flex: 1; min-height: 0; }
+  @media (max-width: 600px) {
+    .A .top { gap: 0 8px; padding: 0 12px; } .A .right { padding: 6px 0; } .A .right button { padding: 3px 8px; }
+    .A .tabs { order: 3; flex: 1 0 100%; } .A .tabs button { flex: 1; padding: 8px 4px; }
+  }
+
+  /* ---------- D: bottom tab bar (phone-native) ---------- */
+  .D { display: flex; flex-direction: column; height: 100dvh; }
+  .D .appbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface); min-height: 48px; }
+  .D .appbar .title { font-weight: 650; font-size: 16px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .D .appbar .back { border: 0; background: none; color: var(--s1); font-size: 15px; padding: 2px 4px; }
+  .D .screen { flex: 1; min-height: 0; overflow-y: auto; }
+  .D .status { margin: 12px; padding: 12px 14px; border-radius: 12px; background: var(--bad-t); border: 1px solid var(--bad); }
+  .D .status b { display: block; font-size: 15px; } .D .status p { margin: 4px 0 0; color: var(--ink2); }
+  .D .sec { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 14px 16px 6px; font-weight: 600; }
+  .D .cell { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; border: 0; border-radius: 0; border-bottom: 1px solid var(--border); padding: 12px 16px; background: none; }
+  .D .cell .ic { width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none; }
+  .D .cell .ic.r { background: var(--warn-t); color: var(--warn); } .D .cell .ic.l { background: var(--s1-t); color: var(--s1); }
+  .D .cell .tx { flex: 1; min-width: 0; } .D .cell .tx b { display: block; font-weight: 550; font-size: 14px; } .D .cell .tx small { color: var(--muted); }
+  .D .cell .chev { color: var(--muted); font-size: 18px; }
+  .D nav.tb { display: flex; border-top: 1px solid var(--border); background: var(--surface); padding-bottom: env(safe-area-inset-bottom); }
+  .D nav.tb button { flex: 1; border: 0; border-radius: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 9px; font-size: 11px; color: var(--muted); }
+  .D nav.tb button[aria-selected=true] { color: var(--s1); }
+  .D nav.tb .g { font-size: 19px; line-height: 1; }
+  .D nav.tb .add .g { width: 30px; height: 30px; margin-top: -2px; border-radius: 50%; background: var(--s1); color: #fff; display: grid; place-items: center; font-size: 22px; }
+
+  /* ---------- B: library sidebar ---------- */
+  .B { display: grid; grid-template-columns: 290px 1fr; height: 100dvh; }
+  .B aside { border-right: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
+  .B aside .hd { padding: 14px 14px 10px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--border); }
+  .B .seg { display: flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .B .seg button { flex: 1; border: 0; border-radius: 0; padding: 4px 0; }
+  .B .seg button[aria-pressed=true] { background: var(--s1); color: #fff; }
+  .B .list { overflow-y: auto; flex: 1; padding: 6px 0 70px; }
+  .B .grp { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 12px 14px 4px; font-weight: 600; }
+  .B .item { display: grid; grid-template-columns: 26px 1fr; gap: 0 8px; width: 100%; text-align: left; border: 0; border-radius: 0; padding: 7px 14px; background: none; }
+  .B .item[aria-current=true] { background: var(--s1-t); box-shadow: inset 3px 0 var(--s1); }
+  .B .item .ic { grid-row: span 2; width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+  .B .item .ic.r { background: var(--warn-t); color: var(--warn); } .B .item .ic.l { background: var(--s1-t); color: var(--s1); }
+  .B .item b { font-weight: 550; } .B .item small { color: var(--muted); }
+  .B .drop { margin: 0 14px; border: 1.5px dashed var(--band2); border-radius: 8px; padding: 10px; text-align: center; color: var(--muted); font-size: 12px; }
+  .B main { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .B .crumb { display: none; }
+  @media (max-width: 760px) {
+    .B { grid-template-columns: 1fr; }
+    .B aside { position: fixed; inset: 0 20% 0 0; z-index: 30; transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 40px rgba(0,0,0,.3); }
+    .B.open aside { transform: none; }
+    .B .crumb { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  }
+
+  /* ---------- C: day timeline + open-document tabs ---------- */
+  .C { display: flex; flex-direction: column; height: 100dvh; }
+  .C .doctabs { display: flex; align-items: flex-end; gap: 2px; padding: 6px 10px 0; background: var(--band); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .C .dt { flex: none; display: flex; align-items: center; gap: 6px; border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: 0; padding: 6px 8px 6px 12px; background: none; max-width: 230px; }
+  .C .dt[aria-selected=true] { background: var(--page); border-color: var(--border); margin-bottom: -1px; padding-bottom: 7px; }
+  .C .dt .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .C .dt .x { border: 0; padding: 0 5px; background: none; color: var(--muted); border-radius: 4px; line-height: 1.2; }
+  .C .dt .x:hover { background: var(--band2); color: var(--ink); }
+  .C .dt .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .C .body { flex: 1; min-height: 0; overflow: auto; }
+  .C .home { max-width: 860px; margin: 0 auto; padding: 22px 16px 90px; }
+  .C .home h1 { font-size: 20px; margin: 0 0 4px; }
+  .C .home .lede { color: var(--ink2); margin: 0 0 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .C .day { display: grid; grid-template-columns: 92px 1fr; gap: 14px; position: relative; padding-bottom: 18px; }
+  .C .day::before { content: ""; position: absolute; left: 100px; top: 8px; bottom: 0; width: 2px; background: var(--border); }
+  .C .day:last-child::before { display: none; }
+  .C .when { text-align: right; padding-top: 2px; } .C .when b { display: block; font-size: 15px; } .C .when span { color: var(--muted); font-size: 11px; }
+  .C .entries { display: flex; flex-direction: column; gap: 6px; padding-left: 22px; position: relative; }
+  .C .entries::before { content: ""; position: absolute; left: 3px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--s1); }
+  .C .entry { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 8px 12px; border-radius: 8px; }
+  .C .entry .k { font-size: 11px; font-weight: 700; width: 54px; }
+  .C .entry .k.r { color: var(--warn); } .C .entry .k.l { color: var(--s1); }
+  .C .entry .stats { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .C .entry.none { border-style: dashed; color: var(--muted); cursor: default; background: none; }
+  @media (max-width: 600px) {
+    .C .day { grid-template-columns: 1fr; gap: 4px; } .C .day::before { display: none; } .C .when { text-align: left; display: flex; gap: 8px; align-items: baseline; }
+    .C .entries { padding-left: 0; } .C .entries::before { display: none; }
+    .C .entry { grid-template-columns: auto 1fr; } .C .entry .stats { grid-column: 2; white-space: normal; }
+  }
+
+  /* ---------- prototype switcher (not part of any design) ---------- */
+  .proto { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 4px;
+           background: #111; color: #fff; border-radius: 999px; padding: 4px; box-shadow: 0 6px 24px rgba(0,0,0,.35); font: 600 12px system-ui, sans-serif; }
+  .proto button { background: #2b2b2b; color: #fff; border: 0; border-radius: 999px; width: 30px; height: 30px; padding: 0; }
+  .proto button:hover { background: #444; }
+  .proto span { padding: 0 10px; white-space: nowrap; } .proto em { font-style: normal; color: #f5c84b; margin-right: 6px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input id="fileIn" type="file" accept=".html,.htm,.csv" multiple hidden>
+<div class="proto" role="toolbar" aria-label="Prototype variant switcher">
+  <button id="pPrev" type="button" aria-label="Previous variant">←</button><span id="pLabel"></span><button id="pNext" type="button" aria-label="Next variant">→</button>
+</div>
+
+<script>
+// Library as the hosted app would hold it in IndexedDB. Taken from the real built files.
+// report.i is the report's index in report_viewer.html's picker (sorted by date).
+const REPORTS = [
+  { id: "r0821", kind: "report", date: "2026-08-21", time: "9:57 PM", title: "Diagnostic report", i: 0, tags: [["MIL on", "bad"], ["P0401 confirmed", "bad"]] },
+  { id: "r1002", kind: "report", date: "2026-10-02", time: "9:32 PM", title: "Diagnostic report", i: 1, tags: [["MIL on", "bad"], ["P0401 permanent", "bad"], ["post-regen", "warn"]] },
+];
+const LOGS = [
+  ["2026-07-26", "4:59 PM", "1659", 51.8, null, ""], ["2026-07-26", "10:17 PM", "2217", 31.9, 25.5, "Trip 3"],
+  ["2026-08-21", "9:22 PM", "2122", 32.1, 21.7, "MIL commanded on"], ["2026-10-02", "5:59 PM", "1759", 15.3, 8, "Cold start"],
+  ["2026-10-02", "6:25 PM", "1825", 30.8, 24.4, "Active DPF regen"], ["2026-10-02", "8:42 PM", "2042", 47.1, 32.4, "P0401 failed this cycle"],
+  ["2026-10-04", "5:22 PM", "1722", 41.1, 35.7, "Highway, P0401 status not read"],
+].map(([date, time, hhmm, min, mi, note]) => ({ id: "l" + date + hhmm, kind: "log", date, time, title: note || "Drive log", min, mi,
+  src: `viewer_${date}_${hhmm}.html`, tags: /regen/i.test(note) ? [["regen", "warn"]] : /failed/i.test(note) ? [["P0401 failed", "bad"]] : [] }));
+const ALL = [...REPORTS, ...LOGS].sort((a, b) => (b.date + tt(b.time)).localeCompare(a.date + tt(a.time)));
+function tt(t) { const [, h, m, p] = t.match(/(\d+):(\d+) (AM|PM)/); return String(+h % 12 + (p === "PM" ? 12 : 0)).padStart(2, "0") + m; }
+const byId = Object.fromEntries(ALL.map((x) => [x.id, x]));
+const fmtDay = (d, opt = { month: "short", day: "numeric" }) => new Date(d + "T12:00").toLocaleDateString(undefined, opt);
+const stats = (x) => x.kind === "report" ? "Codes · readiness · Mode $06 · IUMPR" : `${x.min} min` + (x.mi ? ` · ${x.mi} mi` : "");
+
+// ---------- helpers ----------
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null && v !== false) k.startsWith("on") ? el.addEventListener(k.slice(2), v) : el.setAttribute(k, v === true ? "" : v);
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
+  return el;
+}
+const svgNS = "http://www.w3.org/2000/svg";
+function logo() {
+  const s = document.createElementNS(svgNS, "svg"); s.setAttribute("viewBox", "0 0 64 64");
+  s.innerHTML = '<rect width="64" height="64" rx="14" fill="#2a78d6"/><path d="M10 44h44M14 44l9-18 9 10 8-16 10 24" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>';
+  return s;
+}
+const tags = (x) => x.tags.map(([t, c]) => h("span", { class: "tag " + c }, t));
+let theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+document.documentElement.dataset.theme = theme;
+const themeBtn = () => h("button", { type: "button", onclick: () => { theme = theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = theme;
+  document.querySelectorAll("iframe").forEach(skin); draw(); } }, theme === "dark" ? "Light" : "Dark");
+const addBtn = (label = "Add file…", cls = "") => h("button", { type: "button", class: cls, onclick: () => fileIn.click() }, label);
+fileIn.onchange = () => { toast(`Prototype: would read ${fileIn.files.length} file(s), tell reports from CSV logs, save them and open the newest.`); fileIn.value = ""; };
+function toast(msg) { const t = h("div", { class: "toast" }, msg); document.body.append(t); setTimeout(() => t.remove(), 3500); }
+
+// The pane is the real viewer. The shell owns theme and "Add", so hide the viewer's own buttons and pick the report.
+function frame(x) {
+  const f = h("iframe", { title: x.title, src: x.kind === "report" ? "report_viewer.html" : x.src });
+  f.dataset.pick = x.kind === "report" ? x.i : "";
+  f.addEventListener("load", () => skin(f));
+  return f;
+}
+function skin(f) {
+  try {
+    const d = f.contentDocument; d.documentElement.dataset.theme = theme;
+    for (const id of ["themeBtn", "addBtn"]) { const b = d.getElementById(id); if (b) b.hidden = true; }
+    if (f.dataset.pick !== "" && !f.dataset.picked) {
+      f.dataset.picked = 1; const a = d.getElementById("selA"), b = d.getElementById("selB"), i = +f.dataset.pick;
+      a.value = i; b.value = i > 0 ? i - 1 : (REPORTS.length > 1 ? 1 : ""); a.dispatchEvent(new Event("change"));
+    }
+  } catch (e) { console.warn("serve over http so the shell can reach the viewer", e); }
+}
+
+// ---------- A: top tabs ----------
+const sA = { tab: "log", sel: { report: "r1002", log: LOGS[LOGS.length - 1].id } };
+function VariantA() {
+  const list = sA.tab === "report" ? REPORTS : LOGS, cur = byId[sA.sel[sA.tab]];
+  const tab = (k, label, n) => h("button", { type: "button", role: "tab", "aria-selected": sA.tab === k, onclick: () => { sA.tab = k; draw(); } }, label, h("span", { class: "n" }, n));
+  return h("div", { class: "A" },
+    h("div", { class: "top" }, h("div", { class: "brand" }, logo(), "OBD viewer"),
+      h("div", { class: "tabs", role: "tablist" }, tab("report", "Diagnostic reports", REPORTS.length), tab("log", "Drive logs", LOGS.length)),
+      h("div", { class: "right" }, addBtn(), themeBtn())),
+    h("div", { class: "strip" }, [...list].reverse().map((x) => h("button", { type: "button", class: "chip", "aria-pressed": x.id === cur.id,
+      onclick: () => { sA.sel[sA.tab] = x.id; draw(); } }, h("b", {}, `${fmtDay(x.date)} · ${x.time}`), h("span", {}, x.kind === "report" ? x.tags.map((t) => t[0]).join(" · ") : `${x.title} · ${stats(x)}`)))),
+    h("div", { class: "pane" }, frame(cur)));
+}
+
+// ---------- B: library sidebar ----------
+const sB = { filter: "all", cur: "r1002", open: false, q: "" };
+function VariantB() {
+  const cur = byId[sB.cur];
+  const shown = ALL.filter((x) => (sB.filter === "all" || x.kind === sB.filter) && (x.title + x.date + x.tags.join()).toLowerCase().includes(sB.q.toLowerCase()));
+  const groups = {}; for (const x of shown) (groups[x.date.slice(0, 7)] ||= []).push(x);
+  const seg = (k, label) => h("button", { type: "button", "aria-pressed": sB.filter === k, onclick: () => { sB.filter = k; draw(); } }, label);
+  const q = h("input", { type: "search", placeholder: "Search library…", value: sB.q, "aria-label": "Search library" });
+  q.addEventListener("input", () => { sB.q = q.value; draw(); const n = document.querySelector(".B input[type=search]"); n.focus(); n.setSelectionRange(99, 99); });
+  return h("div", { class: "B" + (sB.open ? " open" : "") },
+    h("aside", {},
+      h("div", { class: "hd" }, h("div", { class: "brand" }, logo(), "OBD viewer", h("span", { style: "margin-left:auto" }, themeBtn())),
+        h("div", { class: "seg" }, seg("all", "All"), seg("report", "Reports"), seg("log", "Logs")), q),
+      h("div", { class: "list" },
+        Object.entries(groups).map(([m, xs]) => [h("div", { class: "grp" }, fmtDay(m + "-01", { month: "long", year: "numeric" })),
+          xs.map((x) => h("button", { type: "button", class: "item", "aria-current": x.id === sB.cur, onclick: () => { sB.cur = x.id; sB.open = false; draw(); } },
+            h("span", { class: "ic " + (x.kind === "report" ? "r" : "l") }, x.kind === "report" ? "DR" : "LOG"),
+            h("b", {}, `${fmtDay(x.date)} · ${x.title}`),
+            h("small", {}, `${x.time} · ${stats(x)} `, tags(x))))]),
+        h("p", { class: "drop" }, "Drop a Diagnostic Report or CSV log anywhere", h("br"), addBtn("Browse…")))),
+    h("main", {},
+      h("div", { class: "crumb" }, h("button", { type: "button", onclick: () => { sB.open = true; draw(); } }, "☰ Library"),
+        h("b", {}, `${fmtDay(cur.date)} · ${cur.title}`)),
+      h("div", { style: "flex:1;min-height:0" }, frame(cur))));
+}
+
+// ---------- C: day timeline + open-document tabs ----------
+const sC = { open: ["r1002", LOGS[5].id], cur: "home" };
+function VariantC() {
+  const openDoc = (id) => { if (!sC.open.includes(id)) sC.open.push(id); sC.cur = id; draw(); };
+  const close = (id, e) => { e.stopPropagation(); sC.open = sC.open.filter((x) => x !== id); if (sC.cur === id) sC.cur = sC.open[sC.open.length - 1] || "home"; draw(); };
+  const dt = (id, label, dot) => h("div", { class: "dt", role: "tab", tabindex: 0, "aria-selected": sC.cur === id, onclick: () => { sC.cur = id; draw(); } },
+    dot ? h("span", { class: "dot", style: `background:${dot}` }) : null, h("span", { class: "t" }, label),
+    id !== "home" ? h("button", { type: "button", class: "x", "aria-label": "Close", onclick: (e) => close(id, e) }, "×") : null);
+  const days = {}; for (const x of ALL) (days[x.date] ||= []).push(x);
+  const home = h("div", { class: "home" },
+    h("h1", {}, "2012 F-250 · 6.7L"),
+    h("div", { class: "lede" }, h("span", { class: "tag bad" }, "MIL on"), h("span", { class: "tag bad" }, "P0401 permanent"),
+      h("span", {}, `${REPORTS.length} reports · ${LOGS.length} drive logs`), h("span", { style: "margin-left:auto;display:flex;gap:8px" }, addBtn("Add file…", "primary"), themeBtn())),
+    Object.entries(days).map(([d, xs]) => h("div", { class: "day" },
+      h("div", { class: "when" }, h("b", {}, fmtDay(d)), h("span", {}, fmtDay(d, { weekday: "short", year: "numeric" }))),
+      h("div", { class: "entries" },
+        [...xs].sort((a, b) => tt(a.time).localeCompare(tt(b.time))).map((x) => h("button", { type: "button", class: "entry", onclick: () => openDoc(x.id) },
+          h("span", { class: "k " + (x.kind === "report" ? "r" : "l") }, x.kind === "report" ? "REPORT" : "LOG"),
+          h("span", {}, h("b", {}, x.title), " ", h("span", { class: "muted" }, x.time), " ", tags(x)),
+          h("span", { class: "stats" }, stats(x)))),
+        xs.some((x) => x.kind === "report") ? null : h("div", { class: "entry none" }, h("span", { class: "k" }, ""), h("span", {}, "No diagnostic report this day"), h("span", {}))))));
+  const cur = sC.cur === "home" ? null : byId[sC.cur];
+  return h("div", { class: "C" },
+    h("div", { class: "doctabs", role: "tablist" }, dt("home", "⌂ All days"),
+      sC.open.map((id) => { const x = byId[id]; return dt(id, `${fmtDay(x.date)} ${x.kind === "report" ? "report" : x.time}`, x.kind === "report" ? "var(--warn)" : "var(--s1)"); })),
+    h("div", { class: "body" }, cur ? frame(cur) : home));
+}
+
+// ---------- D: bottom tab bar ----------
+const sD = { tab: "recent", cur: null };
+function VariantD() {
+  const cur = sD.cur && byId[sD.cur];
+  const cell = (x) => h("button", { type: "button", class: "cell", onclick: () => { sD.cur = x.id; draw(); } },
+    h("span", { class: "ic " + (x.kind === "report" ? "r" : "l") }, x.kind === "report" ? "DR" : "LOG"),
+    h("span", { class: "tx" }, h("b", {}, x.title), h("small", {}, `${fmtDay(x.date)} · ${x.time} · ${stats(x)} `, tags(x))),
+    h("span", { class: "chev" }, "›"));
+  const tb = (k, g, label) => h("button", { type: "button", role: "tab", "aria-selected": !cur && sD.tab === k, onclick: () => { sD.tab = k; sD.cur = null; draw(); } },
+    h("span", { class: "g" }, g), label);
+  const titles = { recent: "OBD viewer", report: "Diagnostic reports", log: "Drive logs" };
+  let body;
+  if (cur) body = frame(cur);
+  else if (sD.tab === "recent") body = h("div", {},
+    h("div", { class: "status" }, h("b", {}, "MIL on · P0401 permanent"), h("p", {}, `Latest report ${fmtDay(REPORTS[REPORTS.length - 1].date)}. Latest drive ${fmtDay(LOGS[LOGS.length - 1].date)}.`)),
+    h("div", { class: "sec" }, "Recent"), ALL.slice(0, 5).map(cell));
+  else body = h("div", {}, ALL.filter((x) => x.kind === sD.tab).map(cell));
+  return h("div", { class: "D" },
+    h("div", { class: "appbar" },
+      cur ? h("button", { type: "button", class: "back", onclick: () => { sD.cur = null; draw(); } }, "‹ Back") : h("span", { class: "brand" }, logo()),
+      h("span", { class: "title" }, cur ? `${fmtDay(cur.date)} · ${cur.kind === "report" ? "Report" : cur.time}` : titles[sD.tab]), themeBtn()),
+    h("div", { class: "screen" }, body),
+    h("nav", { class: "tb", role: "tablist" }, tb("recent", "◷", "Recent"), tb("report", "▤", "Reports"), tb("log", "∿", "Logs"),
+      h("button", { type: "button", class: "add", onclick: () => fileIn.click() }, h("span", { class: "g" }, "+"), "Add")));
+}
+
+// ---------- switcher ----------
+const VARIANTS = { A: ["Top tabs", VariantA], B: ["Library sidebar", VariantB], C: ["Day timeline + doc tabs", VariantC], D: ["Bottom tab bar", VariantD] };
+const keys = Object.keys(VARIANTS);
+let v = new URLSearchParams(location.search).get("variant"); if (!VARIANTS[v]) v = "A";
+if (new URLSearchParams(location.search).has("bare")) document.querySelector(".proto").hidden = true;   // inside prototype_phones.html
+function draw() {
+  app.replaceChildren(VARIANTS[v][1]());
+  pLabel.replaceChildren(h("em", {}, "PROTOTYPE"), `${v} (${VARIANTS[v][0]})`);
+  document.querySelector(".proto").style.bottom = v === "D" ? "74px" : "";   // clear of D's tab bar
+  console.log("state", JSON.stringify({ variant: v, A: sA, B: sB, C: sC }));
+}
+function go(d) { v = keys[(keys.indexOf(v) + d + keys.length) % keys.length]; const u = new URL(location); u.searchParams.set("variant", v); history.replaceState(null, "", u); draw(); }
+pPrev.onclick = () => go(-1); pNext.onclick = () => go(1);
+addEventListener("keydown", (e) => { if (e.target.closest("input,textarea,[contenteditable]")) return; if (e.key === "ArrowLeft") go(-1); if (e.key === "ArrowRight") go(1); });
+draw();
+</script>
+</body>
+</html>

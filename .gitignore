@@ -1,0 +1,10 @@
+# Real exports carry the VIN; keep them out of git.
+data/
+*.csv
+!test/fixtures/**/*.csv
+Diagnostic*Report*.html
+
+node_modules/
+.env
+*.local.md
+CLAUDE.local.md
