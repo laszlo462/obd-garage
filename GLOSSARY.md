@@ -65,6 +65,6 @@ Reference Report, for analysis outside the app.
 _Avoid_: Export, archive, package
 
 **Note**:
-Something the owner wrote about a whole Drive Log or Diagnostic Report, or pinned to a moment in a Drive
-Log. Notes are permanent and never touched when rules re-run.
+Something the owner wrote about a whole Drive Log or Diagnostic Report, or pinned to one moment (a single
+row) in a Drive Log. Notes are permanent and never touched when rules re-run.
 _Avoid_: Annotation, comment, event

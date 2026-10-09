@@ -4,4 +4,4 @@ Drive Logs reach tens of thousands of rows across many Channels and are viewed m
 
 ## Status
 
-Accepted on one condition: the prototype for "Can Notes be pinned to a moment on a phone chart?" is built on uPlot and has to work on the owner's iPhone. If it does not, this ADR is superseded and ECharts takes its place.
+Accepted. It was conditional on the prototype for "Can Notes be pinned to a moment on a phone chart?" working on the owner's iPhone, and it did (2026-10-09), including at about 56k rows. The prototype is kept on the `prototype/notes-pinning` branch.
