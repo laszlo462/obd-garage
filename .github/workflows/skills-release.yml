@@ -1,0 +1,20 @@
+# Weekly check for a mattpocock/skills release newer than the skills vendored in .claude/skills/.
+name: skills-release
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-skills-release.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
