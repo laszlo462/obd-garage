@@ -7,7 +7,7 @@ model: sonnet
 You implement exactly one build issue. The parent gives you the issue number; fetch it
 as described in `docs/agents/issue-tracker.md` and read the issues it links to.
 
-Read the repo's `CLAUDE.md`, `CONTEXT.md` and the relevant `docs/adr/` entries before
+Read the repo's `CLAUDE.md`, `GLOSSARY.md` and the relevant `docs/adr/` entries before
 writing code. Use the domain's vocabulary.
 
 ## How to work

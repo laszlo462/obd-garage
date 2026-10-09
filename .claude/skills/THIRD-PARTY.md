@@ -1,6 +1,6 @@
 # Third-party skills
 
-The skills in this folder are copied from **mattpocock/skills c55ee46**
+The skills in this folder are copied from **mattpocock/skills v1.3.1**
 (<https://github.com/mattpocock/skills>; a release tag or commit), MIT licensed, © 2026 Matt
 Pocock. They are vendored so that Claude Code cloud sessions, which don't load plugins, get the
 same slash commands as local sessions. The plugin is disabled for this project in `.claude/settings.json`, so local sessions use
@@ -15,7 +15,6 @@ list; a line `local = upstream` vendors an upstream skill under another name.
 tdd
 codebase-design
 diagnosing-bugs
-resolving-merge-conflicts
 domain-modeling
 research
 wayfinder
@@ -24,6 +23,9 @@ prototype
 triage
 to-tickets
 spec-review = code-review
+implement-spec
+pr
+retro
 ```
 
 ## Project edits
@@ -36,6 +38,18 @@ The copies are otherwise unchanged, apart from this:
 
 Don't edit the copies by hand; the next sync overwrites them. Project conventions belong in
 `CLAUDE.md` and `docs/agents/`, which the skills read.
+
+## Gaps in this repo
+
+Where a skill assumes something this repo or cloud sessions don't provide:
+
+- **`implement-spec`, draft PRs.** Open the draft through REST: add `-F draft=true` to the `pulls`
+  create call in `.claude/agents/shipper.md`. Marking it ready for review has no REST endpoint,
+  only GraphQL, so in a cloud session ask the owner to do it.
+- **`implement-spec`, worktrees.** Each implementer runs in its own git worktree; whether that
+  works in cloud sessions is unconfirmed (see `docs/agents/cloud-environment.md`).
+- **`setup-matt-pocock-skills`** is mentioned by several skills but not vendored; this repo's
+  equivalent setup is `docs/agents/`.
 
 ## Re-syncing
 

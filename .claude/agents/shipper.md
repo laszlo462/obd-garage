@@ -55,11 +55,11 @@ do not fix it.
 
 ## PR description
 
-Use `.github/pull_request_template.md` if the repo has one. Otherwise use these sections:
-Summary, Changes, Verification, then `Closes #<issue>`, then the attribution footer from
-the handoff.
+Use `.github/pull_request_template.md` if the repo has one. Otherwise use the template in
+`.claude/skills/pr/SKILL.md` (Summary, Evidence, Merge Danger), then `Closes #<issue>`, then
+the attribution footer from the handoff.
 
-- Verification lists only the checks the parent reported. Do not invent any.
+- Evidence lists only the checks the parent reported. Do not invent any.
 - Add `Closes #<issue>` only when the PR fully resolves that issue. Never guess issue
   numbers.
 
