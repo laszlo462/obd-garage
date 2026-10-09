@@ -5,8 +5,13 @@ wayfinder map issue exists, at which point that map is the source of truth). Don
 
 ## Rules
 
-- **No personal vehicle data in the repo.** Real OBDLink reports and logs contain the VIN. Keep sample data
-  out of git (see `.gitignore`) or scrub the VIN before committing a fixture.
+- **No personal data or secrets in the repo.** The repo may be public.
+  - Real OBDLink reports and logs contain the VIN. Keep sample data out of git (see `.gitignore`) or scrub
+    the VIN before committing a fixture.
+  - No personal paths, hostnames, IPs or links to private notes in committed files or commit messages.
+  - Never print or hardcode a secret; reference it by environment variable name only.
+- **Prefer a pointer over a copy** when documenting code. Point at the code for enumerable facts (routes,
+  env vars, file lists) and only write down what the code can't say: the why, the gotchas, the conventions.
 - **The app must work without the LLM.** Rule-based events and manual notes are the baseline. Claude
   analysis is an optional add-on behind a server-side key.
 - **Keep the layers apart:** generic core, vehicle profiles, rule packs. Vehicle-specific logic (e.g. the
@@ -15,11 +20,24 @@ wayfinder map issue exists, at which point that map is the source of truth). Don
   markup (the reference report viewer does this).
 - `reference/` is a frozen snapshot of the original viewers and prototype. Don't edit it. Port from it.
 
+## Subagents
+
+Project agents live in `.claude/agents/` so cloud sessions have them too.
+
+- `explorer` (Haiku, read-only) for lookups like "where is X defined".
+- `implementer` (Sonnet) for implementation: one build issue, test-first.
+- `shipper` (Haiku) to commit, push and open a PR once the owner asks to ship.
+- Merging stays with the owner.
+
 ## Agent skills
+
+Skills are vendored in `.claude/skills/` (see `THIRD-PARTY.md` there); the plugin is disabled for this
+project. Cloud setup: `docs/agents/cloud-environment.md`.
 
 ### Issue tracker
 
-GitHub Issues on this repo, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+GitHub Issues on this repo, via **`gh api` (REST) only**. `gh issue` / `gh pr` use GraphQL, which fails in
+cloud sessions. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enabledPlugins": {
+    "mattpocock-skills@claude-plugins-official": false
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm ci)",
+      "Bash(npm test)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(npx biome *)",
+      "Bash(npx vitest *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"$CLAUDE_CODE_REMOTE\" ] && [ -f \"$CLAUDE_PROJECT_DIR/package-lock.json\" ]; then cd \"$CLAUDE_PROJECT_DIR\" && npm ci --no-audit --no-fund >&2; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -12,3 +12,6 @@ CLAUDE.local.md
 # Editor settings
 .zed/
 .claude/worktrees/
+
+# Personal Claude Code settings
+.claude/settings.local.json
