@@ -1,0 +1,492 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throwaway. Question: can a Note be pinned to a moment in a Drive Log on a phone, without
+  precise tapping? Also the ADR 0002 spike: uPlot + our own touch plugin (pinch zoom, drag pan, tap).
+  Three variants, switched by ?variant=A|B|C (bar at the top). ?stress=10 upsamples the log 10x.
+    A  Scrub cursor:      one finger scrubs the cursor, two fingers pinch/pan, "Note here" button.
+    B  Events + overview: one finger pans, pinch zooms, tap Events to jump, overview strip for coarse moves.
+    C  Long-press:        one finger pans, pinch zooms, long-press drops a pin (keep holding to slide it).
+  Notes live in memory only. Built by build.ts, which injects DATA.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Note pinning prototype</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css">
+<script src="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.iife.min.js"></script>
+<style>
+  :root { --bg:#fff; --fg:#111827; --mut:#6b7280; --line:#e5e7eb; --card:#f9fafb; --note:#d97706; --acc:#2563eb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0b0f14; --fg:#e5e7eb; --mut:#9ca3af; --line:#1f2937; --card:#111827; --note:#f59e0b; --acc:#60a5fa; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.35 system-ui, -apple-system, sans-serif; }
+  body { padding: env(safe-area-inset-top) 0 calc(84px + env(safe-area-inset-bottom)); }
+  header { padding: 8px 12px 4px; }
+  header h1 { font-size: 15px; margin: 0; }
+  header p { margin: 2px 0 0; color: var(--mut); font-size: 12px; }
+  #proto { position: fixed; top: calc(6px + env(safe-area-inset-top)); right: 6px; z-index: 50; display:flex; align-items:center;
+    background:#111; color:#fff; border-radius:999px; font-size:12px; box-shadow:0 2px 8px #0006; }
+  #proto button { background:none; border:0; color:#fff; font-size:16px; padding:6px 10px; }
+  #readout { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line);
+    padding: 4px 12px 6px; font-size: 11px; height: 68px; overflow: hidden; }
+  #readout .when { font-weight: 600; font-variant-numeric: tabular-nums; }
+  #readout .vals { display:grid; grid-template-columns: repeat(3, 1fr); gap: 1px 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #readout i { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:3px; }
+  .hint { color: var(--mut); font-size: 12px; padding: 4px 12px; }
+  .panel { position: relative; }
+  .panel .ttl { position:absolute; left: 44px; top: 0; font-size: 10px; color: var(--mut); z-index: 2; pointer-events:none; }
+  .u-over { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action: pan-y; }
+  section { padding: 6px 12px; }
+  section h2 { font-size: 13px; margin: 8px 0 4px; color: var(--mut); text-transform: uppercase; letter-spacing: .04em; }
+  .row { display:flex; gap:8px; align-items: baseline; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  .row .t { font-variant-numeric: tabular-nums; color: var(--mut); white-space: nowrap; font-size: 12px; }
+  .row.sel { background: color-mix(in srgb, var(--acc) 12%, transparent); }
+  .row .n { font-weight:600; min-width: 1.4em; }
+  .acts { display:flex; flex-wrap:wrap; gap:6px; padding: 6px 0 10px 28px; }
+  button.b { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 10px; padding: 8px 12px; }
+  button.p { background: var(--note); border-color: var(--note); color: #111; font-weight: 600; }
+  button:disabled { opacity: .4; }
+  #bar { position: fixed; left:0; right:0; bottom:0; z-index: 30; background: var(--bg); border-top:1px solid var(--line);
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); display:flex; gap:8px; align-items:stretch; }
+  #bar:empty { display:none; }
+  #bar .b { min-width: 52px; font-size: 18px; }
+  #bar .p { flex: 1; font-size: 15px; }
+  #sheet { position: fixed; left:0; right:0; bottom:0; z-index: 40; background: var(--card); border-top: 2px solid var(--note);
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px #0004; display:none; }
+  #sheet.open { display:block; }
+  #sheet .hd { display:flex; align-items:center; gap:8px; margin-bottom: 8px; }
+  #sheet .hd .w { flex:1; font-weight:600; font-variant-numeric: tabular-nums; }
+  #sheet textarea { width:100%; height: 72px; font: 16px system-ui; border-radius: 8px; border:1px solid var(--line);
+    background: var(--bg); color: var(--fg); padding: 8px; }
+  #sheet .ft { display:flex; gap:8px; justify-content:flex-end; margin-top: 8px; }
+  #ov { display:block; width: 100%; height: 48px; touch-action: none; border:1px solid var(--line); border-radius: 6px; }
+  #lp { position: fixed; z-index: 35; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%;
+    border: 3px solid var(--note); pointer-events: none; display: none; }
+  #lp.on { display:block; animation: grow .5s linear forwards; }
+  @keyframes grow { from { transform: scale(.3); opacity:.2 } to { transform: scale(1); opacity: 1 } }
+  details { padding: 6px 12px 20px; }
+  details pre { font-size: 11px; white-space: pre-wrap; word-break: break-all; background: var(--card); padding: 8px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div id="proto"><button id="pv" aria-label="Previous variant">‹</button><span id="vl"></span><button id="nv" aria-label="Next variant">›</button></div>
+<header><h1 id="h1"></h1><p id="sub"></p></header>
+<div id="readout"></div>
+<div class="hint" id="hint"></div>
+<div id="charts"></div>
+<div id="extra"></div>
+<section><h2>Notes</h2><div id="notes"></div></section>
+<details id="state"><summary>State (prototype)</summary><pre id="statepre"></pre></details>
+<div id="bar"></div>
+<div id="sheet"></div>
+<div id="lp"></div>
+<script>
+/*__DATA__*/
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const VARIANTS = { A: "Scrub cursor", B: "Events + overview", C: "Long-press" };
+const KEYS = Object.keys(VARIANTS);
+const variant = VARIANTS[params.get("variant")] ? params.get("variant") : "A";
+const stress = Math.max(1, Math.min(20, Number(params.get("stress")) || 1));
+
+// ---------- prototype switcher ----------
+function go(k) { params.set("variant", k); location.search = params.toString(); }
+const vi = KEYS.indexOf(variant);
+$("vl").textContent = `${variant} · ${VARIANTS[variant]}`;
+$("pv").onclick = () => go(KEYS[(vi + KEYS.length - 1) % KEYS.length]);
+$("nv").onclick = () => go(KEYS[(vi + 1) % KEYS.length]);
+addEventListener("keydown", (e) => {
+  if (e.target.closest("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") $("pv").click();
+  if (e.key === "ArrowRight") $("nv").click();
+});
+
+// ---------- data ----------
+let T = DATA.t;
+const CH = {};
+for (const [k, c] of Object.entries(DATA.ch)) CH[k] = { ...c };
+if (stress > 1) {
+  const nt = [], nv = Object.fromEntries(Object.keys(CH).map((k) => [k, []]));
+  for (let i = 0; i < T.length - 1; i++)
+    for (let s = 0; s < stress; s++) {
+      const f = s / stress;
+      nt.push(T[i] + (T[i + 1] - T[i]) * f);
+      for (const k in CH) nv[k].push(CH[k].v[i] + (CH[k].v[i + 1] - CH[k].v[i]) * f);
+    }
+  nt.push(T.at(-1));
+  for (const k in CH) { nv[k].push(CH[k].v.at(-1)); CH[k].v = nv[k]; }
+  T = nt;
+}
+const T0 = T[0], T1 = T.at(-1), MIN_R = 10;
+const EVENTS = DATA.events.slice().sort((a, b) => a.t0 - b.t0).map((e, i) => ({ ...e, n: i + 1 }));
+
+const sm = DATA.start.match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)(?:\.(\d+))?\s*(AM|PM)/);
+const startMs = new Date(+sm[3], +sm[1] - 1, +sm[2], (+sm[4] % 12) + (sm[8] === "PM" ? 12 : 0), +sm[5], +sm[6]).getTime();
+const p2 = (n) => String(n).padStart(2, "0");
+function clock(t, secs = true) {
+  const d = new Date(startMs + t * 1000);
+  return `${p2(d.getHours())}:${p2(d.getMinutes())}` + (secs ? `:${p2(d.getSeconds())}` : "");
+}
+const rel = (t) => `+${Math.floor(t / 60)}:${p2(Math.floor(t % 60))}`;
+function nearestIdx(t) {
+  let lo = 0, hi = T.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (T[m] <= t) lo = m; else hi = m; }
+  return t - T[lo] <= T[hi] - t ? lo : hi;
+}
+
+$("h1").textContent = `Drive Log · ${clock(T0, false)}–${clock(T1, false)}`;
+$("sub").textContent = `${DATA.file} · ${T.length.toLocaleString()} rows${stress > 1 ? ` (×${stress} stress)` : ""} · ${Object.keys(CH).length} Channels · ${EVENTS.length} Events`;
+
+// ---------- state ----------
+const S = { xMin: T0, xMax: T1, curIdx: null, notes: [], pending: null, selEvent: null, lastDrawMs: 0, maxDrawMs: 0, log: [] };
+let nextId = 1;
+function logG(s) { S.log.unshift(`${new Date().toLocaleTimeString()} ${s}`); S.log.length = Math.min(S.log.length, 8); renderState(); }
+function renderState() {
+  if (!$("state").open) return;
+  $("statepre").textContent = JSON.stringify({
+    variant, stress, rows: T.length, view: [S.xMin.toFixed(1), S.xMax.toFixed(1)],
+    cursor: S.curIdx == null ? null : { t: T[S.curIdx], clock: clock(T[S.curIdx]) },
+    pending: S.pending, selEvent: S.selEvent, lastDrawMs: +S.lastDrawMs.toFixed(1), maxDrawMs: +S.maxDrawMs.toFixed(1),
+    gestures: S.log, notes: S.notes,
+  }, null, 1);
+}
+$("state").addEventListener("toggle", renderState);
+
+// ---------- charts ----------
+const SHORT = { rpm: "RPM", vss: "Speed", load: "Load", maf: "MAF", cmd: "EGR cmd", act: "EGR act", vp: "EGR VP", ep: "EP", map: "MAP", ect: "ECT" };
+const COLORS = { rpm: "#e4572e", vss: "#2e86ab", load: "#8e44ad", maf: "#16a085", cmd: "#7f8c8d", act: "#c0392b", vp: "#2980b9", ep: "#d35400", map: "#27ae60", ect: "#b7950b" };
+const PANELS = [
+  { title: "Engine", s: [["rpm", "l"], ["vss", "r"]] },
+  { title: "Load & air", s: [["load", "l"], ["maf", "r"]] },
+  { title: "EGR", s: [["cmd", "l"], ["act", "l"], ["vp", "l"]] },
+  { title: "Pressures", s: [["ep", "l"], ["map", "l"]] },
+].map((p) => ({ ...p, s: p.s.filter(([k]) => CH[k]) })).filter((p) => p.s.length);
+
+const css = getComputedStyle(document.documentElement);
+const fg = css.getPropertyValue("--mut").trim(), grid = css.getPropertyValue("--line").trim();
+const noteC = css.getPropertyValue("--note").trim(), accC = css.getPropertyValue("--acc").trim();
+const panelH = () => Math.round(Math.max(96, Math.min(150, (innerHeight - 300) / PANELS.length)));
+const width = () => document.body.clientWidth;
+const font = "10px system-ui";
+const nullBind = () => null;
+
+const plots = PANELS.map((p, pi) => {
+  const el = document.createElement("div");
+  el.className = "panel";
+  el.innerHTML = `<div class="ttl">${p.title}</div>`;
+  $("charts").append(el);
+  const last = pi === PANELS.length - 1, hasR = p.s.some(([, s]) => s === "r");
+  const yAxis = (scale, side) => ({ scale, side, size: 40, font, stroke: fg, ticks: { show: false }, grid: { show: side === 3, stroke: grid, width: 1 } });
+  const u = new uPlot({
+    width: width(), height: panelH() + (last ? 22 : 0),
+    legend: { show: false },
+    cursor: {
+      y: false, points: { size: 6 }, drag: { x: false, y: false, setScale: false },
+      // Our touch/mouse layer drives the cursor; switch off uPlot's own mouse handling.
+      bind: { mousedown: nullBind, mouseup: nullBind, click: nullBind, dblclick: nullBind, mousemove: nullBind, mouseleave: nullBind, mouseenter: nullBind },
+    },
+    scales: { x: { time: false } },
+    axes: [
+      { show: last, size: 22, font, stroke: fg, space: 70, grid: { stroke: grid, width: 1 }, ticks: { show: false },
+        values: (u, vs) => vs.map((v) => clock(v, S.xMax - S.xMin < 300)) },
+      yAxis("l", 3),
+      ...(hasR ? [yAxis("r", 1)] : [{ scale: "l", side: 1, size: 40, show: true, values: () => [], grid: { show: false }, ticks: { show: false } }]),
+    ],
+    series: [{}, ...p.s.map(([k, scale]) => ({ label: CH[k].label, scale, stroke: COLORS[k], width: 1.25, points: { show: false } }))],
+    hooks: { draw: [drawMarks] },
+  }, [T, ...p.s.map(([k]) => CH[k].v)], el);
+  attachGestures(u);
+  return u;
+});
+addEventListener("resize", () => plots.forEach((u, i) => u.setSize({ width: width(), height: panelH() + (i === plots.length - 1 ? 22 : 0) })));
+
+function drawMarks(u) {
+  const { ctx } = u, { left, top, width: w, height: h } = u.bbox, dpr = devicePixelRatio;
+  const X = (v) => u.valToPos(v, "x", true);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(left, top, w, h); ctx.clip();
+  const first = u === plots[0];
+  for (const e of EVENTS) {
+    const a = X(e.t0), b = X(e.t1), sel = S.selEvent === e.n;
+    ctx.fillStyle = sel ? accC + "40" : "#64748b22";
+    ctx.strokeStyle = sel ? accC : "#64748b88";
+    if (b - a < 2) { ctx.lineWidth = dpr; ctx.beginPath(); ctx.moveTo(a, top); ctx.lineTo(a, top + h); ctx.stroke(); }
+    else ctx.fillRect(a, top, b - a, h);
+    if (first) { ctx.fillStyle = sel ? accC : fg; ctx.font = `${10 * dpr}px system-ui`; ctx.fillText(String(e.n), a + 2 * dpr, top + 11 * dpr); }
+  }
+  const pin = (n, dashed) => {
+    const a = X(n.t0), b = X(n.t1);
+    ctx.strokeStyle = noteC; ctx.fillStyle = noteC + "33"; ctx.lineWidth = 2 * dpr;
+    ctx.setLineDash(dashed ? [4 * dpr, 3 * dpr] : []);
+    if (b - a > 2) ctx.fillRect(a, top, b - a, h);
+    ctx.beginPath(); ctx.moveTo(a, top); ctx.lineTo(a, top + h); ctx.stroke();
+    if (first) { ctx.setLineDash([]); ctx.fillStyle = noteC; ctx.beginPath(); ctx.moveTo(a, top); ctx.lineTo(a + 9 * dpr, top + 5 * dpr); ctx.lineTo(a, top + 10 * dpr); ctx.fill(); }
+  };
+  for (const n of S.notes) pin(n, false);
+  if (S.pending) pin(S.pending, true);
+  ctx.restore();
+}
+const redrawMarks = () => plots.forEach((u) => u.redraw(false, false));
+
+// ---------- view + cursor ----------
+let raf = 0;
+function setRange(min, max) {
+  let R = Math.min(Math.max(max - min, MIN_R), T1 - T0);
+  if (R !== max - min) min = (min + max) / 2 - R / 2;
+  min = Math.min(Math.max(min, T0), T1 - R);
+  S.xMin = min; S.xMax = min + R;
+  if (!raf) raf = requestAnimationFrame(applyRange);
+}
+function applyRange() {
+  raf = 0;
+  const t = performance.now();
+  for (const u of plots) u.setScale("x", { min: S.xMin, max: S.xMax });
+  placeCursor(); drawOverview?.();
+  // uPlot commits on a microtask; time to the next frame covers the redraw.
+  requestAnimationFrame(() => { S.lastDrawMs = performance.now() - t; S.maxDrawMs = Math.max(S.maxDrawMs, S.lastDrawMs); renderState(); });
+}
+function placeCursor() {
+  for (const u of plots) {
+    const t = S.curIdx == null ? null : T[S.curIdx];
+    const left = t == null || t < S.xMin || t > S.xMax ? -10 : u.valToPos(t, "x");
+    u.setCursor({ left, top: 5 }, false);
+  }
+}
+function setCursorT(t) {
+  S.curIdx = nearestIdx(Math.min(Math.max(t, T0), T1));
+  placeCursor(); renderReadout(); renderBar(); renderState();
+}
+function stepCursor(d) { if (S.curIdx == null) return; setCursorT(T[Math.min(Math.max(S.curIdx + d, 0), T.length - 1)]); }
+function centerOn(t0, t1 = t0, pad = 30) {
+  const R = Math.max(t1 - t0 + 2 * pad, Math.min(S.xMax - S.xMin, 180));
+  setRange((t0 + t1) / 2 - R / 2, (t0 + t1) / 2 + R / 2);
+}
+
+function renderReadout() {
+  const i = S.curIdx;
+  if (i == null) { $("readout").innerHTML = `<div class="when">—</div><div class="vals" style="color:var(--mut)">No cursor yet</div>`; return; }
+  const vals = PANELS.flatMap((p) => p.s.map(([k]) => k)).map((k) =>
+    `<span><i style="background:${COLORS[k]}"></i>${SHORT[k]} <b>${CH[k].v[i]}</b> ${CH[k].unit}</span>`).join("");
+  $("readout").innerHTML = `<div class="when">${clock(T[i])} <span style="color:var(--mut);font-weight:400">${rel(T[i])}</span></div><div class="vals">${vals}</div>`;
+}
+
+// ---------- gestures: our uPlot touch plugin ----------
+// One finger: horizontal drag = scrub (A) or pan (B, C); vertical drag = page scroll (touch-action: pan-y).
+// Two fingers: pinch zoom + pan around the midpoint. Tap: place cursor. Long-press (C): drop a pin.
+function attachGestures(u) {
+  const over = u.over;
+  let g = null;
+  const rect = () => over.getBoundingClientRect();
+  const xAt = (cx) => cx - rect().left;
+  const tAt = (x) => S.xMin + (x / rect().width) * (S.xMax - S.xMin);
+  const LP_MS = 500, SLOP = 8;
+
+  function start1(cx, cy, cX, cY) {
+    g = { n: 1, x0: xAt(cx), cx0: cx, cy0: cy, min0: S.xMin, max0: S.xMax, lock: null, at: performance.now(), lp: 0, longpressed: false };
+    if (variant === "C") {
+      const lpEl = $("lp");
+      lpEl.style.left = cX + "px"; lpEl.style.top = cY + "px";
+      g.lpShow = setTimeout(() => lpEl.classList.add("on"), 120);
+      g.lp = setTimeout(() => {
+        lpEl.classList.remove("on");
+        if (!g || g.lock) return;
+        g.longpressed = true;
+        const t = T[nearestIdx(tAt(g.x0))];
+        S.pending = { t0: t, t1: t };
+        setCursorT(t); redrawMarks(); logG(`long-press @ ${clock(t)}`);
+      }, LP_MS);
+    }
+  }
+  function cancelLp() { if (g) { clearTimeout(g.lp); clearTimeout(g.lpShow); } $("lp").classList.remove("on"); }
+  function move1(cx, cy, e) {
+    const dx = cx - g.cx0, dy = cy - g.cy0;
+    if (g.longpressed) { // slide the pending pin
+      e?.preventDefault();
+      const t = T[nearestIdx(tAt(xAt(cx)))];
+      S.pending = { t0: t, t1: t }; setCursorT(t); redrawMarks(); return;
+    }
+    if (!g.lock && Math.max(Math.abs(dx), Math.abs(dy)) > SLOP) { g.lock = Math.abs(dx) > Math.abs(dy) ? "h" : "v"; cancelLp(); }
+    if (g.lock !== "h") return;
+    e?.preventDefault();
+    if (variant === "A") setCursorT(tAt(xAt(cx)));
+    else { const R = g.max0 - g.min0; const m = g.min0 - (dx / rect().width) * R; setRange(m, m + R); }
+  }
+  function end1() {
+    cancelLp();
+    if (!g) return;
+    if (g.longpressed) { logG(`pin released @ ${clock(S.pending.t0)}`); openSheet(); }
+    else if (!g.lock && performance.now() - g.at < LP_MS) { setCursorT(tAt(g.x0)); logG(`tap @ ${clock(T[S.curIdx])}`); }
+    else if (g.lock === "h") logG(variant === "A" ? `scrub → ${clock(T[S.curIdx])}` : `pan → ${clock(S.xMin, false)}–${clock(S.xMax, false)}`);
+    g = null;
+  }
+  function start2(x1, x2) {
+    cancelLp();
+    g = { n: 2, d0: Math.max(20, Math.abs(x1 - x2)), mid0: (x1 + x2) / 2, min0: S.xMin, max0: S.xMax };
+  }
+  function move2(x1, x2) {
+    const w = rect().width, d = Math.max(20, Math.abs(x1 - x2)), mid = (x1 + x2) / 2;
+    const R0 = g.max0 - g.min0, R = (R0 * g.d0) / d;
+    const midVal = g.min0 + (g.mid0 / w) * R0;
+    const min = midVal - (mid / w) * R;
+    setRange(min, min + R);
+  }
+
+  over.addEventListener("touchstart", (e) => {
+    const ts = e.touches;
+    if (ts.length === 1) start1(ts[0].clientX, ts[0].clientY, ts[0].clientX, ts[0].clientY);
+    else if (ts.length === 2) { e.preventDefault(); start2(xAt(ts[0].clientX), xAt(ts[1].clientX)); }
+  }, { passive: false });
+  over.addEventListener("touchmove", (e) => {
+    if (!g) return;
+    const ts = e.touches;
+    if (g.n === 2 && ts.length === 2) { e.preventDefault(); move2(xAt(ts[0].clientX), xAt(ts[1].clientX)); }
+    else if (g.n === 1 && ts.length === 1) move1(ts[0].clientX, ts[0].clientY, e);
+  }, { passive: false });
+  over.addEventListener("touchend", (e) => {
+    if (!g) return;
+    if (g.n === 1) end1();
+    else if (e.touches.length === 0) { logG(`pinch → ${Math.round(S.xMax - S.xMin)} s visible`); g = null; }
+    // 2 → 1 finger: ignore the leftover finger until it lifts (no jump).
+    if (e.cancelable) e.preventDefault(); // no synthetic mouse events
+  }, { passive: false });
+  over.addEventListener("touchcancel", () => { cancelLp(); g = null; });
+  over.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // Desktop: drag like one finger, wheel zooms.
+  over.addEventListener("mousedown", (e) => {
+    start1(e.clientX, e.clientY, e.clientX, e.clientY);
+    const mm = (ev) => g && move1(ev.clientX, ev.clientY + (g.lock ? 0 : 0), null);
+    const mu = () => { removeEventListener("mousemove", mm); removeEventListener("mouseup", mu); end1(); };
+    addEventListener("mousemove", mm); addEventListener("mouseup", mu);
+  });
+  over.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const x = xAt(e.clientX), w = rect().width, R0 = S.xMax - S.xMin, R = R0 * Math.exp(e.deltaY * 0.002);
+    const v = S.xMin + (x / w) * R0;
+    setRange(v - (x / w) * R, v - (x / w) * R + R);
+  }, { passive: false });
+}
+
+// ---------- notes ----------
+function openSheet() {
+  const sh = $("sheet");
+  const n = S.pending;
+  const span = n.t1 > n.t0;
+  sh.innerHTML = `<div class="hd">
+      ${span ? "" : `<button class="b" id="sl">◀</button>`}
+      <div class="w">${span ? `Note on ${clock(n.t0)}–${clock(n.t1)}` : `Note at ${clock(n.t0)} <span style="color:var(--mut);font-weight:400">${rel(n.t0)}</span>`}</div>
+      ${span ? "" : `<button class="b" id="sr">▶</button>`}
+    </div>
+    <textarea id="ta" placeholder="What happened here?"></textarea>
+    <div class="ft"><button class="b" id="sc">Cancel</button><button class="b p" id="ss">Save Note</button></div>`;
+  sh.classList.add("open");
+  const nudge = (d) => {
+    const i = Math.min(Math.max(nearestIdx(S.pending.t0) + d, 0), T.length - 1);
+    S.pending = { t0: T[i], t1: T[i] };
+    sh.querySelector(".w").innerHTML = `Note at ${clock(T[i])} <span style="color:var(--mut);font-weight:400">${rel(T[i])}</span>`;
+    setCursorT(T[i]); redrawMarks();
+  };
+  if (!span) { $("sl").onclick = () => nudge(-1); $("sr").onclick = () => nudge(1); }
+  $("sc").onclick = () => { S.pending = null; sh.classList.remove("open"); redrawMarks(); renderState(); };
+  $("ss").onclick = () => {
+    S.notes.push({ id: nextId++, ...S.pending, text: $("ta").value.trim() || "(empty)", via: variant });
+    S.notes.sort((a, b) => a.t0 - b.t0);
+    S.pending = null; sh.classList.remove("open");
+    redrawMarks(); renderNotes(); logG("note saved");
+  };
+  $("ta").focus();
+  renderState();
+}
+function noteAt(t0, t1 = t0) { S.pending = { t0, t1 }; redrawMarks(); openSheet(); }
+function renderNotes() {
+  $("notes").innerHTML = S.notes.length ? "" : `<div class="hint" style="padding:4px 0">No Notes yet.</div>`;
+  for (const n of S.notes) {
+    const r = document.createElement("div");
+    r.className = "row";
+    r.innerHTML = `<span class="t">${clock(n.t0)}${n.t1 > n.t0 ? `–${clock(n.t1)}` : ""}</span><span style="flex:1">${n.text.replace(/</g, "&lt;")}</span><button class="b">✕</button>`;
+    r.onclick = () => { centerOn(n.t0, n.t1); setCursorT(n.t0); };
+    r.querySelector("button").onclick = (e) => { e.stopPropagation(); S.notes = S.notes.filter((x) => x !== n); renderNotes(); redrawMarks(); renderState(); };
+    $("notes").append(r);
+  }
+}
+
+// ---------- per-variant UI ----------
+function renderBar() {
+  const bar = $("bar");
+  if (variant === "C") { bar.innerHTML = ""; return; }
+  const i = S.curIdx;
+  bar.innerHTML = `<button class="b" id="bl" ${i == null ? "disabled" : ""}>◀</button>
+    <button class="b p" id="bn" ${i == null ? "disabled" : ""}>${i == null ? "Tap the chart to place the cursor" : `📍 Note here · ${clock(T[i])}`}</button>
+    <button class="b" id="br" ${i == null ? "disabled" : ""}>▶</button>`;
+  $("bl").onclick = () => stepCursor(-1);
+  $("br").onclick = () => stepCursor(1);
+  $("bn").onclick = () => noteAt(T[S.curIdx]);
+}
+
+let drawOverview = null;
+if (variant === "A") {
+  $("hint").textContent = "Drag one finger across a chart to move the cursor. Pinch or drag with two fingers to zoom and pan. ◀ ▶ step one row.";
+} else if (variant === "C") {
+  $("hint").textContent = "Drag to pan, pinch to zoom, tap for values. Press and hold on a chart to drop a Note pin; keep holding and slide to adjust it.";
+} else {
+  $("hint").textContent = "Drag to pan, pinch to zoom, tap for values. Tap an Event to jump to it, or drag the window in the overview strip.";
+  const ex = $("extra");
+  ex.innerHTML = `<section><canvas id="ov"></canvas></section><section><h2>Events</h2><div id="evs"></div></section>`;
+  // Overview strip: whole drive, current window, Event ticks. Drag the window or tap to jump.
+  const cv = $("ov"), ovKey = CH.vss ? "vss" : CH.rpm ? "rpm" : Object.keys(CH)[0];
+  drawOverview = () => {
+    const dpr = devicePixelRatio, w = cv.clientWidth * dpr, h = cv.clientHeight * dpr;
+    if (cv.width !== w) { cv.width = w; cv.height = h; }
+    const c = cv.getContext("2d"), v = CH[ovKey].v, vmax = Math.max(...v) || 1;
+    const X = (t) => ((t - T0) / (T1 - T0)) * w;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = "#64748b55";
+    for (const e of EVENTS) c.fillRect(X(e.t0), 0, Math.max(2 * dpr, X(e.t1) - X(e.t0)), h);
+    c.fillStyle = noteC;
+    for (const n of S.notes) c.fillRect(X(n.t0) - dpr, 0, 2 * dpr, h);
+    c.strokeStyle = COLORS[ovKey]; c.lineWidth = dpr; c.beginPath();
+    const step = Math.max(1, Math.floor(v.length / w));
+    for (let i = 0; i < v.length; i += step) c.lineTo(X(T[i]), h - (v[i] / vmax) * (h - 4 * dpr) - 2 * dpr);
+    c.stroke();
+    c.fillStyle = accC + "30"; c.strokeStyle = accC; c.lineWidth = 2 * dpr;
+    c.fillRect(X(S.xMin), 0, X(S.xMax) - X(S.xMin), h); c.strokeRect(X(S.xMin), dpr, X(S.xMax) - X(S.xMin), h - 2 * dpr);
+  };
+  let od = null;
+  const tOf = (e) => T0 + ((e.clientX - cv.getBoundingClientRect().left) / cv.clientWidth) * (T1 - T0);
+  cv.addEventListener("pointerdown", (e) => {
+    cv.setPointerCapture(e.pointerId);
+    const t = tOf(e), R = S.xMax - S.xMin;
+    if (t < S.xMin || t > S.xMax) setRange(t - R / 2, t + R / 2);
+    od = { t, min0: S.xMin };
+  });
+  cv.addEventListener("pointermove", (e) => { if (od) { const R = S.xMax - S.xMin; const m = od.min0 + (tOf(e) - od.t); setRange(m, m + R); } });
+  cv.addEventListener("pointerup", () => { od = null; logG("overview move"); });
+  const renderEvents = () => {
+    $("evs").innerHTML = "";
+    for (const e of EVENTS) {
+      const r = document.createElement("div"), sel = S.selEvent === e.n;
+      r.innerHTML = `<div class="row ${sel ? "sel" : ""}"><span class="n">${e.n}</span><span class="t">${clock(e.t0)}</span><span>${e.title.replace(/</g, "&lt;")}</span></div>`
+        + (sel ? `<div class="acts"><button class="b" data-a="s">📍 Note at start</button>${e.t1 > e.t0 ? `<button class="b" data-a="e">📍 Note at end</button><button class="b" data-a="w">Note on whole Event</button>` : ""}</div>` : "");
+      r.querySelector(".row").onclick = () => {
+        S.selEvent = sel ? null : e.n;
+        if (!sel) { centerOn(e.t0, e.t1); setCursorT(e.t0); logG(`event ${e.n} selected`); }
+        renderEvents(); redrawMarks();
+      };
+      r.querySelectorAll("[data-a]").forEach((b) => b.onclick = () => {
+        const a = b.dataset.a;
+        if (a === "s") noteAt(e.t0); else if (a === "e") noteAt(e.t1); else noteAt(e.t0, e.t1);
+      });
+      $("evs").append(r);
+    }
+  };
+  renderEvents();
+  addEventListener("resize", () => drawOverview());
+}
+
+renderReadout(); renderBar(); renderNotes(); drawOverview?.(); renderState();
+</script>
+</body>
+</html>
