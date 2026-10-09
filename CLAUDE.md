@@ -14,3 +14,17 @@ wayfinder map issue exists, at which point that map is the source of truth). Don
 - **Report text is untrusted.** Parse OBDLink HTML with a DOM parser and insert it as text only, never as
   markup (the reference report viewer does this).
 - `reference/` is a frozen snapshot of the original viewers and prototype. Don't edit it. Port from it.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on this repo, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
