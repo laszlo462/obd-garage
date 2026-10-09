@@ -16,7 +16,7 @@ in `.claude/agents/`.
 3. Paste the setup script below into the environment's setup script field.
 4. Start a cloud session and check:
    - `node -v` reports v24.
-   - `/wayfinder`, `/tdd` and `/spec-review` are listed as slash commands.
+   - `/wayfinder`, `/tdd`, `/spec-review`, `/implement-spec` and `/retro` are listed as slash commands.
    - The `explorer`, `shipper` and `implementer` agents are listed.
    - `gh api repos/{owner}/{repo}/issues` returns this repo's issues.
 
@@ -63,4 +63,6 @@ runs `npm ci` in cloud sessions once a `package-lock.json` exists.
 - **Personal notes and private infrastructure**: anything outside the repo on the owner's own
   machine or network isn't reachable.
 - **Local browser testing**: not confirmed to work. Do browser checks in a local session.
+- **Per-implementer worktrees** (`/implement-spec`): not confirmed to work. If they don't, run
+  `/implement-spec` locally or implement the tickets one at a time.
 - **Merging**: stays with the owner, as locally.
