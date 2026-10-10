@@ -48,6 +48,11 @@ The uploaded file exactly as received. It is the source of truth; everything sho
 can be rebuilt from it.
 _Avoid_: Raw file, source file
 
+**Failed Upload**:
+A Diagnostic Report or Drive Log whose Original is kept but could not be read, or whose Original went
+missing or changed on disk. It is retried whenever uploads are re-parsed.
+_Avoid_: Error, broken file, rejected upload
+
 **Channel**:
 One logged PID column in a Drive Log, after the Vehicle Profile's aliases and decode fixes are applied.
 _Avoid_: Column, series, signal
