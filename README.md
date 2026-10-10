@@ -20,7 +20,9 @@ built the original viewers and prototype. Everything else is open.
     regen when logged, and freeze-frame look-alikes matched against the nearest saved report.
   - **Vehicle profiles:** PID aliases, decode fixes (e.g. the 6.7's EGR position rescale), hidden columns,
     default chart presets.
-  - **Rule packs** switched on per vehicle. The first is "6.7 P0401": the low-flow entry window and its notes.
+  - **Rule packs** switched on per vehicle. The first is "6.7 P0401": the low-flow entry-window Event, its
+    chart overlay and the explanatory text that goes with them (owner **Notes** are separate and never come
+    from a Rule Pack).
   - **Every report and log gets a vehicle ID from day one.** Reports carry the VIN; CSV logs don't, so
     ask which vehicle when one is added.
 - **Events of interest:** about two-thirds of the hand-written events in the original project can be
