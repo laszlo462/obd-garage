@@ -8,9 +8,14 @@ them that matter.
 ### Vehicles
 
 **Vehicle**:
-One physical vehicle the owner tracks, known by its nickname. Its VIN comes from a Diagnostic Report;
-until one arrives the Vehicle is VIN-less.
-_Avoid_: Truck, car
+One physical vehicle the owner tracks, known by its VIN and labelled by its year, make and model. It only
+ever comes from a Diagnostic Report carrying a VIN not seen before.
+_Avoid_: Truck, car, nickname
+
+**Current Vehicle**:
+The Vehicle the app is showing on this device, picked with the Vehicle switcher. New Drive Logs default
+to it.
+_Avoid_: Active vehicle, selected vehicle
 
 **Vehicle Profile**:
 The knowledge about one kind of vehicle that makes its data read correctly: PID aliases, decode fixes,
@@ -34,9 +39,9 @@ assigns its Vehicle when it is added, or leaves it Unassigned.
 _Avoid_: Log file, CSV, session, recording
 
 **Unassigned**:
-A Drive Log that belongs to no Vehicle yet. It can be viewed, but no Vehicle Profile or Rule Pack applies
-to it until it is assigned to a Vehicle.
-_Avoid_: Orphan, unknown vehicle
+A Drive Log that belongs to no Vehicle: not one of the owner's Vehicles, or not known yet. It can be
+viewed, but no Vehicle Profile, Rule Pack or Reference Report applies to it until it is assigned.
+_Avoid_: Orphan, unknown vehicle, VIN-less vehicle
 
 **Original**:
 The uploaded file exactly as received. It is the source of truth; everything shown is derived from it and
@@ -48,8 +53,8 @@ One logged PID column in a Drive Log, after the Vehicle Profile's aliases and de
 _Avoid_: Column, series, signal
 
 **Reference Report**:
-The one Diagnostic Report a Drive Log is compared against: by default the same Vehicle's Report closest in
-time to the drive. The owner can change it or clear it.
+The one Diagnostic Report a Drive Log is compared against: by default its Vehicle's Report closest in
+time to the drive. The owner can change it or clear it. An Unassigned Drive Log has none.
 _Avoid_: Baseline, nearest report
 
 ### Findings
