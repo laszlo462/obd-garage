@@ -65,9 +65,14 @@ never edited by hand.
 _Avoid_: Annotation, detection, alert
 
 **Bundle**:
-A download of the Originals, Events and Notes for one Vehicle over a date range, plus each Drive Log's
-Reference Report, for analysis outside the app.
-_Avoid_: Export, archive, package
+A download of Originals with their Events and Notes, for analysis outside the app or to get the files
+back. It covers either one Vehicle over a date range (plus each Drive Log's Reference Report) or a
+hand-picked set of Unassigned Drive Logs. It is never imported back.
+_Avoid_: Archive, package, backup
+
+**Export**:
+The action that produces a Bundle.
+_Avoid_: Download, share
 
 **Note**:
 Something the owner wrote about a whole Drive Log or Diagnostic Report, or pinned to one moment (a single
