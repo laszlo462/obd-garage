@@ -18,12 +18,13 @@ to it.
 _Avoid_: Active vehicle, selected vehicle
 
 **Vehicle Profile**:
-The knowledge about one kind of vehicle that makes its data read correctly: PID aliases, decode fixes,
-hidden channels and default chart presets.
+The knowledge about one kind of vehicle that makes its data read correctly: the VINs it recognises, PID
+aliases, decode fixes, hidden channels, default chart presets, and the Rule Packs it suggests for a new
+Vehicle.
 _Avoid_: Vehicle config, vehicle type
 
 **Rule Pack**:
-A named set of rules for a specific fault or vehicle, switched on per Vehicle (e.g. "6.7 P0401").
+A named set of Rules for a specific fault or vehicle, switched on per Vehicle (e.g. "6.7 P0401").
 _Avoid_: Plugin, ruleset
 
 ### Uploads
@@ -64,10 +65,19 @@ _Avoid_: Baseline, nearest report
 
 ### Findings
 
+**Rule**:
+A test over a Drive Log's Channels that finds Events. A generic Rule runs on every Drive Log, Unassigned ones
+included; the rest belong to a Rule Pack.
+_Avoid_: Detector, trigger, alert rule
+
 **Event**:
-A moment or span in a Drive Log found by a rule. Events are regenerated whenever rules change and are
+A moment or span in a Drive Log found by a Rule. Events are regenerated whenever Rules change and are
 never edited by hand.
 _Avoid_: Annotation, detection, alert
+
+**Look-alike**:
+An Event marking a span of a Drive Log whose Channels resemble its Reference Report's freeze frame.
+_Avoid_: Match, freeze-frame replay
 
 **Bundle**:
 A download of Originals with their Events and Notes, for analysis outside the app or to get the files
