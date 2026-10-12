@@ -1,10 +1,13 @@
 import { Hono } from "hono";
+import { compress } from "hono/compress";
 import type { Db } from "./db.ts";
 import { createIngest, type IngestDeps } from "./ingest.ts";
 import { GENERIC_ONLY_REGISTRY } from "./registry.ts";
 import { driveLogsRoute } from "./routes/drive-logs.ts";
+import { failedUploadsRoute } from "./routes/failed-uploads.ts";
 import { health } from "./routes/health.ts";
 import { notesRoute } from "./routes/notes.ts";
+import { reportsRoute } from "./routes/reports.ts";
 import { uploadsRoute } from "./routes/uploads.ts";
 import { profilesRoute, rulePacksRoute, vehiclesRoute } from "./routes/vehicles.ts";
 
@@ -20,12 +23,15 @@ export function createApp(deps: AppDeps) {
   const registry = deps.registry ?? GENERIC_ONLY_REGISTRY;
   return new Hono()
     .basePath("/api")
+    .use(compress())
     .route("/health", health)
     .route("/uploads", uploadsRoute({ db, ingest }))
     .route("/vehicles", vehiclesRoute({ db, ingest, registry }))
     .route("/profiles", profilesRoute({ registry }))
     .route("/rule-packs", rulePacksRoute({ registry }))
     .route("/drive-logs", driveLogsRoute({ db, ingest }))
+    .route("/reports", reportsRoute({ db }))
+    .route("/failed-uploads", failedUploadsRoute({ db }))
     .route("/", notesRoute({ db, ...(deps.now ? { now: deps.now } : {}) }));
 }
 

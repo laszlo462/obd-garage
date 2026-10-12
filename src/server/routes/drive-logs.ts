@@ -1,10 +1,44 @@
 import { Hono } from "hono";
 import type { Db } from "../db.ts";
 import type { Ingest } from "../ingest.ts";
+import { newestFirst } from "./uploads.ts";
 
 const parseId = (text: string) => (/^\d+$/.test(text) ? Number(text) : Number.NaN);
 
-/** Assignment and Reference Report state of Drive Logs. Each change re-derives the log. */
+/** One row of the Unassigned list. */
+export type UnassignedItem = {
+  id: number;
+  filename: string;
+  recordedAt: string | null;
+  durationSec: number | null;
+  noteCount: number;
+};
+
+/** One Event as the viewer draws it. */
+export type EventView = {
+  ruleId: string;
+  startSec: number | null;
+  endSec: number | null;
+  kind: string;
+  title: string;
+  text: string;
+  packId: string | null;
+  category: string;
+};
+
+type ChannelView = { label: string; unit?: string; values: (number | null)[] };
+
+/** The Channels payload: column-oriented; a value is `null` where the Original had no number. */
+export type ChannelsPayload = {
+  t: number[];
+  channels: Record<string, ChannelView>;
+  /** Channels the Vehicle Profile hides by default. No Profile hides any yet. */
+  hidden: string[];
+};
+
+export type ReferenceState = "default" | "set" | "cleared";
+
+/** Reading, assignment and Reference Report state of Drive Logs. Each change re-derives the log. */
 export function driveLogsRoute(deps: { db: Db; ingest: Ingest }) {
   const { db, ingest } = deps;
   const driveLog = (idText: string) => {
@@ -13,6 +47,74 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest }) {
   };
 
   return new Hono()
+    .get("/", (c) => {
+      if (c.req.query("unassigned") !== "1")
+        return c.json({ error: "Expected ?unassigned=1." }, 400);
+      const notes = db.noteCounts();
+      const items = db
+        .listUploads({ kind: "drive-log", vehicleId: null })
+        .filter((u) => !db.getDerived(u.id)?.failedError)
+        .sort(newestFirst)
+        .map((u): UnassignedItem => {
+          const meta = db.getDerived(u.id)?.metadata as { duration?: number } | null;
+          return {
+            id: u.id,
+            filename: u.uploadedFilename,
+            recordedAt: u.recordedAt,
+            durationSec: meta?.duration ?? null,
+            noteCount: notes.get(u.id) ?? 0,
+          };
+        });
+      return c.json(items);
+    })
+    .get("/:id", (c) => {
+      const log = driveLog(c.req.param("id"));
+      const derived = log && db.getDerived(log.id);
+      if (!log || !derived) return c.json({ error: "Unknown Drive Log." }, 404);
+      if (derived.failedError !== null || !derived.channels)
+        return c.json({ error: derived.failedError ?? "This Drive Log has no data." }, 409);
+      const blob = JSON.parse(new TextDecoder().decode(derived.channels)) as {
+        t: number[];
+        channels: Record<string, ChannelView>;
+      };
+      const channels: ChannelsPayload["channels"] = {};
+      for (const [key, ch] of Object.entries(blob.channels))
+        channels[key] = {
+          label: ch.label,
+          ...(ch.unit === undefined ? {} : { unit: ch.unit }),
+          values: ch.values,
+        };
+      const chosen = db.getReferenceReport(log.id);
+      const state: ReferenceState = chosen
+        ? chosen.reportId === null
+          ? "cleared"
+          : "set"
+        : "default";
+      const meta = derived.metadata as {
+        startTime: string;
+        duration: number;
+        rows: unknown;
+        referenceReportId: number | null;
+      };
+      const payload: ChannelsPayload = { t: blob.t, channels, hidden: [] };
+      return c.json({
+        id: log.id,
+        filename: log.uploadedFilename,
+        vehicleId: log.vehicleId,
+        recordedAt: log.recordedAt,
+        uploadedAt: log.uploadedAt,
+        metadata: { startTime: meta.startTime, duration: meta.duration, rows: meta.rows },
+        channels: payload,
+        events: derived.events.map((e): EventView => {
+          const d = e.data as Omit<EventView, "ruleId" | "startSec" | "endSec">;
+          return { ruleId: e.ruleId, startSec: e.startSec, endSec: e.endSec, ...d };
+        }),
+        ruleOutcomes: derived.ruleOutcomes as unknown[],
+        decodeNotices: derived.decodeNotices as string[],
+        warnings: derived.warnings as string[],
+        referenceReport: { id: meta.referenceReportId, state },
+      });
+    })
     .post("/assign", async (c) => {
       const body = (await c.req.json().catch(() => null)) as {
         logIds?: unknown;

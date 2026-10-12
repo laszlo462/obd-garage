@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { ParsedReport } from "../../core/report.ts";
 import type { Db, Vehicle } from "../db.ts";
 import type { Ingest } from "../ingest.ts";
 import { removeOriginal } from "../originals.ts";
@@ -25,11 +26,57 @@ function summary(db: Db, v: Vehicle) {
   };
 }
 
+/** The Recent tab's status card. A `null` report is "No diagnostic report yet". */
+export type VehicleStatus = {
+  report: null | {
+    id: number;
+    date: string | null;
+    mil: "on" | "off" | "unknown";
+    storedCodes: string[];
+    pendingCodes: string[];
+    incompleteMonitors: number;
+  };
+};
+
+const hasStatus = (statuses: string[], word: string) =>
+  statuses.some((s) => s.toLowerCase().includes(word));
+
+/** The status card, from the Vehicle's latest Report. */
+function status(db: Db, vehicleId: number): VehicleStatus {
+  const latest = db
+    .listUploads({ kind: "report", vehicleId })
+    .filter((u) => !db.getDerived(u.id)?.failedError)
+    .sort((a, b) => (b.recordedAt ?? "").localeCompare(a.recordedAt ?? "") || b.id - a.id)[0];
+  const parsed = latest && (db.getDerived(latest.id)?.parsedReport as ParsedReport | null);
+  if (!latest || !parsed) return { report: null };
+  const codes = (word: string) => [
+    ...new Set((parsed.dtcs ?? []).filter((d) => hasStatus(d.statuses, word)).map((d) => d.code)),
+  ];
+  return {
+    report: {
+      id: latest.id,
+      date: latest.recordedAt,
+      mil: parsed.overview?.mil ?? "unknown",
+      storedCodes: codes("confirmed"),
+      pendingCodes: codes("pending"),
+      incompleteMonitors: (parsed.monitors ?? []).reduce(
+        (n, e) => n + e.tests.filter((t) => t.state === "incomplete").length,
+        0,
+      ),
+    },
+  };
+}
+
 /** Vehicles, their settings and delete. */
 export function vehiclesRoute(deps: { db: Db; ingest: Ingest; registry: ProfileRegistry }) {
   const { db, ingest, registry } = deps;
   return new Hono()
     .get("/", (c) => c.json(db.listVehicles().map((v) => summary(db, v))))
+    .get("/:id/status", (c) => {
+      const vehicle = db.getVehicle(parseId(c.req.param("id")));
+      if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
+      return c.json(status(db, vehicle.id));
+    })
     .patch("/:id", async (c) => {
       const vehicle = db.getVehicle(parseId(c.req.param("id")));
       if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
