@@ -135,6 +135,9 @@
   --ev-generic: rgba(87,148,242,.10); --ev-look: #b877d9; --ev-pack: #ff9830; --note: #fade2a;
   --c1: #5794f2; --c2: #ff9830; --c3: #73bf69; --c4: #b877d9; --c5: #fade2a; --c6: #f2495c;
 }
+/* ?pal=okabe: Okabe-Ito colour-blind-safe series, for comparison with the Grafana palette */
+[data-pal=okabe] { --c1: #0072b2; --c2: #e69f00; --c3: #009e73; --c4: #cc79a7; --c5: #56b4e9; --c6: #d55e00; }
+[data-pal=okabe][data-theme=dark] { --c1: #56b4e9; --c2: #e69f00; --c3: #009e73; --c4: #cc79a7; --c5: #f0e442; --c6: #d55e00; }
 :root[data-theme=dark] { color-scheme: dark; }
 
 /* ================= base ================= */
@@ -626,7 +629,7 @@ const S = {
   v: ["A", "B", "C", "D", "E", "F"].includes(P.get("variant")) ? P.get("variant") : "F",
   theme: P.get("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   route: P.get("screen") || "recent", stack: [], veh: "f250",
-  sheet: null, cur: 680, on: { rpm: true, vss: true, ect: true, cmd: true, act: true }, look: false, table: false,
+  sheet: null, cur: 680, on: { rpm: true, vss: true, ect: true, cmd: true, act: true, load: P.has("six") }, look: false, table: false,
   cmp: "r0821", m6sort: "headroom", selUn: new Set(), packs: { f250: { p0401: true }, civic: {} }, scroll: 0,
 };
 const NAMES = { A: "Grouped", B: "Instrument", C: "Cards", D: "Flighty", E: "Material 3", F: "Grafana" };
@@ -674,7 +677,7 @@ const isTop = () => TABS.includes(S.route) || ["vehicles", "unassigned", "failed
 // shell
 // ===================================================================================
 function draw() {
-  document.documentElement.dataset.v = S.v; document.documentElement.dataset.theme = S.theme;
+  document.documentElement.dataset.v = S.v; document.documentElement.dataset.theme = S.theme; document.documentElement.dataset.pal = P.get("pal") || "";
   const detail = !isTop();
   const r = S.route;
   const titles = { recent: "Recent", reports: "Diagnostic Reports", logs: "Drive Logs", vehicles: "Vehicles", unassigned: "Unassigned", failed: "Failed Uploads", log: "Drive Log", report: "Diagnostic Report", vsettings: "Vehicle settings", ulog: "Unassigned Drive Log" };
