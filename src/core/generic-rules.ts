@@ -1,4 +1,5 @@
 import { type ChannelKey, channel } from "./channels.ts";
+import { cruise, idle, regen } from "./drive-rules.ts";
 import type { EventDraft, Rule } from "./rules.ts";
 
 /** Rules that run on every Drive Log, Unassigned ones included. */
@@ -87,4 +88,4 @@ export const peaks: Rule = {
 };
 
 /** The generic Rules, in the order they run. */
-export const GENERIC_RULES: readonly Rule[] = [engineStart, peaks];
+export const GENERIC_RULES: readonly Rule[] = [engineStart, peaks, idle, cruise, regen];
