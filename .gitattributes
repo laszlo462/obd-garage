@@ -1,2 +1,2 @@
-# Shell scripts must keep LF, or bash fails on Windows checkouts.
-*.sh text eol=lf
+# Check out text files with LF on every OS. Biome flags CRLF, and bash fails on CRLF scripts.
+* text=auto eol=lf
