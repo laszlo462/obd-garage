@@ -180,6 +180,37 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     db.saveDerived(upload.id, computeDerived(upload, bytes));
   const readOriginal = (u: Upload) => readFileSync(originalPath(dataDir, u.storedPath));
 
+  /**
+   * Re-derives one upload from its Original plus the owner data, all-or-nothing in its own transaction.
+   * Owner data is never written. Returns `false` when there is no such upload. A missing Original
+   * throws (the caller decides how that surfaces).
+   */
+  function rederiveUpload(uploadId: number): boolean {
+    const upload = db.getUpload(uploadId);
+    if (!upload) return false;
+    db.transaction(() => deriveStored(upload, readOriginal(upload)));
+    return true;
+  }
+
+  /** Re-derives the given uploads, Reports first because Drive Logs read them as Reference Reports. */
+  function rederiveUploads(uploadIds: readonly number[]): void {
+    const uploads = uploadIds.flatMap((id) => db.getUpload(id) ?? []);
+    const ordered = [
+      ...uploads.filter((u) => u.kind === "report"),
+      ...uploads.filter((u) => u.kind === "drive-log"),
+    ];
+    db.transaction(() => {
+      for (const u of ordered) deriveStored(u, readOriginal(u));
+    });
+  }
+
+  /** Re-derives every Drive Log of the Vehicle (a Profile or Rule Pack change). Returns the count. */
+  function rederiveVehicleLogs(vehicleId: number): number {
+    const logs = db.listUploads({ kind: "drive-log", vehicleId });
+    rederiveUploads(logs.map((l) => l.id));
+    return logs.length;
+  }
+
   /** Re-derives the Vehicle's Drive Logs whose default Reference Report changed. */
   function rederiveChangedDefaults(vehicleId: number): void {
     for (const log of db.listUploads({ kind: "drive-log", vehicleId })) {
@@ -332,7 +363,15 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     });
   }
 
-  return { ingest, rebuildDerived };
+  return {
+    dataDir,
+    ingest,
+    rebuildDerived,
+    rederiveUpload,
+    rederiveUploads,
+    rederiveVehicleLogs,
+    rederiveChangedDefaults,
+  };
 }
 
 export type Ingest = ReturnType<typeof createIngest>;

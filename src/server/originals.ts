@@ -63,6 +63,11 @@ export function originalPath(dataDir: string, storedPath: string): string {
   return join(dataDir, "originals", ...storedPath.split("/"));
 }
 
+/** Removes a stored Original from disk. The caller has already dropped (or is dropping) its row. */
+export function removeOriginal(dataDir: string, storedPath: string): void {
+  rmSync(originalPath(dataDir, storedPath), { force: true });
+}
+
 /** The startup sweep: empties `<dataDir>/tmp` and touches nothing else. */
 export function sweepTmp(dataDir: string): void {
   const tmpDir = join(dataDir, "tmp");

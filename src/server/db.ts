@@ -174,6 +174,11 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
       );
     },
 
+    /** Deletes the Vehicle row only. The caller first moves or deletes its uploads. */
+    deleteVehicle: (id: number) => {
+      stmt("DELETE FROM vehicles WHERE id = ?").run(id);
+    },
+
     // Owner data: uploads
     addUpload(u: NewUpload): Upload {
       const info = stmt(

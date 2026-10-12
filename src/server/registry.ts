@@ -16,6 +16,10 @@ export type ProfileRegistry = {
   /** `undefined` for an id the registry does not know (the caller falls back to Generic). */
   profile(id: string): Profile | undefined;
   pack(id: string): RulePack | undefined;
+  /** Every Profile, for the settings picker. */
+  profiles(): { id: string; name: string }[];
+  /** Every Rule Pack, for the settings picker. */
+  packs(): { id: string; name: string }[];
 };
 
 export const GENERIC_PROFILE_ID = "generic";
@@ -25,6 +29,8 @@ export const GENERIC_ONLY_REGISTRY: ProfileRegistry = {
   matchVin: () => ({ profileId: GENERIC_PROFILE_ID, suggestedPackIds: [] }),
   profile: (id) => (id === GENERIC_PROFILE_ID ? GENERIC_PROFILE : undefined),
   pack: () => undefined,
+  profiles: () => [{ id: GENERIC_PROFILE_ID, name: "Generic" }],
+  packs: () => [],
 };
 
 /** Adapts the Vehicle Profiles and the given Rule Packs (by id) to the ingest seam. */
@@ -39,6 +45,8 @@ export function createProfileRegistry(
     },
     profile: (id) => profiles.get(id),
     pack: (id) => packs.get(id),
+    profiles: () => profiles.list().map((p) => ({ id: p.id, name: p.name })),
+    packs: () => [...packs.values()].map((p) => ({ id: p.id, name: p.name })),
   };
 }
 
