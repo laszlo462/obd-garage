@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>PROTOTYPE · OBD Garage UI</title>
+<!--
+  PROTOTYPE, throwaway. Wayfinder ticket "UI design: DESIGN.md and screen inventory".
+  Question: what should v0.1 look like? Three visual directions on the decided Variant D shell
+  (bottom tab bar, one responsive layout), each rendering the whole screen inventory:
+    A  Grouped     calm iOS-style inset grouped lists
+    B  Instrument  dense, dark-first, monospaced numbers, tell-tale status
+    C  Cards       warm, bold cards, big numbers, a coloured status hero
+  Switch with ?variant=A|B|C, the floating pill, or ← →. "☰ screens" in the pill jumps anywhere.
+  All data is synthetic (fake VIN, made-up drives). Nothing is saved. Chart gestures are only a
+  one-finger scrub here; the real gestures were settled by the notes-pinning prototype.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ================= tokens ================= */
+:root {
+  --font-ui: -apple-system, system-ui, "Segoe UI", sans-serif;
+  --font-num: var(--font-ui); --font-display: var(--font-ui);
+  --r-card: 12px; --r-ctl: 9px; --r-pill: 999px; --gut: 16px; --cell-y: 12px;
+  --fs-xs: 11px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 17px; --fs-xl: 22px; --fs-title: 30px;
+  --tabbar-h: 56px;
+}
+/* A Grouped */
+[data-v=A] {
+  --bg: #f2f2f7; --surface: #ffffff; --surface2: #f7f7fa; --ink: #111114; --ink2: #3c3c43; --muted: #8a8a8e;
+  --line: rgba(60,60,67,.16); --accent: #0a6cff; --accent-ink: #fff; --accent-t: rgba(10,108,255,.12);
+  --bad: #d92d20; --bad-t: rgba(217,45,32,.11); --warn: #b26a00; --warn-t: rgba(230,145,0,.15); --ok: #1f8a3f; --ok-t: rgba(31,138,63,.12);
+  --ev-generic: rgba(10,108,255,.10); --ev-look: #8e44ad; --ev-pack: #e08a00; --note: #e0a800;
+  --c1: #0a6cff; --c2: #e8590c; --c3: #2b8a3e; --c4: #7048e8; --c5: #0c8599; --c6: #c2255c;
+  --shadow: none;
+}
+[data-v=A][data-theme=dark] {
+  --bg: #000; --surface: #1c1c1e; --surface2: #2c2c2e; --ink: #f5f5f7; --ink2: #d1d1d6; --muted: #8e8e93;
+  --line: rgba(84,84,88,.55); --accent: #3a8bff; --accent-t: rgba(58,139,255,.2);
+  --bad: #ff5a4f; --bad-t: rgba(255,90,79,.17); --warn: #ffb340; --warn-t: rgba(255,179,64,.17); --ok: #3ccf6a; --ok-t: rgba(60,207,106,.16);
+  --ev-generic: rgba(58,139,255,.16); --c1: #4c9aff; --c2: #ff8a3d; --c3: #51cf66; --c4: #9775fa; --c5: #3bc9db; --c6: #f06595;
+}
+/* B Instrument (dark-first) */
+[data-v=B] {
+  --font-ui: "IBM Plex Sans", system-ui, sans-serif; --font-num: "IBM Plex Mono", ui-monospace, monospace; --font-display: var(--font-num);
+  --r-card: 3px; --r-ctl: 3px; --r-pill: 3px; --gut: 14px; --cell-y: 9px; --fs-title: 15px;
+  --bg: #eceeef; --surface: #f9fafa; --surface2: #e3e6e8; --ink: #101417; --ink2: #3a4248; --muted: #6c767d;
+  --line: rgba(16,20,23,.14); --accent: #b77700; --accent-ink: #101417; --accent-t: rgba(183,119,0,.13);
+  --bad: #c8231b; --bad-t: rgba(200,35,27,.10); --warn: #a35f00; --warn-t: rgba(183,119,0,.14); --ok: #18794e; --ok-t: rgba(24,121,78,.12);
+  --ev-generic: rgba(16,20,23,.07); --ev-look: #6741d9; --ev-pack: #b77700; --note: #b77700;
+  --c1: #1c7ed6; --c2: #d9480f; --c3: #2b8a3e; --c4: #6741d9; --c5: #0b7285; --c6: #a61e4d;
+  --shadow: none;
+}
+[data-v=B][data-theme=dark] {
+  --bg: #0b0d0f; --surface: #121518; --surface2: #1a1e22; --ink: #e8ecef; --ink2: #b4bcc2; --muted: #75808a;
+  --line: rgba(232,236,239,.10); --accent: #f2a900; --accent-ink: #0b0d0f; --accent-t: rgba(242,169,0,.14);
+  --bad: #ff4d4d; --bad-t: rgba(255,77,77,.13); --warn: #f2a900; --warn-t: rgba(242,169,0,.13); --ok: #3ddc84; --ok-t: rgba(61,220,132,.11);
+  --ev-generic: rgba(232,236,239,.06); --ev-look: #b197fc; --ev-pack: #f2a900; --note: #f2a900;
+  --c1: #4dabf7; --c2: #ff8c42; --c3: #3ddc84; --c4: #b197fc; --c5: #3bc9db; --c6: #ff6b9d;
+}
+/* C Cards */
+[data-v=C] {
+  --font-display: "Space Grotesk", var(--font-ui); --font-num: "Space Grotesk", var(--font-ui);
+  --r-card: 20px; --r-ctl: 14px; --gut: 16px; --cell-y: 14px; --fs-title: 32px;
+  --bg: #f3efe7; --surface: #fffdf8; --surface2: #f7f2e9; --ink: #1f1b16; --ink2: #4a443c; --muted: #8b8378;
+  --line: rgba(31,27,22,.10); --accent: #0d7c66; --accent-ink: #fff; --accent-t: rgba(13,124,102,.12);
+  --bad: #c63d2f; --bad-t: rgba(198,61,47,.12); --warn: #b5650d; --warn-t: rgba(229,140,30,.16); --ok: #0d7c66; --ok-t: rgba(13,124,102,.13);
+  --ev-generic: rgba(13,124,102,.10); --ev-look: #7a4fd0; --ev-pack: #d9822b; --note: #d9a400;
+  --c1: #0d7c66; --c2: #d9622b; --c3: #3867d6; --c4: #8854d0; --c5: #20a4b8; --c6: #c2255c;
+  --shadow: 0 1px 2px rgba(31,27,22,.06), 0 6px 20px rgba(31,27,22,.06);
+}
+[data-v=C][data-theme=dark] {
+  --bg: #15130f; --surface: #221f1a; --surface2: #2b2721; --ink: #f6f1e8; --ink2: #d6cfc3; --muted: #9a9184;
+  --line: rgba(246,241,232,.10); --accent: #3cc6a5; --accent-ink: #0f1a17; --accent-t: rgba(60,198,165,.16);
+  --bad: #ff6b5b; --bad-t: rgba(255,107,91,.16); --warn: #f0a650; --warn-t: rgba(240,166,80,.16); --ok: #3cc6a5; --ok-t: rgba(60,198,165,.15);
+  --ev-generic: rgba(60,198,165,.14); --ev-look: #b197fc; --ev-pack: #f0a650; --note: #ffd43b;
+  --c1: #3cc6a5; --c2: #ff8f5a; --c3: #74a7ff; --c4: #b197fc; --c5: #4dd4e6; --c6: #f783ac;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+:root[data-theme=dark] { color-scheme: dark; }
+
+/* ================= base ================= */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font: 400 var(--fs-md)/1.4 var(--font-ui); min-height: 100dvh; -webkit-text-size-adjust: 100%; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button, a, label, input, select, summary { touch-action: manipulation; }   /* no double-tap zoom on iOS */
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); } .ink2 { color: var(--ink2); }
+.sm { font-size: var(--fs-sm); } .xs { font-size: var(--fs-xs); }
+a { color: var(--accent); }
+
+/* app bar */
+.appbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 6px; padding: calc(env(safe-area-inset-top) + 8px) 8px 8px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: saturate(1.6) blur(14px); -webkit-backdrop-filter: saturate(1.6) blur(14px);
+  border-bottom: 1px solid transparent; min-height: 52px; }
+.appbar.scrolled, [data-v=B] .appbar { border-bottom-color: var(--line); }
+.appbar .ttl { flex: 1; min-width: 0; text-align: center; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iconbtn { border: 0; background: none; padding: 8px; border-radius: var(--r-ctl); color: var(--accent); display: inline-flex; align-items: center; gap: 4px; position: relative; min-height: 40px; }
+.iconbtn svg { width: 22px; height: 22px; }
+.iconbtn .dot { position: absolute; top: 7px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); border: 2px solid var(--bg); }
+.vswitch { border: 0; background: none; display: inline-flex; align-items: center; gap: 4px; padding: 6px 8px; border-radius: var(--r-ctl); font-weight: 600; color: var(--ink); max-width: 70vw; }
+.vswitch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vswitch svg { width: 14px; height: 14px; color: var(--muted); flex: none; }
+.desknav { display: none; }
+
+main { padding: 0 0 calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 70px); }
+main.detail { padding-bottom: calc(env(safe-area-inset-bottom) + 130px); }
+.wrap { max-width: 760px; margin: 0 auto; }
+.wrap.wide { max-width: 1180px; }
+h1.big { font: 700 var(--fs-title)/1.15 var(--font-display); margin: 4px var(--gut) 12px; letter-spacing: -.01em; }
+.sec { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; color: var(--muted); padding: 18px var(--gut) 6px; display: flex; align-items: baseline; gap: 8px; }
+.sec .r { margin-left: auto; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: var(--fs-sm); }
+.sec button.r { border: 0; background: none; color: var(--accent); padding: 0; }
+
+/* tab bar */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; padding-bottom: env(safe-area-inset-bottom);
+  background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+.tabbar button { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 6px; font-size: 10.5px; color: var(--muted); height: var(--tabbar-h); }
+.tabbar button svg { width: 24px; height: 24px; }
+.tabbar button[aria-selected=true] { color: var(--accent); }
+.tabbar .add .plus { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+.tabbar .add .plus svg { width: 20px; height: 20px; }
+[data-v=B] .tabbar .add .plus { border-radius: 3px; }
+
+/* groups / cells */
+.group { margin: 0 var(--gut); background: var(--surface); border-radius: var(--r-card); overflow: hidden; box-shadow: var(--shadow); }
+.cell { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 0; background: none; padding: var(--cell-y) var(--gut); position: relative; color: var(--ink); min-height: 44px; }
+.cell + .cell::before { content: ""; position: absolute; top: 0; right: 0; left: var(--sep-left, var(--gut)); border-top: 1px solid var(--line); }
+.cell .tx { flex: 1; min-width: 0; } .cell .tx b { display: block; font-weight: 600; } .cell .tx small { color: var(--muted); font-size: var(--fs-sm); display: block; }
+.chev { color: var(--muted); width: 16px; height: 16px; flex: none; }
+.cell .val { color: var(--muted); font-size: var(--fs-sm); text-align: right; }
+.cell:active { background: var(--surface2); }
+.kind { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-size: 10px; font-weight: 700; flex: none; letter-spacing: .02em; }
+.kind.r { background: var(--warn-t); color: var(--warn); } .kind.l { background: var(--accent-t); color: var(--accent); } .kind.x { background: var(--bad-t); color: var(--bad); }
+.kind svg { width: 18px; height: 18px; }
+.group.list { --sep-left: 62px; }
+
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-xs); font-weight: 600; padding: 1px 7px; border-radius: var(--r-pill); background: var(--surface2); color: var(--ink2); white-space: nowrap; vertical-align: 1px; }
+.badge.bad { background: var(--bad-t); color: var(--bad); } .badge.warn { background: var(--warn-t); color: var(--warn); } .badge.ok { background: var(--ok-t); color: var(--ok); } .badge.acc { background: var(--accent-t); color: var(--accent); }
+.badge.count { background: var(--bad); color: #fff; min-width: 20px; justify-content: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--accent); padding: 9px 14px; border-radius: var(--r-ctl); font-weight: 600; min-height: 40px; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.danger { color: var(--bad); }
+.btn.block { width: 100%; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.card { margin: 0 var(--gut) 12px; background: var(--surface); border-radius: var(--r-card); padding: 14px var(--gut); box-shadow: var(--shadow); }
+.card h3 { margin: 0 0 8px; font: 600 var(--fs-md)/1.3 var(--font-display); display: flex; align-items: center; gap: 8px; }
+.card h3 .r { margin-left: auto; font: 500 var(--fs-sm) var(--font-ui); }
+.note-text { white-space: pre-wrap; }
+
+/* status card variants */
+.status { margin: 0 var(--gut) 4px; background: var(--surface); border-radius: var(--r-card); padding: 14px var(--gut); display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow); width: calc(100% - 2 * var(--gut)); border: 0; text-align: left; color: var(--ink); }
+.status .lamp { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--bad-t); color: var(--bad); }
+.status .lamp svg { width: 24px; height: 24px; }
+.status b { display: block; font-size: var(--fs-lg); } .status p { margin: 2px 0 0; color: var(--ink2); font-size: var(--fs-sm); }
+.status .facts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+/* B: tell-tale cluster */
+.cluster { margin: 10px var(--gut) 4px; display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); background: var(--surface); width: calc(100% - 2 * var(--gut)); padding: 0; text-align: left; color: var(--ink); border-radius: var(--r-card); }
+.cluster > div { padding: 10px 10px 9px; border-right: 1px solid var(--line); min-width: 0; }
+.cluster > div:last-child { border-right: 0; }
+.cluster .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.cluster .v { font: 600 26px/1.1 var(--font-num); margin-top: 4px; }
+.cluster .v.bad { color: var(--bad); } .cluster .v.warn { color: var(--warn); }
+.cluster .lampv { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--bad); font: 600 15px var(--font-num); }
+.cluster .lampv svg { width: 26px; height: 26px; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--bad) 60%, transparent)); }
+.cluster .foot { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 7px 10px; font: 12px var(--font-num); color: var(--muted); display: flex; justify-content: space-between; }
+/* C: hero */
+.hero { margin: 4px var(--gut) 8px; border-radius: var(--r-card); padding: 18px 18px 16px; background: var(--bad); color: #fff; box-shadow: var(--shadow); border: 0; width: calc(100% - 2 * var(--gut)); text-align: left; position: relative; overflow: hidden; }
+.hero .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; opacity: .85; font-weight: 600; }
+.hero .big { font: 700 34px/1.05 var(--font-display); margin: 6px 0 4px; letter-spacing: -.01em; }
+.hero .sub { opacity: .9; font-size: var(--fs-sm); }
+.hero .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px; }
+.hero .stats div { background: rgba(255,255,255,.16); border-radius: 12px; padding: 8px 10px; }
+.hero .stats b { display: block; font: 700 22px var(--font-num); } .hero .stats span { font-size: 11px; opacity: .9; }
+.hero svg.bg { position: absolute; right: -18px; top: -14px; width: 130px; height: 130px; opacity: .14; }
+
+/* C: feed cards */
+.fcards { display: grid; gap: 10px; margin: 0 var(--gut); }
+.fcard { background: var(--surface); border-radius: 16px; padding: 12px 14px; box-shadow: var(--shadow); display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; text-align: left; border: 0; color: var(--ink); width: 100%; }
+.fcard .when { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.fcard b { font: 600 var(--fs-lg)/1.25 var(--font-display); }
+.fcard .spark { grid-row: 1 / span 3; grid-column: 2; align-self: center; width: 96px; height: 40px; }
+.fcard .meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* B: dense rows */
+.rows { margin: 0 var(--gut); border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 54px 1fr auto; gap: 2px 10px; align-items: baseline; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 9px 2px; color: var(--ink); }
+.row .k { font: 600 10px var(--font-num); letter-spacing: .06em; }
+.row .k.r { color: var(--warn); } .row .k.l { color: var(--c1); }
+.row .t { font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .d { font: 12px var(--font-num); color: var(--muted); text-align: right; white-space: nowrap; }
+.row .m { grid-column: 2 / -1; font: 12px var(--font-num); color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; }
+.row:active { background: var(--surface2); }
+
+/* ================= Drive Log viewer ================= */
+.vhead { padding: 4px var(--gut) 10px; }
+.vhead h2 { margin: 0; font: 700 var(--fs-xl)/1.2 var(--font-display); }
+.vhead .meta { display: flex; gap: 6px 10px; flex-wrap: wrap; align-items: center; margin-top: 6px; color: var(--muted); font-size: var(--fs-sm); }
+.refchip { display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--line); background: none; border-radius: var(--r-pill); padding: 3px 10px; font-size: var(--fs-sm); color: var(--ink2); }
+.refchip i { width: 14px; border-top: 2px dashed var(--ink2); }
+.notice { margin: 0 var(--gut) 10px; padding: 8px 12px; border-radius: var(--r-ctl); background: var(--warn-t); color: var(--warn); font-size: var(--fs-sm); display: flex; gap: 8px; }
+.chpick { display: flex; gap: 6px; overflow-x: auto; padding: 0 var(--gut) 10px; scrollbar-width: none; }
+.chpick button { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-pill); padding: 5px 11px; font-size: var(--fs-sm); display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); }
+.chpick button[aria-pressed=true] { border-color: var(--ch); color: var(--ink); background: color-mix(in srgb, var(--ch) 12%, var(--surface)); }
+.chpick button i { width: 8px; height: 8px; border-radius: 50%; background: var(--ch); }
+.chpick .more { color: var(--accent); }
+.readout { margin: 0 var(--gut) 8px; display: grid; grid-template-columns: 84px 1fr; gap: 10px; align-items: start; overflow: hidden; }
+.readout .time { font: 600 var(--fs-lg)/1.1 var(--font-num); }
+.readout .time small { display: block; font: 500 11px var(--font-num); color: var(--muted); }
+/* one fixed slot per charted Channel, in picker order: values never reflow as digits change */
+.readout .vals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 22px; gap: 2px 8px; font-size: var(--fs-sm); }
+@media (min-width: 900px) { .readout .vals { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); } }
+.readout .vals > span { white-space: nowrap; overflow: hidden; display: flex; align-items: baseline; gap: 4px; }
+.readout .vals i { flex: none; width: 8px; height: 8px; border-radius: 50%; align-self: center; }
+.readout .vals b { font: 600 var(--fs-sm) var(--font-num); font-variant-numeric: tabular-nums; }
+.readout .vals .u { color: var(--muted); font-size: 12px; }
+.readout .notehit { color: var(--note); font-weight: 600; }
+.panel .dots { position: absolute; inset: 0; pointer-events: none; }
+.panel .dots i { position: absolute; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 2px var(--surface); }
+.pins { position: absolute; left: 0; right: 0; top: 40px; height: 0; z-index: 2; }
+.pin { position: absolute; width: 36px; height: 36px; margin: -20px 0 0 -18px; border: 0; background: none; padding: 0; display: grid; place-items: center; }
+.pin::before { content: ""; width: 15px; height: 15px; background: var(--note); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.pin.on::before { width: 19px; height: 19px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--note) 35%, transparent), 0 1px 3px rgba(0,0,0,.35); }
+.inwin { display: inline-flex; align-items: center; gap: 4px; color: var(--ev-pack); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.chartbox { margin: 0 var(--gut) 10px; background: var(--surface); border-radius: var(--r-card); padding: 6px 0 4px; box-shadow: var(--shadow); position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+[data-v=B] .chartbox { border: 1px solid var(--line); }
+.overview { height: 34px; margin: 0 10px 4px; position: relative; }
+.overview svg { width: 100%; height: 100%; display: block; }
+.panel { position: relative; height: 104px; margin: 0 0 2px; }
+.panel svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.panel .lbl { position: absolute; left: 10px; top: 2px; font-size: 10.5px; color: var(--muted); pointer-events: none; display: flex; gap: 8px; }
+.panel .lbl span::before { content: ""; display: inline-block; width: 8px; height: 2px; background: var(--c); margin-right: 4px; vertical-align: 3px; }
+.xaxis { display: flex; justify-content: space-between; padding: 0 10px; font: 10px var(--font-num); color: var(--muted); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 2px var(--gut) 12px; font-size: 11.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.sw { width: 16px; height: 10px; border-radius: 2px; display: inline-block; }
+.sw.gen { background: var(--ev-generic); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+.sw.look { border: 1.5px solid var(--ev-look); background: color-mix(in srgb, var(--ev-look) 12%, transparent); }
+.sw.pack { background: repeating-linear-gradient(135deg, var(--ev-pack) 0 2px, transparent 2px 5px); border: 1px solid var(--ev-pack); }
+.sw.ff { height: 0; border-top: 2px dashed var(--ink2); border-radius: 0; }
+.sw.pin { width: 10px; height: 10px; background: var(--note); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+.toggle { display: flex; align-items: center; gap: 10px; padding: 10px var(--gut); }
+.toggle .tx { flex: 1; }
+.switch { appearance: none; width: 46px; height: 28px; border-radius: 14px; background: var(--surface2); border: 1px solid var(--line); position: relative; flex: none; transition: background .15s; margin: 0; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+.switch:checked { background: var(--ok); } .switch:checked::after { transform: translateX(18px); }
+[data-v=B] .switch, [data-v=B] .switch::after { border-radius: 3px; }
+[data-v=B] .switch:checked { background: var(--accent); }
+.evs { list-style: none; margin: 0; padding: 0; }
+.ev { display: grid; grid-template-columns: 22px 1fr auto; gap: 0 10px; padding: 9px var(--gut); align-items: start; position: relative; border: 0; background: none; width: 100%; text-align: left; color: var(--ink); }
+.ev + .ev::before { content: ""; position: absolute; top: 0; left: calc(var(--gut) + 32px); right: 0; border-top: 1px solid var(--line); }
+.ev .mk { width: 18px; height: 18px; margin-top: 1px; border-radius: 4px; }
+.ev .mk.generic { background: var(--ev-generic); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+.ev .mk.point { border-radius: 50%; width: 10px; height: 10px; margin: 5px 4px; background: var(--accent); border: 0; }
+.ev .mk.look { border: 1.5px solid var(--ev-look); background: color-mix(in srgb, var(--ev-look) 12%, transparent); }
+.ev .mk.pack { background: repeating-linear-gradient(135deg, var(--ev-pack) 0 2px, transparent 2px 5px); border: 1px solid var(--ev-pack); }
+.ev .mk.note { background: var(--note); border-radius: 50% 50% 50% 0; transform: rotate(-45deg) scale(.8); }
+.ev b { font-weight: 600; display: block; } .ev small { color: var(--muted); font-size: var(--fs-sm); display: block; }
+.ev .tm { font: 500 12px var(--font-num); color: var(--muted); text-align: right; white-space: nowrap; }
+.ev .src { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; color: var(--ev-pack); }
+.ev.na { opacity: 1; padding-top: 6px; padding-bottom: 6px; }
+.ev.na small { font-style: italic; }
+.ev.na .mk { border: 1px dashed var(--muted); background: none; }
+.ev.sel { background: var(--accent-t); }
+.notebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; display: flex; align-items: center; gap: 8px; padding: 8px var(--gut) calc(8px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line); }
+.notebar .step { width: 52px; height: 44px; border-radius: var(--r-ctl); border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.notebar .step svg { width: 18px; height: 18px; } .notebar .step small { font-size: 9.5px; color: var(--muted); }
+.notebar .main.open { background: var(--note); color: #1d1600; }
+.notebar .main { flex: 1; height: 44px; border-radius: var(--r-ctl); border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.notebar .main span { font-family: var(--font-num); font-weight: 500; opacity: .9; }
+table.dt { width: 100%; border-collapse: collapse; font: 12px var(--font-num); }
+table.dt th, table.dt td { padding: 5px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.dt th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--surface); }
+table.dt th:first-child, table.dt td:first-child { text-align: left; }
+table.dt tr.cur td { background: var(--accent-t); font-weight: 600; }
+.tablewrap { overflow-x: auto; margin: 0 -14px; padding: 0 6px; }
+
+/* ================= Report viewer ================= */
+.cmpbar { display: flex; align-items: center; gap: 8px; margin: 0 var(--gut) 12px; padding: 8px 12px; border-radius: var(--r-ctl); background: var(--surface); box-shadow: var(--shadow); font-size: var(--fs-sm); }
+[data-v=B] .cmpbar { border: 1px solid var(--line); }
+.cmpbar select { margin-left: auto; border: 0; background: var(--surface2); border-radius: var(--r-ctl); padding: 5px 8px; color: var(--accent); font-weight: 600; max-width: 55%; }
+.ovgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 0 var(--gut) 12px; }
+.ov { background: var(--surface); border-radius: var(--r-card); padding: 10px 12px; box-shadow: var(--shadow); }
+[data-v=B] .ov { border: 1px solid var(--line); }
+.ov .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+.ov .v { font: 700 24px/1.15 var(--font-num); margin-top: 2px; }
+.ov .v.bad { color: var(--bad); } .ov .v.ok { color: var(--ok); } .ov .v.warn { color: var(--warn); }
+.ov .d { font-size: 12px; color: var(--muted); }
+details.rsec { margin: 0 var(--gut) 10px; background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow); overflow: hidden; }
+[data-v=B] details.rsec { border: 1px solid var(--line); }
+details.rsec > summary { list-style: none; padding: 12px var(--gut); font: 600 var(--fs-md) var(--font-display); display: flex; align-items: center; gap: 8px; cursor: pointer; }
+details.rsec > summary::-webkit-details-marker { display: none; }
+details.rsec > summary::after { content: "›"; margin-left: 8px; color: var(--muted); transform: rotate(90deg); transition: transform .15s; font-size: 18px; line-height: 1; }
+details.rsec:not([open]) > summary::after { transform: none; }
+details.rsec > summary .r { margin-left: auto; display: flex; gap: 4px; }
+.rbody { padding: 0 var(--gut) 12px; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; font-size: var(--fs-sm); }
+.kv > * { padding: 7px 0; border-top: 1px solid var(--line); }
+.kv .v { text-align: right; font-family: var(--font-num); }
+.mon { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; font-size: var(--fs-sm); }
+.mon > * { padding: 7px 0; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 6px; }
+.mon .st { justify-content: flex-end; }
+.dtc { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.dtc .code { font: 700 var(--fs-lg) var(--font-num); color: var(--bad); }
+.dtc .code.pend { color: var(--warn); }
+.dtc .tags { grid-column: 2; display: flex; gap: 4px; flex-wrap: wrap; }
+.m6 { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: var(--fs-sm); }
+.m6 .bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--surface2); position: relative; }
+.m6 .bar i { position: absolute; top: -2px; width: 3px; height: 10px; border-radius: 2px; background: var(--ink); }
+.m6 .bar b { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 3px; }
+.m6 .v { font-family: var(--font-num); text-align: right; }
+.m6 .lim { grid-column: 1 / -1; display: flex; justify-content: space-between; font: 11px var(--font-num); color: var(--muted); }
+.seg { display: inline-flex; background: var(--surface2); border-radius: var(--r-ctl); padding: 2px; }
+.seg button { border: 0; background: none; padding: 4px 10px; border-radius: calc(var(--r-ctl) - 2px); font-size: 12px; color: var(--ink2); }
+.seg button[aria-pressed=true] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: 600; }
+.delta.up { color: var(--bad); } .delta.down { color: var(--ok); }
+
+/* ================= sheets ================= */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.38); display: flex; align-items: flex-end; justify-content: center; animation: fade .15s; }
+.sheet { background: var(--bg); width: 100%; max-width: 560px; max-height: 88dvh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 8px 0 calc(16px + env(safe-area-inset-bottom)); animation: up .2s ease-out; }
+[data-v=B] .sheet { border-radius: 4px 4px 0 0; border-top: 1px solid var(--line); }
+[data-v=C] .sheet { border-radius: 26px 26px 0 0; }
+.sheet .grab { width: 38px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 6px; }
+.sheet .sh { display: flex; align-items: center; padding: 4px var(--gut) 8px; gap: 8px; }
+.sheet .sh h2 { margin: 0; flex: 1; font: 700 var(--fs-lg) var(--font-display); }
+.sheet .sh button { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 6px; }
+.sheet p.lede { margin: 0 var(--gut) 12px; color: var(--ink2); font-size: var(--fs-sm); }
+.sheet .foot { padding: 14px var(--gut) 0; display: grid; gap: 8px; }
+.radio { appearance: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); margin: 0; flex: none; }
+.radio:checked { border: 7px solid var(--accent); }
+.check { appearance: none; width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--line); margin: 0; flex: none; position: relative; }
+.check:checked { background: var(--accent); border-color: var(--accent); }
+.check:checked::after { content: ""; position: absolute; left: 6px; top: 2px; width: 6px; height: 11px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.res { display: grid; grid-template-columns: 22px 1fr; gap: 0 10px; padding: 9px var(--gut); font-size: var(--fs-sm); position: relative; }
+.res + .res::before { content: ""; position: absolute; top: 0; left: calc(var(--gut) + 32px); right: 0; border-top: 1px solid var(--line); }
+.res .ic { font-weight: 700; text-align: center; }
+.res .ic.ok { color: var(--ok); } .res .ic.warn { color: var(--warn); } .res .ic.bad { color: var(--bad); } .res .ic.ref { color: var(--muted); }
+.res small { display: block; color: var(--muted); }
+.progress { margin: 6px var(--gut) 14px; height: 6px; border-radius: 3px; background: var(--surface2); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); transition: width .25s; }
+textarea { width: 100%; min-height: 120px; border-radius: var(--r-ctl); border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 10px 12px; font: inherit; resize: vertical; }
+.field { padding: 0 var(--gut) 10px; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+.field input[type=date], .field select { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-ctl); padding: 9px 10px; min-height: 42px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.empty { text-align: center; padding: 40px var(--gut); color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 64px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 10px; z-index: 60; font-size: var(--fs-sm); max-width: calc(100vw - 32px); animation: fade .2s; }
+@keyframes fade { from { opacity: 0; } } @keyframes up { from { transform: translateY(40px); opacity: .5; } }
+
+/* ================= desktop ================= */
+@media (min-width: 900px) {
+  :root { --gut: 20px; }
+  .tabbar { display: none; }
+  .desknav { display: flex; gap: 2px; margin-left: 12px; }
+  .desknav button { border: 0; background: none; padding: 7px 12px; border-radius: var(--r-ctl); color: var(--ink2); font-weight: 500; display: inline-flex; gap: 6px; align-items: center; }
+  .desknav button svg { width: 18px; height: 18px; }
+  .desknav button[aria-selected=true] { background: var(--accent-t); color: var(--accent); }
+  .desknav button.add { background: var(--accent); color: var(--accent-ink); margin-left: 6px; }
+  .appbar { padding: 10px 20px; }
+  .appbar .ttl { text-align: left; }
+  main { padding-bottom: 90px; }
+  .ovgrid { grid-template-columns: repeat(4, 1fr); }
+  .scrim { align-items: center; }
+  .sheet { border-radius: 16px !important; max-height: 80vh; }
+  .sheet .grab { display: none; }
+  .lv { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 0 4px; align-items: start; }
+  .lv .side { position: sticky; top: 70px; max-height: calc(100vh - 160px); overflow-y: auto; }
+  .panel { height: 130px; }
+  .notebar { left: 50%; right: auto; transform: translateX(-50%); bottom: 16px; width: 420px; border-radius: 14px; border: 1px solid var(--line); padding: 8px; box-shadow: 0 8px 30px rgba(0,0,0,.18); }
+  .fcards { grid-template-columns: 1fr 1fr; }
+  .rgrid { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+}
+
+/* ================= prototype pill (not part of any design) ================= */
+.proto { position: fixed; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 3px; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 10px);
+  background: #111; color: #fff; border-radius: 999px; padding: 3px; box-shadow: 0 6px 24px rgba(0,0,0,.4); font: 600 12px/1 system-ui, sans-serif; }
+body.has-notebar .proto { bottom: calc(env(safe-area-inset-bottom) + 72px); }
+@media (min-width: 900px) { .proto { bottom: 14px; left: auto; right: 14px; transform: none; } body.has-notebar .proto { bottom: 14px; } }
+.proto button { background: #2b2b2b; color: #fff; border: 0; border-radius: 999px; height: 30px; min-width: 30px; padding: 0 9px; font: inherit; }
+.proto span { padding: 0 6px; white-space: nowrap; } .proto em { font-style: normal; color: #f5c84b; margin-right: 4px; }
+.pmenu { position: fixed; z-index: 101; left: 50%; transform: translateX(-50%); bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 50px); background: #111; color: #fff; border-radius: 14px; padding: 6px; width: min(320px, calc(100vw - 24px)); max-height: 60dvh; overflow-y: auto; font: 13px system-ui, sans-serif; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+@media (min-width: 900px) { .pmenu { left: auto; right: 14px; transform: none; bottom: 56px; } }
+.pmenu button { display: block; width: 100%; text-align: left; background: none; border: 0; color: #fff; padding: 8px 10px; border-radius: 8px; font: inherit; }
+.pmenu button:hover, .pmenu button:active { background: #2b2b2b; }
+.pmenu .h { color: #f5c84b; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 4px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="layer"></div>
+<div class="proto" id="proto" role="toolbar" aria-label="Prototype controls">
+  <button id="pPrev" type="button" aria-label="Previous variant">←</button>
+  <span id="pLabel"></span>
+  <button id="pNext" type="button" aria-label="Next variant">→</button>
+  <button id="pTheme" type="button" aria-label="Toggle theme">◐</button>
+  <button id="pMenu" type="button" aria-label="Jump to a screen">☰</button>
+</div>
+<div class="pmenu" id="pmenu" hidden></div>
+
+<script>
+// ===================================================================================
+// Synthetic data. Fake VIN, made-up drives: safe to commit.
+// ===================================================================================
+const VEHICLES = [
+  { id: "f250", label: "2012 Ford F-250", vin: "1FTXX2BTXCEX01234", profile: "Ford 6.7L Power Stroke", packs: { p0401: true }, reports: 3, logs: 9, latest: "2026-10-02" },
+  { id: "civic", label: "2009 Honda Civic", vin: "2HGXX16XX9HX05678", profile: "Generic", packs: {}, reports: 1, logs: 2, latest: "2026-06-14" },
+];
+const PACKS = [{ id: "p0401", name: "6.7 P0401", desc: "EGR low-flow entry window (600–2,500 rpm, ECT 70–100 °C, valve 40–60 %)" }];
+const PROFILES = ["Generic", "Ford 6.7L Power Stroke"];
+const REPORTS = [
+  { id: "r1002", veh: "f250", date: "2026-10-02", time: "21:32", mil: true, stored: 1, pending: 1, perm: 1, incomplete: 2, monitors: 11, notes: 1 },
+  { id: "r0821", veh: "f250", date: "2026-08-21", time: "21:57", mil: true, stored: 1, pending: 0, perm: 1, incomplete: 3, monitors: 11, notes: 0 },
+  { id: "r0610", veh: "f250", date: "2026-06-10", time: "18:05", mil: false, stored: 0, pending: 0, perm: 0, incomplete: 1, monitors: 11, notes: 0 },
+  { id: "r0614", veh: "civic", date: "2026-06-14", time: "12:40", mil: false, stored: 0, pending: 0, perm: 0, incomplete: 0, monitors: 9, notes: 0 },
+];
+const LOGS = [
+  { id: "l1004a", veh: "f250", date: "2026-10-04", time: "17:22", min: 41, events: 9, notes: 2, title: "Drive Log", main: true },
+  { id: "l1002c", veh: "f250", date: "2026-10-02", time: "20:42", min: 47, events: 12, notes: 0, title: "Drive Log" },
+  { id: "l1002b", veh: "f250", date: "2026-10-02", time: "18:25", min: 31, events: 7, notes: 1, title: "Drive Log", warn: "12 rows skipped" },
+  { id: "l1002a", veh: "f250", date: "2026-10-02", time: "17:59", min: 15, events: 4, notes: 0, title: "Drive Log" },
+  { id: "l0821a", veh: "f250", date: "2026-08-21", time: "21:22", min: 32, events: 8, notes: 0, title: "Drive Log" },
+  { id: "l0726b", veh: "f250", date: "2026-07-26", time: "22:17", min: 32, events: 6, notes: 0, title: "Drive Log" },
+  { id: "l0612", veh: "civic", date: "2026-06-12", time: "08:10", min: 22, events: 5, notes: 0, title: "Drive Log" },
+];
+const UNASSIGNED = [
+  { id: "u1", date: "2026-10-06", time: "07:48", min: 18, notes: 0 },
+  { id: "u2", date: "2026-09-28", time: "13:05", min: 54, notes: 1 },
+];
+const FAILED = [
+  { id: "f1", kind: "log", name: "2026-09-30_1412.csv", up: "2026-10-01 08:12", err: "No StartTime line, so the drive cannot be placed in time." },
+];
+
+// --- synthetic Drive Log series (2 s rows, 41 min) ---
+const N = 1230, DT = 2, START = "17:22:04";
+const T = Array.from({ length: N }, (_, i) => i * DT);
+const rnd = ((s) => () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32))(7);
+const CH = {
+  rpm: { label: "Engine RPM", unit: "rpm", c: "--c1", dp: 0, v: [] },
+  vss: { label: "Vehicle speed", unit: "mph", c: "--c2", dp: 1, v: [] },
+  ect: { label: "Engine coolant temp 1", unit: "°F", c: "--c3", dp: 1, v: [] },
+  cmd: { label: "Commanded EGR A", unit: "%", c: "--c4", dp: 1, v: [] },
+  act: { label: "Actual EGR A", unit: "%", c: "--c5", dp: 1, v: [] },
+  load: { label: "Calculated load", unit: "%", c: "--c6", dp: 1, v: [] },
+  maf: { label: "Mass air flow A", unit: "lb/min", c: "--c1", dp: 2, v: [] },
+  vp: { label: "EGR valve position", unit: "%", c: "--c2", dp: 1, v: [] },
+  map: { label: "Intake MAP A", unit: "inHg", c: "--c3", dp: 1, v: [] },
+};
+{
+  let v = 0, a = 0;
+  for (let i = 0; i < N; i++) {
+    const t = T[i];
+    let tgt = t < 70 ? 0 : t < 700 ? Math.max(0, 28 + 24 * Math.sin(t / 47) + 8 * Math.sin(t / 11)) : t < 1600 ? 64 + 2 * Math.sin(t / 90) : t < 2300 ? Math.max(0, 24 + 20 * Math.sin(t / 39)) : 0;
+    if ((t > 300 && t < 330) || (t > 1900 && t < 1940)) tgt = 0;
+    const nv = v + (tgt - v) * 0.12 + (rnd() - .5) * 1.2; a = nv - v; v = Math.max(0, nv);
+    const rpm = v < 1 ? 690 + rnd() * 30 : 900 + v * 13 + a * 120 + rnd() * 40;
+    const ect = 68 + (192 - 68) * (1 - Math.exp(-t / 520)) + (rnd() - .5) * .6;
+    const load = v < 1 ? 18 + rnd() * 3 : Math.min(95, 28 + a * 30 + v * .3 + rnd() * 6);
+    const win = rpm > 600 && rpm < 2500 && ect > 158 && ect < 212;
+    const cmd = win ? 46 + 9 * Math.sin(t / 33) + rnd() * 2 : 3 + rnd() * 2;
+    CH.rpm.v.push(Math.round(rpm)); CH.vss.v.push(+v.toFixed(1)); CH.ect.v.push(+ect.toFixed(1)); CH.load.v.push(+load.toFixed(1));
+    CH.cmd.v.push(+cmd.toFixed(1)); CH.act.v.push(+(cmd * (win ? .38 : .9) + rnd() * 2).toFixed(1));
+    CH.vp.v.push(+(cmd * 1.05).toFixed(1)); CH.maf.v.push(+(2 + rpm / 400 + load / 30).toFixed(2)); CH.map.v.push(+(29 + load / 9).toFixed(1));
+  }
+}
+const FF = { rpm: 1680, vss: 63, ect: 187, cmd: 52, act: 19, load: 41 };   // Reference Report freeze frame
+const EVENTS = [
+  { cat: "generic", kind: "point", t0: 6, title: "Engine start", text: "rpm 0 → 712" },
+  { cat: "generic", kind: "span", t0: 6, t1: 70, title: "Idle", text: "64 s at 700 rpm" },
+  { cat: "pack", kind: "span", t0: 820, t1: 1010, title: "P0401 entry window", text: "Actual EGR A 38 % of commanded while inside the window. DOBDSM1202 test conditions.", pack: "6.7 P0401" },
+  { cat: "generic", kind: "span", t0: 760, t1: 1580, title: "Cruise", text: "13 min 40 s at 64 mph" },
+  { cat: "look", kind: "span", t0: 1180, t1: 1260, title: "Looks like the freeze frame", text: "P0401, 2026-10-02 report · 5 Channels inside ±10 %" },
+  { cat: "pack", kind: "span", t0: 1300, t1: 1460, title: "P0401 entry window", text: "Actual EGR A 41 % of commanded while inside the window.", pack: "6.7 P0401" },
+  { cat: "look", kind: "span", t0: 1440, t1: 1490, title: "Looks like the freeze frame", text: "P0401, 2026-10-02 report · 4 Channels inside ±10 %" },
+  { cat: "generic", kind: "point", t0: 1508, title: "Peak speed", text: "67.2 mph" },
+  { cat: "generic", kind: "point", t0: 1544, title: "Peak rpm", text: "2,014 rpm" },
+  { cat: "generic", kind: "point", t0: 2410, title: "Peak coolant temp", text: "191.6 °F" },
+];
+const OUTCOMES_NA = [{ title: "Regen", text: "not applicable, no DPF regen status in this log" }];
+const PINS = [{ t: 1352, text: "Felt a stumble here, light throttle uphill." }];
+const LOG_NOTES = [{ text: "Drive home. AC on, towing nothing. Fuel at ¼." }];
+
+// ===================================================================================
+// state
+// ===================================================================================
+const P = new URLSearchParams(location.search);
+const S = {
+  v: ["A", "B", "C"].includes(P.get("variant")) ? P.get("variant") : "A",
+  theme: P.get("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
+  route: P.get("screen") || "recent", stack: [], veh: "f250",
+  sheet: null, cur: 680, on: { rpm: true, vss: true, ect: true, cmd: true, act: true }, look: false, table: false,
+  cmp: "r0821", m6sort: "headroom", selUn: new Set(), packs: { f250: { p0401: true }, civic: {} }, scroll: 0,
+};
+const NAMES = { A: "Grouped", B: "Instrument", C: "Cards" };
+
+// ===================================================================================
+// helpers
+// ===================================================================================
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const day = (d, o = { weekday: "short", day: "numeric", month: "short" }) => new Date(d + "T12:00").toLocaleDateString("en-GB", o);
+const ago = (d) => { const n = Math.round((new Date("2026-10-11T12:00") - new Date(d + "T12:00")) / 864e5); return n === 0 ? "today" : n === 1 ? "yesterday" : n < 14 ? `${n} days ago` : n < 60 ? `${Math.round(n / 7)} weeks ago` : `${Math.round(n / 30)} months ago`; };
+const hms = (t) => { const [h, m, s] = START.split(":").map(Number); let x = h * 3600 + m * 60 + s + Math.round(t); return [x / 3600 | 0, (x % 3600) / 60 | 0, x % 60].map((n) => String(n).padStart(2, "0")).join(":"); };
+const mmss = (t) => `${(t / 60) | 0}:${String(Math.round(t % 60)).padStart(2, "0")}`;
+const veh = () => VEHICLES.find((x) => x.id === S.veh);
+const cssv = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const I = {
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+  wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15l4-6 4 8 4-11 3 7h3"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+  engine: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 6h6v2h-2v1h4l2 2h2V9h2v8h-2v-2h-2l-2 3H8l-2-2H4v2H2V10h2v2h2V9h2V8H7z"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>',
+  car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 15v-3l2-5h11l3 5h2v3z"/><circle cx="7" cy="16" r="2"/><circle cx="17" cy="16" r="2"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 2h6l1-2h5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>',
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/></svg>',
+};
+function toast(m) { const t = document.createElement("div"); t.className = "toast"; t.textContent = m; document.body.append(t); setTimeout(() => t.remove(), 2600); }
+
+// ===================================================================================
+// navigation
+// ===================================================================================
+const TABS = ["recent", "reports", "logs"];
+function go(route, push = true) { if (push && !TABS.includes(route)) S.stack.push(S.route); else if (TABS.includes(route)) S.stack = []; S.route = route; S.sheet = null; window.scrollTo(0, 0); draw(); }
+function back() { S.route = S.stack.pop() || "recent"; draw(); }
+function sheet(name, data) { S.sheet = name ? { name, ...(data || {}) } : null; drawSheet(); }
+const isTop = () => TABS.includes(S.route) || ["vehicles", "unassigned", "failed"].includes(S.route);
+
+// ===================================================================================
+// shell
+// ===================================================================================
+function draw() {
+  document.documentElement.dataset.v = S.v; document.documentElement.dataset.theme = S.theme;
+  const detail = !isTop();
+  const r = S.route;
+  const titles = { recent: "Recent", reports: "Diagnostic Reports", logs: "Drive Logs", vehicles: "Vehicles", unassigned: "Unassigned", failed: "Failed Uploads", log: "Drive Log", report: "Diagnostic Report", vsettings: "Vehicle settings", ulog: "Unassigned Drive Log" };
+  const badge = UNASSIGNED.length + FAILED.length;
+  const vehicleScoped = ["recent", "reports", "logs"].includes(r);
+  const left = S.stack.length
+    ? `<button class="iconbtn" data-act="back" aria-label="Back">${I.back}<span class="sm">${{ recent: "Recent", reports: "Reports", logs: "Logs", vehicles: "Vehicles", unassigned: "Unassigned", log: "Drive Log", report: "Report" }[S.stack[S.stack.length - 1]] || "Back"}</span></button>`
+    : `<button class="vswitch" data-act="switcher" ${vehicleScoped ? "" : "hidden"}><span>${esc(veh().label)}</span>${I.down}</button>`;
+  const title = S.stack.length || !vehicleScoped ? titles[r] : (S.v === "A" ? "" : "");
+  const nav = (k, ic, l) => `<button role="tab" aria-selected="${S.route === k}" data-go="${k}">${ic}${l}</button>`;
+  $("#app").innerHTML = `
+    <header class="appbar">
+      ${left}
+      <nav class="desknav">${nav("recent", I.clock, "Recent")}${nav("reports", I.doc, "Reports")}${nav("logs", I.wave, "Drive Logs")}<button class="add" data-act="add">${I.plus}Add</button></nav>
+      <div class="ttl">${S.stack.length ? esc(titles[r]) : (vehicleScoped ? "" : esc(titles[r]))}</div>
+      ${r === "log" || r === "ulog" || r === "report" ? `<button class="iconbtn" data-act="more" aria-label="More">${I.more}</button>` : ""}
+      <button class="iconbtn" data-act="menu" aria-label="Menu">${I.menu}${badge ? '<i class="dot"></i>' : ""}</button>
+    </header>
+    <main class="${detail ? "detail" : ""}">${SCREENS[r]()}</main>
+    ${detail ? "" : `<nav class="tabbar" role="tablist">${nav("recent", I.clock, "Recent")}${nav("reports", I.doc, "Reports")}${nav("logs", I.wave, "Drive Logs")}<button class="add" data-act="add"><span class="plus">${I.plus}</span>Add</button></nav>`}
+    ${r === "log" || r === "ulog" ? notebar() : ""}`;
+  document.body.classList.toggle("has-notebar", r === "log" || r === "ulog");
+  if (r === "log" || r === "ulog") mountChart();
+  drawSheet(); drawProto();
+  const u = new URL(location); u.searchParams.set("variant", S.v); u.searchParams.set("screen", S.route); history.replaceState(null, "", u);
+}
+addEventListener("scroll", () => $(".appbar")?.classList.toggle("scrolled", scrollY > 4), { passive: true });
+
+// ===================================================================================
+// list building blocks, styled per variant
+// ===================================================================================
+function itemCells(items) {
+  if (!items.length) return `<div class="empty">Nothing here yet.</div>`;
+  if (S.v === "B") return `<div class="rows">${items.map((x) => `
+    <button class="row" data-go="${x.route}"><span class="k ${x.k}">${x.k === "r" ? "REPORT" : "LOG"}</span><span class="t">${esc(x.title)}</span><span class="d">${esc(x.right)}</span>
+    <span class="m">${x.meta}</span></button>`).join("")}</div>`;
+  if (S.v === "C") return `<div class="fcards">${items.map((x) => `
+    <button class="fcard" data-go="${x.route}"><span class="when">${esc(x.when)}</span>${x.k === "l" ? spark() : `<span class="spark" style="display:grid;place-items:center"><span class="kind r">${I.doc}</span></span>`}
+    <b>${esc(x.title)}</b><span class="meta">${x.meta}</span></button>`).join("")}</div>`;
+  return `<div class="group list">${items.map((x) => `
+    <button class="cell" data-go="${x.route}"><span class="kind ${x.k}">${x.k === "r" ? I.doc : I.wave}</span>
+    <span class="tx"><b>${esc(x.title)}</b><small>${esc(x.when)}</small><span style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${x.meta}</span></span>${I.chev}</button>`).join("")}</div>`;
+}
+function spark() {
+  const v = CH.vss.v, n = 60, step = Math.floor(v.length / n);
+  const pts = Array.from({ length: n }, (_, i) => `${(i / (n - 1)) * 96},${38 - (v[i * step] / 70) * 34}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 96 40"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+}
+const logItem = (l) => ({ k: "l", route: "log", title: S.v === "B" ? `${day(l.date, { day: "2-digit", month: "short" })} ${l.time}` : `${l.time} drive · ${l.min} min`, when: `${day(l.date)} · ${ago(l.date)}`, right: `${l.min} min`,
+  meta: [l.events ? `<span class="badge">${l.events} Events</span>` : "", l.notes ? `<span class="badge acc">${l.notes} Note${l.notes > 1 ? "s" : ""}</span>` : "", l.warn ? `<span class="badge warn">${l.warn}</span>` : ""].join("") });
+const repItem = (r) => ({ k: "r", route: "report", title: S.v === "B" ? `${day(r.date, { day: "2-digit", month: "short" })} ${r.time}` : `Diagnostic Report`, when: `${day(r.date)} · ${r.time} · ${ago(r.date)}`, right: r.mil ? "MIL ON" : "MIL off",
+  meta: [r.mil ? `<span class="badge bad">MIL on</span>` : `<span class="badge ok">MIL off</span>`, r.stored ? `<span class="badge bad">${r.stored} stored</span>` : "", r.pending ? `<span class="badge warn">${r.pending} pending</span>` : "", r.incomplete ? `<span class="badge">${r.incomplete} monitors incomplete</span>` : `<span class="badge ok">monitors ready</span>`, r.notes ? `<span class="badge acc">${r.notes} Note</span>` : ""].join("") });
+
+// ===================================================================================
+// screens
+// ===================================================================================
+const SCREENS = {
+  recent() {
+    const v = veh(), r = REPORTS.find((x) => x.veh === v.id);
+    const feed = [...REPORTS.filter((x) => x.veh === v.id).map((x) => ({ ...repItem(x), d: x.date + x.time })), ...LOGS.filter((x) => x.veh === v.id).map((x) => ({ ...logItem(x), d: x.date + x.time }))].sort((a, b) => b.d.localeCompare(a.d)).slice(0, 7);
+    let status;
+    if (!r) status = `<div class="status"><span class="lamp" style="background:var(--surface2);color:var(--muted)">${I.doc}</span><div><b>No diagnostic report yet</b><p>Add an OBDLink Diagnostic Report to see codes and monitors.</p></div></div>`;
+    else if (S.v === "B") status = `<button class="cluster" data-go="report">
+        <div><div class="k">MIL</div><div class="lampv" style="${r.mil ? "" : "color:var(--muted);filter:none"}">${I.engine}${r.mil ? "ON" : "OFF"}</div></div>
+        <div><div class="k">Stored</div><div class="v ${r.stored ? "bad" : ""}">${r.stored}</div></div>
+        <div><div class="k">Pending</div><div class="v ${r.pending ? "warn" : ""}">${r.pending}</div></div>
+        <div><div class="k">Monitors</div><div class="v ${r.incomplete ? "warn" : ""}">${r.monitors - r.incomplete}<span class="muted" style="font-size:15px">/${r.monitors}</span></div></div>
+        <div class="foot"><span>P0401 STORED · PERMANENT</span><span>${day(r.date, { day: "2-digit", month: "short" })} · ${ago(r.date).toUpperCase()}</span></div></button>`;
+    else if (S.v === "C") status = `<button class="hero" data-go="report" style="${r.mil ? "" : "background:var(--ok)"}">${I.engine.replace("<svg", '<svg class="bg"')}
+        <div class="eyebrow">Latest report · ${day(r.date, { day: "numeric", month: "short" })} · ${ago(r.date)}</div>
+        <div class="big">${r.mil ? "Check engine light on" : "All clear"}</div><div class="sub">P0401 · EGR flow insufficient · permanent</div>
+        <div class="stats"><div><b>${r.stored}</b><span>stored</span></div><div><b>${r.pending}</b><span>pending</span></div><div><b>${r.incomplete}</b><span>monitors incomplete</span></div></div></button>`;
+    else status = `<button class="status" data-go="report"><span class="lamp">${I.engine}</span><div style="flex:1"><b>${r.mil ? "MIL on" : "MIL off"} · P0401</b><p>Latest report ${day(r.date)}, ${ago(r.date)}</p>
+        <div class="facts"><span class="badge bad">${r.stored} stored</span><span class="badge warn">${r.pending} pending</span><span class="badge">${r.incomplete} of ${r.monitors} monitors incomplete</span></div></div>${I.chev}</button>`;
+    return `<div class="wrap">${S.v === "A" ? `<h1 class="big">Recent</h1>` : S.v === "C" ? `<h1 class="big">Hello, ${esc(v.label.split(" ").slice(1).join(" "))}</h1>` : ""}
+      ${status}<div class="sec">Recent uploads<span class="r">${v.reports} reports · ${v.logs} drive logs</span></div>${itemCells(feed)}</div>`;
+  },
+  reports() { return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Reports</h1>` : `<div class="sec">Diagnostic Reports · ${esc(veh().label)}</div>`}${itemCells(REPORTS.filter((x) => x.veh === S.veh).map(repItem))}</div>`; },
+  logs() {
+    const ls = LOGS.filter((x) => x.veh === S.veh), g = {};
+    for (const l of ls) (g[l.date.slice(0, 7)] ||= []).push(l);
+    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Drive Logs</h1>` : ""}${Object.entries(g).map(([m, xs]) => `<div class="sec">${day(m + "-01", { month: "long", year: "numeric" })}</div>${itemCells(xs.map(logItem))}`).join("")}</div>`;
+  },
+  log: () => logViewer(false),
+  ulog: () => logViewer(true),
+  report: reportViewer,
+  vehicles() {
+    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Vehicles</h1>` : ""}<div class="sec">${VEHICLES.length} vehicles · added from Diagnostic Reports</div>
+      ${VEHICLES.map((v) => `<div class="card"><h3>${S.v === "B" ? "" : `<span class="kind l">${I.car}</span>`}<span>${esc(v.label)}${v.id === S.veh ? ` <span class="badge acc">Current</span>` : ""}<br><small class="muted num" style="font-weight:400">${v.vin}</small></span></h3>
+        <div class="kv"><span>Profile</span><span class="v">${esc(v.profile)}</span><span>Rule Packs</span><span class="v">${Object.keys(S.packs[v.id]).filter((k) => S.packs[v.id][k]).map((k) => PACKS.find((p) => p.id === k).name).join(", ") || "none"}</span>
+        <span>Reports · Drive Logs</span><span class="v">${v.reports} · ${v.logs}</span><span>Latest report</span><span class="v">${day(v.latest)}</span></div>
+        <div class="btnrow" style="margin-top:12px">${v.id === S.veh ? "" : `<button class="btn primary" data-act="switchto" data-id="${v.id}">Switch to</button>`}<button class="btn" data-go="vsettings" data-id="${v.id}">Settings</button><button class="btn" data-act="export" data-scope="vehicle">Export…</button><button class="btn danger" data-act="delveh" data-id="${v.id}">Delete…</button></div></div>`).join("")}
+      <p class="muted sm" style="margin:4px var(--gut)">A Vehicle is added when a Diagnostic Report with a new VIN is uploaded.</p></div>`;
+  },
+  vsettings() {
+    const v = VEHICLES.find((x) => x.id === (S.vid || S.veh));
+    return `<div class="wrap"><div class="vhead"><h2>${esc(v.label)}</h2><div class="meta num">${v.vin}</div></div>
+      <div class="sec">Vehicle Profile</div><div class="group">${PROFILES.map((p) => `<label class="cell"><span class="tx"><b>${p}</b><small>${p === "Generic" ? "Standard PIDs only" : "Aliases, EGR decode fix, default chart preset"}</small></span><input type="radio" class="radio" name="prof" ${p === v.profile ? "checked" : ""}></label>`).join("")}</div>
+      <div class="sec">Rule Packs</div><div class="group">${PACKS.map((p) => `<label class="cell"><span class="tx"><b>${p.name}</b><small>${p.desc}</small></span><input type="checkbox" class="switch" data-act="pack" data-id="${p.id}" ${S.packs[v.id][p.id] ? "checked" : ""}></label>`).join("")}</div>
+      <p class="muted sm" style="margin:8px var(--gut)">Changing the Profile or a Rule Pack regenerates this Vehicle's Events. Notes are kept.</p>
+      <div class="sec">Danger zone</div><div class="group"><button class="cell" data-act="delveh" data-id="${v.id}" style="color:var(--bad)"><span class="tx"><b>Delete vehicle…</b></span></button></div></div>`;
+  },
+  unassigned() {
+    const sel = S.selUn;
+    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Unassigned</h1>` : ""}<p class="muted sm" style="margin:0 var(--gut) 8px">Drive Logs that belong to no Vehicle. They get generic Events only.</p>
+      <div class="group">${UNASSIGNED.map((u) => `<label class="cell"><input type="checkbox" class="check" data-act="selun" data-id="${u.id}" ${sel.has(u.id) ? "checked" : ""}>
+        <span class="tx"><b>${day(u.date)} · ${u.time}</b><small>${u.min} min${u.notes ? ` · ${u.notes} Note` : ""}</small></span><button class="btn" data-go="ulog" style="padding:5px 10px;min-height:32px">View</button></label>`).join("")}</div>
+      <div class="btnrow" style="margin:12px var(--gut)"><button class="btn primary" ${sel.size ? "" : "disabled style=opacity:.5"} data-act="assign">Assign to…</button><button class="btn" ${sel.size ? "" : "disabled style=opacity:.5"} data-act="export" data-scope="unassigned">Export</button><button class="btn danger" ${sel.size ? "" : "disabled style=opacity:.5"} data-act="toast" data-m="Delete ${sel.size} Drive Log(s)? (confirm step)">Delete</button></div></div>`;
+  },
+  failed() {
+    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Failed Uploads</h1>` : ""}<p class="muted sm" style="margin:0 var(--gut) 8px">These files were kept but could not be read. They are retried on every re-parse.</p>
+      ${FAILED.map((f) => `<div class="card"><h3><span class="kind x">${I.warn}</span><span style="min-width:0;overflow-wrap:anywhere">${esc(f.name)}<br><small class="muted" style="font-weight:400">Drive Log · uploaded ${f.up}</small></span></h3>
+        <p class="sm" style="margin:0 0 12px;color:var(--bad)">${esc(f.err)}</p><div class="btnrow"><button class="btn" data-act="toast" data-m="Downloads the Original">Download original</button><button class="btn danger" data-act="toast" data-m="Delete (confirm step)">Delete</button></div></div>`).join("")}</div>`;
+  },
+};
+
+// ===================================================================================
+// Drive Log viewer
+// ===================================================================================
+const PANELS = [["rpm", "vss"], ["ect"], ["cmd", "act"], ["load"], ["maf"], ["vp"], ["map"]];
+function logViewer(un) {
+  const evs = EVENTS.filter((e) => !un || e.cat === "generic").filter((e) => e.cat !== "look" || S.look);
+  const notes = un ? [] : PINS;
+  const allRows = [...evs.map((e) => ({ ...e, t: e.t0 })), ...notes.map((n) => ({ cat: "note", kind: "point", t0: n.t, t: n.t, title: "Note", text: n.text }))].sort((a, b) => a.t - b.t);
+  const evCard = `<div class="card" style="padding:12px 0 6px"><h3 style="padding:0 var(--gut)">Events <span class="badge">${evs.length}</span>${un ? "" : `<label class="r" style="display:flex;align-items:center;gap:8px;font-size:12px">Look-alikes<input type="checkbox" class="switch" data-act="look" ${S.look ? "checked" : ""} style="transform:scale(.8)"></label>`}</h3>
+    <ul class="evs">${allRows.map((e) => `<li><button class="ev" data-act="${e.cat === "note" ? "opennote" : "seek"}" data-j="0" data-t="${e.t}"><span class="mk ${e.cat === "note" ? "note" : e.kind === "point" ? "point" : e.cat}"></span>
+      <span>${e.pack ? `<span class="src">${esc(e.pack)}</span>` : ""}<b>${esc(e.title)}</b><small>${esc(e.text)}</small></span><span class="tm">${hms(e.t0)}${e.t1 ? `<br>${mmss(e.t1 - e.t0)}` : ""}</span></button></li>`).join("")}
+    ${(un ? [{ title: "Look-alikes", text: "skipped, no Reference Report" }, { title: "6.7 P0401", text: "not run, Unassigned logs get no Rule Packs" }, ...OUTCOMES_NA] : OUTCOMES_NA).map((o) => `<li class="ev na"><span class="mk"></span><span><small>${esc(o.title)}: ${esc(o.text)}</small></span><span></span></li>`).join("")}</ul></div>`;
+  const notesCard = `<div class="card"><h3>Notes <span class="badge">${(un ? 0 : LOG_NOTES.length)}</span><button class="r btn" data-act="note" data-whole="1" style="padding:4px 10px;min-height:30px">Add</button></h3>
+    ${(un ? [] : LOG_NOTES).map((n) => `<p class="note-text sm" style="margin:0 0 6px">${esc(n.text)}</p>`).join("") || `<p class="muted sm" style="margin:0">No Notes on the whole drive.</p>`}</div>`;
+  const ch = Object.entries(CH);
+  return `<div class="wrap wide"><div class="vhead"><h2>${S.v === "B" ? "SAT 04 OCT · 17:22" : "Sat 4 Oct, 17:22"}</h2>
+      <div class="meta"><span>${un ? "Unassigned" : esc(veh().label)}</span><span>41 min · 1,230 rows</span>${un ? `<button class="refchip" data-act="assign">Assign to a Vehicle…</button>` : `<button class="refchip" data-act="ref"><i></i>Reference: 2 Oct report</button>`}</div></div>
+    ${un ? "" : `<div class="notice">${I.warn.replace("<svg", '<svg style="width:16px;height:16px;flex:none;margin-top:1px"')}<span>EGR position rescaled from the pre-October decode.</span></div>`}
+    <div class="lv"><div>
+      <div class="chpick">${ch.map(([k, c]) => `<button aria-pressed="${!!S.on[k]}" data-act="ch" data-k="${k}" style="--ch:var(${c.c})"><i></i>${esc(c.label)}</button>`).join("")}<button class="more" data-act="toast" data-m="Channel picker sheet: all Channels, search, Profile preset">All Channels…</button></div>
+      <div class="readout" id="readout"></div>
+      <div class="chartbox" id="chartbox"></div>
+      <div class="legend"><span><i class="sw gen"></i>Event</span><span><i class="sw pack"></i>Rule Pack</span>${S.look ? `<span><i class="sw look"></i>Look-alike</span>` : ""}${un ? "" : `<span><i class="sw ff"></i>Freeze frame</span><span><i class="sw pin"></i>Note</span>`}</div>
+      <div class="card" style="padding:10px var(--gut)"><h3 style="margin:0">Data table<button class="r btn" data-act="table" style="padding:4px 10px;min-height:30px">${S.table ? "Hide" : "Show"}</button></h3>${S.table ? `<div class="tablewrap" id="dtable" style="margin-top:8px"></div>` : ""}</div>
+    </div><div class="side">${evCard}${notesCard}</div></div></div>`;
+}
+function notebar() {
+  const L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>';
+  return `<div class="notebar"><button class="step" data-d="-1" aria-label="Back one row (hold to repeat)">${L}<small>row</small></button>
+    <button class="main" id="nbMain" data-act="note"></button><button class="step" data-d="1" aria-label="Forward one row (hold to repeat)">${L.replace("M15 5l-7 7 7 7", "M9 5l7 7-7 7")}<small>row</small></button></div>`;
+}
+function mountChart() {
+  const box = $("#chartbox"); if (!box) return;
+  const un = S.route === "ulog";
+  const W = 1000, panels = PANELS.map((p) => p.filter((k) => S.on[k])).filter((p) => p.length);
+  const tmax = T[N - 1], X = (t) => (t / tmax) * W;
+  const evs = EVENTS.filter((e) => !un || e.cat === "generic").filter((e) => e.cat !== "look" || S.look);
+  const ov = CH.vss.v, ovpts = ov.map((v, i) => `${X(T[i]).toFixed(1)},${(30 - (v / 70) * 28).toFixed(1)}`).join(" ");
+  let html = `<div class="overview"><svg viewBox="0 0 ${W} 32" preserveAspectRatio="none"><polygon points="0,32 ${ovpts} ${W},32" fill="var(--surface2)"/><polyline points="${ovpts}" fill="none" stroke="var(--muted)" stroke-width="1" vector-effect="non-scaling-stroke"/>
+    <rect x="0" y="0" width="${W}" height="32" fill="none" stroke="var(--accent)" stroke-width="1.5" vector-effect="non-scaling-stroke" rx="3"/></svg></div>`;
+  html += `<svg width="0" height="0" style="position:absolute"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="6" fill="var(--ev-pack)" opacity=".45"/></pattern></defs></svg>`;
+  for (const p of panels) {
+    const H = 100;
+    let lo = Infinity, hi = -Infinity;
+    for (const k of p) for (const v of CH[k].v) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    if (!un) for (const k of p) if (FF[k] != null) { lo = Math.min(lo, FF[k]); hi = Math.max(hi, FF[k]); }
+    const pad = (hi - lo) * .1 || 1; lo -= pad; hi += pad;
+    const Y = (v) => (H - 4 - ((v - lo) / (hi - lo)) * (H - 18)).toFixed(1);
+    let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
+    for (const g of [.25, .5, .75]) s += `<line x1="0" x2="${W}" y1="${(H * g).toFixed(1)}" y2="${(H * g).toFixed(1)}" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+    for (const e of evs) if (e.kind === "span") {
+      const x = X(e.t0), w = X(e.t1) - x;
+      if (e.cat === "pack") s += `<rect x="${x}" y="0" width="${w}" height="${H}" fill="url(#hatch)"/><rect x="${x}" y="0" width="${w}" height="${H}" fill="none" stroke="var(--ev-pack)" stroke-width="1" vector-effect="non-scaling-stroke" opacity=".6"/>`;
+      else if (e.cat === "look") s += `<rect x="${x}" y="1" width="${w}" height="${H - 2}" fill="var(--ev-look)" fill-opacity=".1" stroke="var(--ev-look)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+      else s += `<rect x="${x}" y="0" width="${w}" height="${H}" fill="var(--ev-generic)"/>`;
+    }
+    if (!un) for (const k of p) if (FF[k] != null) s += `<line x1="0" x2="${W}" y1="${Y(FF[k])}" y2="${Y(FF[k])}" stroke="var(${CH[k].c})" stroke-width="1.2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke" opacity=".85"/>`;
+    for (const k of p) {
+      const step = Math.max(1, Math.floor(N / 700));
+      const pts = []; for (let i = 0; i < N; i += step) pts.push(`${X(T[i]).toFixed(1)},${Y(CH[k].v[i])}`);
+      s += `<polyline points="${pts.join(" ")}" fill="none" stroke="var(${CH[k].c})" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    }
+    for (const e of evs) if (e.kind === "point") s += `<line x1="${X(e.t0)}" x2="${X(e.t0)}" y1="0" y2="${H}" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 3" vector-effect="non-scaling-stroke" opacity=".6"/>`;
+    if (!un) for (const n of PINS) s += `<line x1="${X(n.t)}" x2="${X(n.t)}" y1="0" y2="${H}" stroke="var(--note)" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+    s += `<line class="cursor" x1="0" x2="0" y1="0" y2="${H}" stroke="var(--ink)" stroke-width="1.2" vector-effect="non-scaling-stroke"/></svg>`;
+    html += `<div class="panel" data-lo="${lo}" data-hi="${hi}"><div class="dots">${p.map((k) => `<i data-k="${k}" style="--c:var(${CH[k].c})"></i>`).join("")}</div><div class="lbl">${p.map((k) => `<span style="--c:var(${CH[k].c})">${esc(CH[k].label)} (${CH[k].unit})</span>`).join("")}</div>${s}</div>`;
+  }
+  if (!un) html += `<div class="pins">${PINS.map((n, j) => `<button class="pin" data-act="opennote" data-j="${j}" aria-label="Open Note at ${hms(n.t)}" style="left:${(X(n.t) / W) * 100}%"></button>`).join("")}</div>`;
+  html += `<div class="xaxis">${[0, .25, .5, .75, 1].map((f) => `<span>${hms(f * tmax).slice(0, 5)}</span>`).join("")}</div>`;
+  box.innerHTML = html;
+  const seek = (ev) => { const r = box.getBoundingClientRect(); const f = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)); S.cur = Math.round(f * (N - 1)); updateCursor(); };
+  let lock = null, sx = 0, sy = 0;
+  box.onpointerdown = (e) => { if (e.target.closest(".pin")) { lock = "pin"; return; } lock = e.pointerType === "mouse" ? "x" : null; sx = e.clientX; sy = e.clientY; if (lock) { seek(e); box.setPointerCapture(e.pointerId); } };
+  box.onpointermove = (e) => { if (lock === null && e.pointerType !== "mouse") { const dx = Math.abs(e.clientX - sx), dy = Math.abs(e.clientY - sy); if (dx + dy > 6) lock = dx > dy ? "x" : "y"; } if (lock === "x" && e.buttons) seek(e); };
+  box.onpointerup = (e) => { if (lock === null) seek(e); lock = null; };
+  // ‹ › step one row; hold to repeat
+  document.querySelectorAll(".notebar .step").forEach((b) => {
+    let tm; const stop = () => clearTimeout(tm);
+    const tick = (first) => { S.cur = Math.min(N - 1, Math.max(0, S.cur + +b.dataset.d)); updateCursor(); tm = setTimeout(() => tick(false), first ? 420 : 70); };
+    b.onpointerdown = (e) => { e.preventDefault(); tick(true); }; b.onpointerup = b.onpointerleave = b.onpointercancel = stop;
+    b.oncontextmenu = (e) => e.preventDefault();
+  });
+  box.addEventListener("touchmove", (e) => { if (lock === "x") e.preventDefault(); }, { passive: false });
+  updateCursor();
+}
+function updateCursor() {
+  const i = S.cur, t = T[i], f = t / T[N - 1] * 1000;
+  document.querySelectorAll("#chartbox .cursor").forEach((l) => { l.setAttribute("x1", f); l.setAttribute("x2", f); });
+  const un = S.route === "ulog";
+  const inWin = !un && EVENTS.some((e) => e.cat === "pack" && t >= e.t0 && t <= e.t1);
+  const pinJ = un ? -1 : PINS.findIndex((n) => Math.abs(n.t - t) <= DT);   // cursor on a pinned row (snaps to the nearest row)
+  const ro = $("#readout");
+  if (ro) ro.innerHTML = `<div class="time">${hms(t)}<small>+${mmss(t)}</small><small>${inWin ? '<span class="inwin">● In window</span>' : pinJ >= 0 ? '<span class="notehit">● Note</span>' : "&nbsp;"}</small></div>
+    <div class="vals">${Object.entries(CH).filter(([k]) => S.on[k]).map(([k, c]) => `<span><i style="background:var(${c.c})"></i><b>${c.v[i].toFixed(c.dp)}</b><span class="u">${c.unit}</span></span>`).join("")}</div>`;
+  document.querySelectorAll("#chartbox .panel").forEach((p) => { const lo = +p.dataset.lo, hi = +p.dataset.hi;
+    p.querySelectorAll(".dots i").forEach((d) => { const y = 100 - 4 - ((CH[d.dataset.k].v[i] - lo) / (hi - lo)) * 82; d.style.left = f / 10 + "%"; d.style.top = y + "%"; }); });
+  document.querySelectorAll("#chartbox .pin").forEach((p) => p.classList.toggle("on", +p.dataset.j === pinJ));
+  const nb = $("#nbMain");
+  if (nb) { nb.classList.toggle("open", pinJ >= 0); nb.dataset.act = pinJ >= 0 ? "opennote" : "note"; nb.dataset.j = pinJ;
+    nb.innerHTML = pinJ >= 0 ? `Open Note <span>${hms(PINS[pinJ].t)}</span>` : `Note here <span>${hms(t)}</span>`; }
+  const dt = $("#dtable");
+  if (dt) { const ks = Object.keys(CH).filter((k) => S.on[k]); const a = Math.max(0, i - 4), b = Math.min(N, i + 5);
+    dt.innerHTML = `<table class="dt"><tr><th>Time</th>${ks.map((k) => `<th>${esc(CH[k].label.split(" ").slice(0, 2).join(" "))}</th>`).join("")}</tr>${Array.from({ length: b - a }, (_, j) => a + j).map((r) => `<tr class="${r === i ? "cur" : ""}"><td>${hms(T[r])}</td>${ks.map((k) => `<td>${CH[k].v[r]}</td>`).join("")}</tr>`).join("")}</table>`; }
+}
+
+// ===================================================================================
+// Diagnostic Report viewer
+// ===================================================================================
+const MON = [["Misfire", "c", "c"], ["Fuel system", "c", "c"], ["Comprehensive components", "c", "c"], ["NMHC catalyst", "c", "i"], ["NOx/SCR aftertreatment", "i", "i"], ["Boost pressure", "c", "c"], ["Exhaust gas sensor", "c", "c"], ["PM filter", "i", "c"], ["EGR/VVT system", "c", "c"], ["Evap system", "n", "n"], ["Secondary air", "n", "n"]];
+const M6 = [
+  { name: "EGR flow: low-flow test", tid: "$31 / $85", v: 41.2, lo: 40, hi: 160, prev: 44.8, unit: "%" },
+  { name: "NOx catalyst efficiency", tid: "$65 / $8B", v: 72.4, lo: 60, hi: 100, prev: 70.1, unit: "%" },
+  { name: "DPF differential pressure", tid: "$8B / $A1", v: 3.1, lo: 0, hi: 8.0, prev: 2.6, unit: "kPa" },
+  { name: "Boost pressure control", tid: "$81 / $82", v: 0.42, lo: 0, hi: 1.2, prev: 0.40, unit: "" },
+  { name: "Exhaust gas sensor B1 S1", tid: "$01 / $86", v: 512, lo: 300, hi: 900, prev: 498, unit: "mV" },
+];
+const hr = (m) => Math.min(m.v - m.lo, m.hi - m.v) / (m.hi - m.lo) * 100;
+function reportViewer() {
+  const cmp = S.cmp, st = { c: ["Complete", "ok"], i: ["Incomplete", "warn"], n: ["Not supported", ""] };
+  const m6 = [...M6].sort((a, b) => S.m6sort === "headroom" ? hr(a) - hr(b) : 0);
+  const sec = (title, right, body, open = true) => `<details class="rsec" ${open ? "open" : ""}><summary>${title}<span class="r">${right}</span></summary><div class="rbody">${body}</div></details>`;
+  return `<div class="wrap"><div class="vhead"><h2>${S.v === "B" ? "THU 02 OCT · 21:32" : "Thu 2 Oct, 21:32"}</h2><div class="meta"><span>${esc(veh().label)}</span><span>OBDLink Diagnostic Report</span></div></div>
+    <div class="cmpbar"><span class="muted">Compared with</span><select data-act="cmp"><option value="r0821" ${cmp === "r0821" ? "selected" : ""}>Previous · 21 Aug</option><option value="r0610" ${cmp === "r0610" ? "selected" : ""}>10 Jun</option><option value="" ${cmp ? "" : "selected"}>No comparison</option></select></div>
+    <div class="ovgrid"><div class="ov"><div class="k">MIL</div><div class="v bad">ON</div><div class="d">${cmp ? "was ON" : "&nbsp;"}</div></div>
+      <div class="ov"><div class="k">Codes</div><div class="v bad">2</div><div class="d">${cmp ? '<span class="delta up">+1 pending</span>' : "1 stored · 1 pending"}</div></div>
+      <div class="ov"><div class="k">Monitors</div><div class="v warn">9/11</div><div class="d">${cmp ? '<span class="delta down">1 more complete</span>' : "2 incomplete"}</div></div>
+      <div class="ov"><div class="k">Since clear</div><div class="v">256<span class="muted" style="font-size:13px"> mi</span></div><div class="d">31 warm-ups</div></div></div>
+    <div class="rgrid">
+    ${sec("Trouble codes", `<span class="badge bad">2</span>`, `
+      <div class="dtc" style="border-top:0"><span class="code">P0401</span><span><b>EGR flow insufficient detected</b></span><span class="tags"><span class="badge bad">Stored</span><span class="badge bad">Permanent</span>${cmp ? '<span class="badge">Also in 21 Aug</span>' : ""}</span></div>
+      <div class="dtc"><span class="code pend">P0471</span><span><b>Exhaust pressure sensor A range/performance</b></span><span class="tags"><span class="badge warn">Pending</span>${cmp ? '<span class="badge acc">New</span>' : ""}</span></div>`)}
+    ${sec("Readiness monitors", `<span class="badge warn">2 incomplete</span>`, `<div class="mon">${MON.map(([n, now, was]) => `<span>${n}${cmp && now !== was ? ` <span class="badge acc">was ${st[was][0].toLowerCase()}</span>` : ""}</span><span class="st"><span class="badge ${st[now][1]}">${st[now][0]}</span></span>`).join("")}</div>`)}
+    ${sec("Mode $06 on-board monitoring", `<span class="seg"><button aria-pressed="${S.m6sort === "headroom"}" data-act="m6" data-s="headroom">Least headroom</button><button aria-pressed="${S.m6sort !== "headroom"}" data-act="m6" data-s="report">Report order</button></span>`,
+      m6.map((m, i) => { const h = hr(m), f = (m.v - m.lo) / (m.hi - m.lo) * 100, col = h < 5 ? "var(--bad)" : h < 20 ? "var(--warn)" : "var(--ok)";
+        return `<div class="m6" ${i ? "" : 'style="border-top:0"'}><span><b>${m.name}</b><br><span class="muted xs num">${m.tid}</span></span><span class="v"><b>${m.v}</b> ${m.unit}<br><span class="xs" style="color:${col}">${h.toFixed(0)} % headroom</span>${cmp ? `<br><span class="xs muted">was ${m.prev}</span>` : ""}</span>
+          <span class="bar"><b style="width:${f}%;background:${col};opacity:.35"></b><i style="left:calc(${f}% - 1px)"></i></span><span class="lim"><span>min ${m.lo}</span><span>max ${m.hi}</span></span></div>`; }).join(""))}
+    ${sec("Mode $02 freeze frame", `<span class="muted xs">P0401</span>`, `<div class="kv">${[["Engine RPM", "1,680 rpm"], ["Vehicle speed", "63 mph"], ["Engine coolant temp", "187 °F"], ["Commanded EGR A", "52 %"], ["Actual EGR A", "19 %"], ["Calculated load", "41 %"], ["Fuel system status", "CL"]].map(([k, v]) => `<span>${k}</span><span class="v">${v}</span>`).join("")}</div>`, false)}
+    ${sec("Mode $01 live data", `<span class="muted xs">24 PIDs</span>`, `<div class="kv">${[["Engine RPM", "702 rpm"], ["Engine coolant temp", "176 °F"], ["Intake air temp", "64 °F"], ["Barometric pressure", "29.3 inHg"], ["Control module voltage", "14.2 V"]].map(([k, v]) => `<span>${k}</span><span class="v">${v}</span>`).join("")}<span class="muted">…19 more</span><span></span></div>`, false)}
+    ${sec("In-use performance (IUMPR)", `<span class="muted xs">8 monitors</span>`, `<div class="kv">${[["EGR/VVT", "142 / 160 · 0.89"], ["NMHC catalyst", "98 / 160 · 0.61"], ["NOx/SCR", "61 / 160 · 0.38"], ["PM filter", "133 / 160 · 0.83"]].map(([k, v]) => `<span>${k}</span><span class="v">${v}</span>`).join("")}</div>`, false)}
+    ${sec("Vehicle info", "", `<div class="kv">${[["VIN", veh().vin], ["Calibration ID", "FFXX-14C204-XX"], ["CVN", "8A3F 21C0"], ["Protocol", "ISO 15765-4 CAN (11/500)"]].map(([k, v]) => `<span>${k}</span><span class="v">${v}</span>`).join("")}</div>`, false)}
+    ${sec("Notes", `<span class="badge">1</span>`, `<p class="note-text sm" style="margin:0 0 10px">Scanned after the 20:42 drive, engine warm.</p><button class="btn" data-act="note" data-whole="1">Add Note</button>`)}
+    </div></div>`;
+}
+
+// ===================================================================================
+// sheets
+// ===================================================================================
+function drawSheet() {
+  const L = $("#layer"), s = S.sheet;
+  if (!s) { L.innerHTML = ""; return; }
+  const head = (t, right = "Close") => `<div class="grab"></div><div class="sh"><h2>${t}</h2><button data-act="close">${right}</button></div>`;
+  const V = veh();
+  const body = {
+    switcher: () => `${head("Current Vehicle", "Done")}<div class="group">${VEHICLES.map((v) => `<label class="cell" data-act="switchto" data-id="${v.id}"><span class="kind l">${I.car}</span><span class="tx"><b>${esc(v.label)}</b><small class="num">…${v.vin.slice(-4)} · ${v.reports} reports · ${v.logs} drive logs</small></span><input type="radio" class="radio" name="cv" ${v.id === S.veh ? "checked" : ""}></label>`).join("")}</div>
+      <div class="group" style="margin-top:12px"><button class="cell" data-go="vehicles"><span class="tx"><b>Manage vehicles…</b></span>${I.chev}</button></div>`,
+    menu: () => `${head("OBD Garage")}<div class="group list">
+      <button class="cell" data-go="vehicles"><span class="kind l">${I.car}</span><span class="tx"><b>Vehicles</b></span><span class="val">${VEHICLES.length}</span>${I.chev}</button>
+      <button class="cell" data-go="unassigned"><span class="kind l">${I.inbox}</span><span class="tx"><b>Unassigned</b></span><span class="badge count">${UNASSIGNED.length}</span>${I.chev}</button>
+      <button class="cell" data-go="failed"><span class="kind x">${I.warn}</span><span class="tx"><b>Failed Uploads</b></span><span class="badge count">${FAILED.length}</span>${I.chev}</button></div>
+      <div class="group list" style="margin-top:12px"><button class="cell" data-act="export" data-scope="vehicle"><span class="kind l">${I.share}</span><span class="tx"><b>Export ${esc(V.label)}…</b></span>${I.chev}</button></div>
+      <p class="muted xs" style="text-align:center;margin-top:16px">v0.1.0 · self-hosted</p>`,
+    add: () => `${head("Add files")}<p class="lede">PROTOTYPE: this stands in for the iOS Files picker. Pick a batch to simulate.</p>
+      <div class="group">${[["mixed", "1 report (new VIN) + 3 drive logs", "Reports first, then the Vehicle question, then the New-vehicle sheet"], ["logs", "3 drive logs", "Vehicle question defaults to the Current Vehicle"], ["messy", "5 files with problems", "Warning, overlap, failure, duplicate, unknown type"]].map(([k, t, d]) => `<button class="cell" data-act="sim" data-k="${k}"><span class="tx"><b>${t}</b><small>${d}</small></span>${I.chev}</button>`).join("")}</div>`,
+    which: () => `${head(`${s.n} Drive Log${s.n > 1 ? "s" : ""}: which Vehicle?`, "")}<p class="lede">Drive Logs carry no VIN. Pick the Vehicle they were recorded on.</p>
+      <div class="group">${[...VEHICLES, ...(s.newV ? [{ id: "new", label: "2015 Toyota Tacoma", vin: "5TFXX4CN9FX09876", fresh: true }] : [])].map((v) => `<label class="cell"><span class="tx"><b>${esc(v.label)}${v.fresh ? ' <span class="badge acc">New</span>' : ""}${!s.newV && v.id === S.veh ? ' <span class="badge">Current</span>' : ""}</b><small class="num">…${v.vin.slice(-4)}</small></span><input type="radio" class="radio" name="wv" ${(s.newV ? v.fresh : v.id === S.veh) ? "checked" : ""}></label>`).join("")}
+      <label class="cell"><span class="tx"><b>Unassigned</b><small>Not one of my vehicles, or not sure</small></span><input type="radio" class="radio" name="wv"></label></div>
+      <div class="foot"><button class="btn primary block" data-act="simnext">Add ${s.n} Drive Log${s.n > 1 ? "s" : ""}</button></div>`,
+    progress: () => `${head("Uploading", "")}<p class="lede num">${s.i} of ${s.n} · ${esc(s.file)}</p><div class="progress"><i style="width:${(s.i / s.n) * 100}%"></i></div>`,
+    result: () => `${head(s.title, "Done")}<div class="group" style="padding:4px 0">${s.rows.map(([k, f, why]) => `<div class="res"><span class="ic ${k}">${{ ok: "✓", warn: "!", bad: "✕", ref: "–" }[k]}</span><span>${esc(f)}<small>${esc(why)}</small></span></div>`).join("")}</div>
+      <div class="foot">${s.next ? `<button class="btn primary block" data-act="newveh">Continue</button>` : `<button class="btn primary block" data-act="close">Done</button>`}</div>`,
+    newveh: () => `${head("New vehicle added", "Done")}<div class="card" style="margin-top:4px"><h3><span class="kind l">${I.car}</span><span>2015 Toyota Tacoma<br><small class="muted num" style="font-weight:400">5TFXX4CN9FX09876</small></span></h3>
+        <div class="kv"><span>Profile</span><span class="v">Generic</span><span>Rule Packs</span><span class="v">none</span></div><div class="btnrow" style="margin-top:10px"><button class="btn" data-go="vsettings">Change</button></div></div>
+      <div class="sec">Same-day Unassigned Drive Logs</div><p class="lede">These were recorded on 6 Oct, the day of this report.</p>
+      <div class="group"><label class="cell"><input type="checkbox" class="check" checked><span class="tx"><b>Mon 6 Oct · 07:48</b><small>18 min</small></span></label></div>
+      <div class="foot"><button class="btn primary block" data-act="toast" data-m="Assigned 1 Drive Log; Events regenerated">Assign to this vehicle</button><button class="btn block" data-act="close">Not now</button></div>`,
+    export: () => `${head("Export")}<p class="lede">${s.scope === "unassigned" ? `A Bundle of the ${S.selUn.size || 2} selected Unassigned Drive Logs.` : `A Bundle for ${esc(V.label)}: Originals, Events, Notes and a README timeline. It contains the VIN.`}</p>
+      ${s.scope === "unassigned" ? "" : `<div class="field two"><div><label>From</label><input type="date" value="2026-10-04"></div><div><label>To</label><input type="date" value="2026-10-04"></div></div>
+      <div class="field"><div class="btnrow">${["This day", "Last 30 days", "All time"].map((x, i) => `<button class="btn" style="${i ? "" : "border-color:var(--accent)"}">${x}</button>`).join("")}</div></div>
+      <div class="group"><div class="cell"><span class="tx"><b>1 Drive Log · 0 Reports</b><small>+1 Reference Report outside the range (2 Oct)</small></span></div></div>`}
+      <div class="foot"><button class="btn primary block" data-act="toast" data-m="Downloads obd-garage_1FTX…_2026-10-04_2026-10-04.zip">Download .zip</button></div>`,
+    noteview: () => { const n = PINS[s.j]; return `${head(`Note at ${hms(n.t)}`, "Close")}<div class="card"><p class="note-text" style="margin:0">${esc(n.text)}</p></div>
+      <p class="lede">Pinned to the row at +${mmss(n.t)} into the drive. Added 4 Oct, 19:02.</p>
+      <div class="foot"><button class="btn block" data-act="note">Edit</button><button class="btn danger block" data-act="toast" data-m="Delete this Note? (confirm step)">Delete</button></div>`; },
+    note: () => `${head(s.whole ? "Note" : `Note at ${hms(T[S.cur])}`, "Cancel")}<div class="field"><textarea placeholder="What happened here?" autofocus></textarea></div>
+      <div class="foot"><button class="btn primary block" data-act="toast" data-m="Note saved">Save</button></div>`,
+    ref: () => `${head("Reference Report", "Done")}<p class="lede">Freeze-frame lines and look-alikes compare against this report. Default: the closest in time.</p>
+      <div class="group">${REPORTS.filter((r) => r.veh === "f250").map((r, i) => `<label class="cell"><span class="tx"><b>${day(r.date)} · ${r.time}${i === 0 ? ' <span class="badge">Closest</span>' : ""}</b><small>${r.stored ? "P0401 freeze frame" : "No freeze frame"}</small></span><input type="radio" class="radio" name="rr" ${i === 0 ? "checked" : ""}></label>`).join("")}
+      <label class="cell"><span class="tx"><b>None</b><small>Hide freeze-frame lines and look-alikes</small></span><input type="radio" class="radio" name="rr"></label></div>`,
+    more: () => `${head(S.route === "report" ? "Diagnostic Report" : "Drive Log")}<div class="group">
+      ${S.route === "log" ? `<button class="cell" data-act="assign"><span class="tx"><b>Change Vehicle…</b><small>Regenerates Events, keeps Notes</small></span>${I.chev}</button>` : ""}
+      <button class="cell" data-act="export" data-scope="vehicle"><span class="tx"><b>Export this day…</b></span>${I.chev}</button>
+      <button class="cell" data-act="toast" data-m="Downloads the Original"><span class="tx"><b>Download original</b></span></button>
+      <button class="cell" data-act="toast" data-m="Delete? Removes the Original, parsed data, Events and Notes." style="color:var(--bad)"><span class="tx"><b>Delete…</b></span></button></div>`,
+    delveh: () => { const v = VEHICLES.find((x) => x.id === s.id); return `${head(`Delete ${esc(v.label)}?`, "Cancel")}<p class="lede">Removes its ${v.reports} Diagnostic Reports and their Notes. Its ${v.logs} Drive Logs become Unassigned.</p>
+      <div class="group"><label class="cell"><input type="checkbox" class="check"><span class="tx"><b>Also delete its ${v.logs} Drive Logs</b><small>And their Notes</small></span></label></div>
+      <div class="foot"><button class="btn block" style="background:var(--bad);color:#fff;border:0" data-act="close">Delete vehicle</button></div>`; },
+    assign: () => `${head("Assign to…", "Cancel")}<div class="group">${VEHICLES.map((v) => `<label class="cell"><span class="tx"><b>${esc(v.label)}</b><small class="num">…${v.vin.slice(-4)}</small></span><input type="radio" class="radio" name="as" ${v.id === S.veh ? "checked" : ""}></label>`).join("")}</div>
+      <p class="lede" style="margin-top:10px">Events are regenerated with the Vehicle's Profile and Rule Packs. Notes are kept.</p><div class="foot"><button class="btn primary block" data-act="toast" data-m="Assigned">Assign</button></div>`,
+  }[s.name];
+  L.innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog">${body()}</div></div>`;
+}
+
+// --- upload simulation (Reports first, then one Vehicle question, then results, then New vehicle) ---
+async function sim(kind) {
+  const step = (i, n, file) => new Promise((r) => { sheet("progress", { i, n, file }); setTimeout(r, 380); });
+  if (kind === "mixed") {
+    await step(1, 4, "2026-10-06_report.html");
+    sheet("which", { n: 3, newV: true, after: async () => { for (let i = 2; i <= 4; i++) await step(i, 4, `2026-10-06_0${i}48.csv`);
+      sheet("result", { title: "4 files added", next: true, rows: [["ok", "2026-10-06_report.html", "New vehicle: 2015 Toyota Tacoma"], ["ok", "2026-10-06_0248.csv", "Drive Log · 2015 Toyota Tacoma"], ["ok", "2026-10-06_0348.csv", "Drive Log · 2015 Toyota Tacoma"], ["ok", "2026-10-06_0448.csv", "Drive Log · 2015 Toyota Tacoma"]] }); } });
+  } else if (kind === "logs") {
+    sheet("which", { n: 3, after: async () => { for (let i = 1; i <= 3; i++) await step(i, 3, `2026-10-0${i + 6}_1722.csv`);
+      sheet("result", { title: "3 Drive Logs added", rows: [1, 2, 3].map((i) => ["ok", `2026-10-0${i + 6}_1722.csv`, `Drive Log · ${veh().label}`]) }); } });
+  } else {
+    sheet("which", { n: 3, after: async () => { for (let i = 1; i <= 5; i++) await step(i, 5, `file ${i}`);
+      sheet("result", { title: "2 added, 3 not", rows: [["warn", "2026-10-08_0715.csv", "Added · 12 rows skipped"], ["warn", "2026-10-08_0731.csv", "Added · overlaps the 07:15 drive on this Vehicle"], ["bad", "2026-10-08_0901.csv", "Failed Upload · no StartTime line. Kept under Failed Uploads"], ["ref", "2026-10-04_1722.csv", "Already added (same file). Open it"], ["ref", "IMG_2231.jpg", "Refused · not an OBDLink report or Drive Log"]] }); } });
+  }
+}
+
+// ===================================================================================
+// events
+// ===================================================================================
+document.addEventListener("click", (e) => {
+  const g = e.target.closest("[data-go]");
+  if (g) { if (g.dataset.id) S.vid = g.dataset.id; go(g.dataset.go); return; }
+  const a = e.target.closest("[data-act]"); if (!a) return;
+  const k = a.dataset.act;
+  if (k === "scrim") { if (e.target === a) sheet(null); return; }
+  if (k === "back") back();
+  else if (k === "close") sheet(null);
+  else if (k === "switcher") sheet("switcher");
+  else if (k === "menu") sheet("menu");
+  else if (k === "add") sheet("add");
+  else if (k === "more") sheet("more");
+  else if (k === "ref") sheet("ref");
+  else if (k === "assign") sheet("assign");
+  else if (k === "delveh") sheet("delveh", { id: a.dataset.id });
+  else if (k === "export") sheet("export", { scope: a.dataset.scope });
+  else if (k === "note") sheet("note", { whole: !!a.dataset.whole });
+  else if (k === "switchto") { S.veh = a.dataset.id; S.sheet = null; draw(); toast(`Current Vehicle: ${veh().label}`); }
+  else if (k === "toast") { sheet(null); toast(a.dataset.m); }
+  else if (k === "sim") sim(a.dataset.k);
+  else if (k === "simnext") S.sheet.after();
+  else if (k === "newveh") sheet("newveh");
+  else if (k === "ch") { S.on[a.dataset.k] = !S.on[a.dataset.k]; draw(); }
+  else if (k === "look") { S.look = a.checked; draw(); }
+  else if (k === "table") { S.table = !S.table; draw(); }
+  else if (k === "opennote") { const j = +a.dataset.j; S.cur = Math.round(PINS[j].t / DT); updateCursor(); sheet("noteview", { j }); }
+  else if (k === "seek") { S.cur = Math.round(+a.dataset.t / DT); updateCursor(); $("#chartbox").scrollIntoView({ behavior: "smooth", block: "center" }); }
+  else if (k === "m6") { S.m6sort = a.dataset.s; draw(); }
+  else if (k === "pack") { const id = S.vid || S.veh; S.packs[id][a.dataset.id] = a.checked; toast("Events regenerated for this Vehicle"); }
+  else if (k === "selun") { a.checked ? S.selUn.add(a.dataset.id) : S.selUn.delete(a.dataset.id); draw(); }
+});
+document.addEventListener("change", (e) => { if (e.target.dataset.act === "cmp") { S.cmp = e.target.value; draw(); } });
+
+// ===================================================================================
+// prototype pill
+// ===================================================================================
+const VK = ["A", "B", "C"];
+function drawProto() { pLabel.innerHTML = `<em>PROTO</em>${S.v} · ${NAMES[S.v]}`; }
+function cycle(d) { S.v = VK[(VK.indexOf(S.v) + d + 3) % 3]; draw(); console.log("state", { variant: S.v, route: S.route, theme: S.theme }); }
+pPrev.onclick = () => cycle(-1); pNext.onclick = () => cycle(1);
+pTheme.onclick = () => { S.theme = S.theme === "dark" ? "light" : "dark"; draw(); };
+pMenu.onclick = () => {
+  const m = $("#pmenu"); if (!m.hidden) { m.hidden = true; return; }
+  const J = [["Screens", [["recent", "Recent"], ["reports", "Reports list"], ["logs", "Drive Logs list"], ["log", "Drive Log viewer"], ["report", "Diagnostic Report viewer"], ["vehicles", "Vehicles"], ["vsettings", "Vehicle settings (Rule Packs)"], ["unassigned", "Unassigned"], ["ulog", "Unassigned Drive Log viewer"], ["failed", "Failed Uploads"]]],
+    ["Sheets", [["@switcher", "Current Vehicle switcher"], ["@menu", "Menu"], ["@add", "Upload: pick a batch"], ["@which", "Which Vehicle?"], ["@result", "Batch result (messy)"], ["@newveh", "New vehicle added"], ["@export", "Export"], ["@note", "Note"], ["@ref", "Reference Report"], ["@delveh", "Delete vehicle"]]],
+    ["Data", [["!empty", "Toggle: Current Vehicle with no report"]]]];
+  m.innerHTML = J.map(([h, xs]) => `<div class="h">${h}</div>${xs.map(([k, l]) => `<button data-j="${k}">${l}</button>`).join("")}`).join("");
+  m.hidden = false;
+};
+pmenu.onclick = (e) => {
+  const b = e.target.closest("[data-j]"); if (!b) return; pmenu.hidden = true;
+  const j = b.dataset.j;
+  if (j[0] === "@") { const n = j.slice(1);
+    if (n === "which") sheet("which", { n: 3, after: () => sheet(null) });
+    else if (n === "result") sim("messy").then(() => {}), setTimeout(() => S.sheet?.after?.(), 50);
+    else if (n === "delveh") sheet("delveh", { id: S.veh });
+    else sheet(n, { scope: "vehicle" }); }
+  else if (j === "!empty") { const r = REPORTS.filter((x) => x.veh === "civic"); if (r.length) { REPORTS.splice(REPORTS.indexOf(r[0]), 1); toast("Civic now has no report; switch to it"); } else toast("Already empty"); }
+  else { S.stack = TABS.includes(j) ? [] : [["log", "report"].includes(j) ? "recent" : j === "vsettings" ? "vehicles" : j === "ulog" ? "unassigned" : "recent"]; if (["vehicles", "unassigned", "failed"].includes(j)) S.stack = []; S.route = j; S.sheet = null; draw(); }
+};
+addEventListener("keydown", (e) => { if (e.target.closest("input,textarea,select,[contenteditable]")) return; if (e.key === "ArrowLeft") cycle(-1); if (e.key === "ArrowRight") cycle(1); if (e.key === "Escape") sheet(null); });
+
+draw();
+</script>
+</body>
+</html>
