@@ -12,6 +12,10 @@ updates:
         update-types:
           - minor
           - patch
+    # Node majors are a deliberate move (see docs/adr), not a routine bump.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -36,3 +40,7 @@ updates:
         update-types:
           - minor
           - patch
+    # Node majors are a deliberate move (see docs/adr), not a routine bump.
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
