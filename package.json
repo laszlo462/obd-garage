@@ -16,12 +16,14 @@
   },
   "dependencies": {
     "@hono/node-server": "2.1.4",
+    "better-sqlite3": "13.0.3",
     "hono": "4.13.13",
     "preact": "11.0.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@preact/preset-vite": "2.10.6",
+    "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.19.2",
     "typescript": "7.0.2",
     "vite": "8.3.4",
