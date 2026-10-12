@@ -263,6 +263,13 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
     deleteNote: (id: number) => {
       stmt("DELETE FROM notes WHERE id = ?").run(id);
     },
+    /** Note count per upload id; an upload with none is absent. */
+    noteCounts: () =>
+      new Map(
+        (stmt("SELECT upload_id, COUNT(*) AS n FROM notes GROUP BY upload_id").all() as Row[]).map(
+          (r) => [r.upload_id as number, r.n as number],
+        ),
+      ),
 
     // Derived data
     /** Replaces an upload's derived data all-or-nothing, in one transaction. */
@@ -321,6 +328,13 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
         events,
       };
     },
+    /** Event count per upload id; an upload with none is absent. */
+    eventCounts: () =>
+      new Map(
+        (stmt("SELECT upload_id, COUNT(*) AS n FROM events GROUP BY upload_id").all() as Row[]).map(
+          (r) => [r.upload_id as number, r.n as number],
+        ),
+      ),
     /** Ids of uploads with no derived data, or derived data stamped with another app version. */
     staleUploadIds: (appVersion: string) =>
       (
