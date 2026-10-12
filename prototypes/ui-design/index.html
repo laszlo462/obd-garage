@@ -12,12 +12,17 @@
     A  Grouped     calm iOS-style inset grouped lists
     B  Instrument  dense, dark-first, monospaced numbers, tell-tale status
     C  Cards       warm, bold cards, big numbers, a coloured status hero
+  Round 2 (A won round 1; B and C stay reachable by URL only), researched references to weigh against A:
+    D  Flighty     "departure board": big condensed numerals, caps captions, status words with deltas
+    E  Material 3  tonal surface containers, pill chips, 28 px sheets, Roboto Flex
+    F  Grafana     flat 1 px panels, stat tiles with sparklines, dense rows, mono values
+  These imitate a look only (no assets, logos or names in the UI). See research/mobile-design-references.
   Switch with ?variant=A|B|C, the floating pill, or ← →. "☰ screens" in the pill jumps anywhere.
   All data is synthetic (fake VIN, made-up drives). Nothing is saved. Chart gestures are only a
   one-finger scrub here; the real gestures were settled by the notes-pinning prototype.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Roboto+Flex:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ================= tokens ================= */
 :root {
@@ -78,6 +83,57 @@
   --ev-generic: rgba(60,198,165,.14); --ev-look: #b197fc; --ev-pack: #f0a650; --note: #ffd43b;
   --c1: #3cc6a5; --c2: #ff8f5a; --c3: #74a7ff; --c4: #b197fc; --c5: #4dd4e6; --c6: #f783ac;
   --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+}
+/* D Flighty-like board */
+[data-v=D] {
+  --font-ui: "Inter", system-ui, sans-serif; --font-num: "Barlow Condensed", "Inter", sans-serif; --font-display: "Inter", system-ui, sans-serif;
+  --r-card: 14px; --r-ctl: 10px; --fs-title: 34px;
+  --bg: #f4f5f7; --surface: #ffffff; --surface2: #eceef2; --ink: #0d1117; --ink2: #333a45; --muted: #5b6472;
+  --line: #e3e6eb; --accent: #0a84ff; --accent-ink: #fff; --accent-t: rgba(10,132,255,.12);
+  --bad: #c4262e; --bad-t: rgba(196,38,46,.10); --warn: #b25e00; --warn-t: rgba(178,94,0,.12); --ok: #1a7f4b; --ok-t: rgba(26,127,75,.11);
+  --ev-generic: rgba(10,132,255,.09); --ev-look: #8e44ad; --ev-pack: #d68400; --note: #e0a800;
+  --c1: #0a84ff; --c2: #e8590c; --c3: #1a7f4b; --c4: #7048e8; --c5: #0c8599; --c6: #c2255c; --shadow: none;
+}
+[data-v=D][data-theme=dark] {
+  --bg: #000; --surface: #121418; --surface2: #1c1f25; --ink: #f2f4f7; --ink2: #c9ced6; --muted: #98a1ae;
+  --line: #23272e; --accent: #4aa3ff; --accent-ink: #001a33; --accent-t: rgba(74,163,255,.16);
+  --bad: #ff6b6b; --bad-t: rgba(255,107,107,.15); --warn: #ffb340; --warn-t: rgba(255,179,64,.15); --ok: #3ecf8e; --ok-t: rgba(62,207,142,.14);
+  --ev-generic: rgba(74,163,255,.13); --ev-pack: #ffb340; --note: #ffd43b;
+  --c1: #4aa3ff; --c2: #ff8a3d; --c3: #3ecf8e; --c4: #a78bfa; --c5: #3bc9db; --c6: #f783ac;
+}
+/* E Material 3 tonal (teal seed) */
+[data-v=E] {
+  --font-ui: "Roboto Flex", "Roboto", system-ui, sans-serif; --font-num: var(--font-ui); --font-display: var(--font-ui);
+  --r-card: 16px; --r-ctl: 20px; --r-pill: 8px; --fs-title: 28px;
+  --bg: #f6faf9; --surface: #eaefee; --surface2: #dfe4e3; --ink: #171d1d; --ink2: #3f4948; --muted: #5f6a69;
+  --line: rgba(111,121,120,.35); --accent: #006a6a; --accent-ink: #fff; --accent-t: #9cf1f0; --accent-on-t: #002020;
+  --bad: #ba1a1a; --bad-t: #ffdad6; --bad-on-t: #410002; --warn: #7a5900; --warn-t: #ffdf9e; --ok: #146c2e; --ok-t: #a3f5a8;
+  --ev-generic: rgba(0,106,106,.10); --ev-look: #6750a4; --ev-pack: #b26b00; --note: #c79a00;
+  --c1: #006a6a; --c2: #c25400; --c3: #3a6bd6; --c4: #6750a4; --c5: #0b8fb0; --c6: #b3261e; --shadow: none;
+}
+[data-v=E][data-theme=dark] {
+  --bg: #0e1514; --surface: #1a2120; --surface2: #252b2b; --ink: #dde4e3; --ink2: #bec9c8; --muted: #899392;
+  --line: rgba(137,147,146,.35); --accent: #4cdada; --accent-ink: #003737; --accent-t: #004f4f; --accent-on-t: #9cf1f0;
+  --bad: #ffb4ab; --bad-t: #93000a; --bad-on-t: #ffdad6; --warn: #f0c14a; --warn-t: #5c4300; --ok: #7ddc8f; --ok-t: #00531e;
+  --ev-generic: rgba(76,218,218,.13); --ev-look: #cfbcff; --ev-pack: #f0c14a; --note: #ffd43b;
+  --c1: #4cdada; --c2: #ffb68b; --c3: #a8c7ff; --c4: #cfbcff; --c5: #7fd0ff; --c6: #ffb4ab;
+}
+/* F Grafana-like console */
+[data-v=F] {
+  --font-ui: "Inter", system-ui, sans-serif; --font-num: "Roboto Mono", ui-monospace, monospace; --font-display: var(--font-ui);
+  --r-card: 6px; --r-ctl: 4px; --r-pill: 4px; --gut: 12px; --cell-y: 9px; --fs-title: 15px;
+  --bg: #f4f5f5; --surface: #ffffff; --surface2: #e6e8ec; --ink: #24292e; --ink2: #3d444d; --muted: rgba(36,41,46,.70);
+  --line: rgba(36,41,46,.14); --accent: #3871dc; --accent-ink: #fff; --accent-t: rgba(56,113,220,.12);
+  --bad: #e0226e; --bad-t: rgba(224,34,110,.10); --warn: #b86e00; --warn-t: rgba(255,153,0,.15); --ok: #1b855e; --ok-t: rgba(27,133,94,.12);
+  --ev-generic: rgba(56,113,220,.08); --ev-look: #a352cc; --ev-pack: #e08a00; --note: #e0b400;
+  --c1: #3274d9; --c2: #ff780a; --c3: #56a64b; --c4: #a352cc; --c5: #e0b400; --c6: #e02f44; --shadow: none;
+}
+[data-v=F][data-theme=dark] {
+  --bg: #111217; --surface: #181b1f; --surface2: #22252b; --ink: #ccccdc; --ink2: #b4b4c6; --muted: rgba(204,204,220,.65);
+  --line: rgba(204,204,220,.14); --accent: #6e9fff; --accent-ink: #0b1020; --accent-t: rgba(61,113,217,.2);
+  --bad: #f2495c; --bad-t: rgba(242,73,92,.15); --warn: #ff9830; --warn-t: rgba(255,152,48,.15); --ok: #73bf69; --ok-t: rgba(115,191,105,.14);
+  --ev-generic: rgba(87,148,242,.10); --ev-look: #b877d9; --ev-pack: #ff9830; --note: #fade2a;
+  --c1: #5794f2; --c2: #ff9830; --c3: #73bf69; --c4: #b877d9; --c5: #fade2a; --c6: #f2495c;
 }
 :root[data-theme=dark] { color-scheme: dark; }
 
@@ -353,6 +409,83 @@ textarea { width: 100%; min-height: 120px; border-radius: var(--r-ctl); border: 
 .toast { position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 64px); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 10px; z-index: 60; font-size: var(--fs-sm); max-width: calc(100vw - 32px); animation: fade .2s; }
 @keyframes fade { from { opacity: 0; } } @keyframes up { from { transform: translateY(40px); opacity: .5; } }
 
+/* ================= round 2 variant components ================= */
+/* shared flat-panel treatment (B, F) */
+[data-v=F] .appbar { border-bottom-color: var(--line); background: var(--surface); }
+[data-v=F] .group, [data-v=F] .card, [data-v=F] .chartbox, [data-v=F] .cmpbar, [data-v=F] .ov, [data-v=F] details.rsec { border: 1px solid var(--line); }
+[data-v=F] .sheet { border-radius: 6px 6px 0 0; }
+[data-v=F] .tabbar .add .plus { border-radius: 4px; }
+[data-v=F] .panel .lbl { font-weight: 500; color: var(--ink2); }
+[data-v=F] .readout .vals b, [data-v=F] .badge { font-family: var(--font-num); }
+/* F Recent status: one compact row of stat tiles, deltas as text (no sparklines) */
+.tilebox { display: block; width: calc(100% - 2 * var(--gut)); margin: 10px var(--gut) 4px; padding: 0; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); color: var(--ink); text-align: left; overflow: hidden; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.tile { padding: 8px 10px 7px; min-width: 0; }
+.tile + .tile { border-left: 1px solid var(--line); }
+.tile .k { display: block; font-size: 11px; font-weight: 500; color: var(--ink2); white-space: nowrap; }
+.tile b { display: block; font: 600 22px/1.2 var(--font-num); white-space: nowrap; }
+.tile .s { display: block; font: 11px var(--font-num); color: var(--muted); white-space: nowrap; }
+.tile .s.up { color: var(--warn); font-weight: 600; }
+.tile.bad b { color: var(--bad); } .tile.warn b { color: var(--warn); } .tile.ok b { color: var(--ok); }
+.tilefoot { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--line); padding: 7px 10px; font-size: 12px; color: var(--muted); }
+.tilefoot span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* D board */
+[data-v=D] h1.big { font: 700 var(--fs-title)/1 var(--font-num); text-transform: uppercase; letter-spacing: .01em; }
+[data-v=D] .vhead h2 { font: 700 30px/1.05 var(--font-num); text-transform: uppercase; letter-spacing: .01em; }
+[data-v=D] .readout .time { font-size: 24px; } [data-v=D] .readout .vals { grid-auto-rows: 26px; }
+[data-v=D] .readout .vals b { font-size: 20px; font-weight: 600; }
+[data-v=D] .ov .v { font-size: 34px; } [data-v=D] .dtc .code { font-size: 24px; }
+[data-v=D] .badge { text-transform: uppercase; letter-spacing: .04em; font-size: 10.5px; }
+.bstatus { display: block; margin: 0 var(--gut) 6px; width: calc(100% - 2 * var(--gut)); text-align: left; border: 0; background: var(--surface); border-radius: var(--r-card); padding: 14px var(--gut) 12px; color: var(--ink); }
+.cap { font-size: 11px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.bigword { font: 700 54px/1 var(--font-num); text-transform: uppercase; margin: 6px 0 2px; letter-spacing: .01em; }
+.bigword.bad { color: var(--bad); } .bigword.ok { color: var(--ok); }
+.bdelta { font-size: var(--fs-sm); color: var(--ink2); }
+.bdelta b { color: var(--warn); }
+.bgrid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.bgrid > div + div { border-left: 1px solid var(--line); padding-left: 12px; }
+.bgrid b { display: block; font: 700 34px/1.05 var(--font-num); }
+.bgrid small { white-space: nowrap; font-size: 12px; color: var(--muted); } .bgrid small.up { color: var(--warn); font-weight: 600; }
+.board { margin: 0 var(--gut); background: var(--surface); border-radius: var(--r-card); overflow: hidden; }
+.brow { display: grid; grid-template-columns: 74px 1fr auto; gap: 0 12px; align-items: center; width: 100%; text-align: left; border: 0; background: none; color: var(--ink); padding: 11px var(--gut); position: relative; }
+.brow + .brow::before { content: ""; position: absolute; top: 0; left: var(--gut); right: 0; border-top: 1px solid var(--line); }
+.brow .bt { font: 700 30px/1 var(--font-num); letter-spacing: .01em; }
+.brow .mid { min-width: 0; } .brow .mid b { display: block; font-weight: 600; font-size: var(--fs-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brow .meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+.brow .st { font: 700 15px var(--font-num); text-transform: uppercase; text-align: right; letter-spacing: .03em; }
+.brow .st.bad { color: var(--bad); } .brow .st.ok { color: var(--ok); } .brow .st.n { color: var(--ink2); }
+.brow .st small { display: block; font: 600 10px var(--font-ui); color: var(--muted); letter-spacing: .08em; }
+
+/* E Material 3 */
+[data-v=E] h1.big { font-weight: 400; letter-spacing: 0; }
+[data-v=E] .appbar { background: var(--bg); backdrop-filter: none; }
+[data-v=E] .appbar.scrolled { background: var(--surface); border-bottom-color: transparent; }
+[data-v=E] .tabbar { background: var(--surface); border-top: 0; }
+[data-v=E] .tabbar button { font-weight: 500; color: var(--ink2); gap: 4px; }
+[data-v=E] .tabbar button svg { width: 56px; height: 30px; padding: 4px 16px; border-radius: 16px; }
+[data-v=E] .tabbar button[aria-selected=true] { color: var(--ink); font-weight: 700; }
+[data-v=E] .tabbar button[aria-selected=true] svg { background: var(--accent-t); color: var(--accent-on-t); }
+[data-v=E] .tabbar .add .plus { width: 48px; height: 40px; border-radius: 14px; background: var(--accent-t); color: var(--accent-on-t); }
+[data-v=E] .tabbar .add .plus svg { padding: 0; width: 22px; height: 22px; background: none; }
+[data-v=E] .status { background: var(--bad-t); color: var(--bad-on-t); }
+[data-v=E] .status p { color: inherit; opacity: .85; } [data-v=E] .status .lamp { background: var(--bad); color: var(--bad-t); }
+[data-v=E] .status .badge { background: rgba(255,255,255,.5); color: var(--bad-on-t); }
+[data-v=E][data-theme=dark] .status .badge { background: rgba(0,0,0,.25); }
+[data-v=E] .kind { border-radius: 50%; } [data-v=E] .kind.l { color: var(--accent-on-t); }
+[data-v=E] .badge.acc { color: var(--accent-on-t); }
+[data-v=E] .btn { border-radius: 20px; border-color: var(--line); background: transparent; }
+[data-v=E] .btn.primary { background: var(--accent); }
+[data-v=E] .chpick button { border-radius: 8px; }
+[data-v=E] .chpick button[aria-pressed=true] { background: var(--accent-t); color: var(--accent-on-t); border-color: transparent; }
+[data-v=E] .chpick button[aria-pressed=true]::before { content: "✓"; font-size: 12px; }
+[data-v=E] .sheet { border-radius: 28px 28px 0 0; background: var(--surface); }
+[data-v=E] .sheet .group, [data-v=E] .sheet .card { background: var(--bg); }
+[data-v=E] .readout { background: var(--surface); border-radius: 16px; padding: 10px 12px; }
+[data-v=E] .notebar { background: var(--surface); backdrop-filter: none; border-top: 0; }
+[data-v=E] .notebar .main { border-radius: 20px; } [data-v=E] .notebar .step { border-radius: 20px; background: var(--surface2); border: 0; }
+[data-v=E] .switch:checked { background: var(--accent); }
+
 /* ================= desktop ================= */
 @media (min-width: 900px) {
   :root { --gut: 20px; }
@@ -490,13 +623,14 @@ const LOG_NOTES = [{ text: "Drive home. AC on, towing nothing. Fuel at ¼." }];
 // ===================================================================================
 const P = new URLSearchParams(location.search);
 const S = {
-  v: ["A", "B", "C"].includes(P.get("variant")) ? P.get("variant") : "A",
+  v: ["A", "B", "C", "D", "E", "F"].includes(P.get("variant")) ? P.get("variant") : "F",
   theme: P.get("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
   route: P.get("screen") || "recent", stack: [], veh: "f250",
   sheet: null, cur: 680, on: { rpm: true, vss: true, ect: true, cmd: true, act: true }, look: false, table: false,
   cmp: "r0821", m6sort: "headroom", selUn: new Set(), packs: { f250: { p0401: true }, civic: {} }, scroll: 0,
 };
-const NAMES = { A: "Grouped", B: "Instrument", C: "Cards" };
+const NAMES = { A: "Grouped", B: "Instrument", C: "Cards", D: "Flighty", E: "Material 3", F: "Grafana" };
+const DENSE = () => ["B", "D", "F"].includes(S.v);   // compact "04 Oct 17:22" style titles
 
 // ===================================================================================
 // helpers
@@ -574,7 +708,10 @@ addEventListener("scroll", () => $(".appbar")?.classList.toggle("scrolled", scro
 // ===================================================================================
 function itemCells(items) {
   if (!items.length) return `<div class="empty">Nothing here yet.</div>`;
-  if (S.v === "B") return `<div class="rows">${items.map((x) => `
+  if (S.v === "D") return `<div class="board">${items.map((x) => `
+    <button class="brow" data-go="${x.route}"><span class="bt">${x.time}</span><span class="mid"><span class="cap">${x.k === "r" ? "Report" : "Drive Log"} · ${esc(x.dcap)}</span><b>${esc(x.sub)}</b><span class="meta">${x.meta}</span></span>
+    <span class="st ${x.stc}">${x.st}<small>${x.stl}</small></span></button>`).join("")}</div>`;
+  if (S.v === "B" || S.v === "F") return `<div class="rows">${items.map((x) => `
     <button class="row" data-go="${x.route}"><span class="k ${x.k}">${x.k === "r" ? "REPORT" : "LOG"}</span><span class="t">${esc(x.title)}</span><span class="d">${esc(x.right)}</span>
     <span class="m">${x.meta}</span></button>`).join("")}</div>`;
   if (S.v === "C") return `<div class="fcards">${items.map((x) => `
@@ -589,9 +726,11 @@ function spark() {
   const pts = Array.from({ length: n }, (_, i) => `${(i / (n - 1)) * 96},${38 - (v[i * step] / 70) * 34}`).join(" ");
   return `<svg class="spark" viewBox="0 0 96 40"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
 }
-const logItem = (l) => ({ k: "l", route: "log", title: S.v === "B" ? `${day(l.date, { day: "2-digit", month: "short" })} ${l.time}` : `${l.time} drive · ${l.min} min`, when: `${day(l.date)} · ${ago(l.date)}`, right: `${l.min} min`,
+const logItem = (l) => ({ time: l.time, dcap: day(l.date, { weekday: "short", day: "numeric", month: "short" }), sub: "Drive", st: l.min, stc: "n", stl: "min",
+  k: "l", route: "log", title: DENSE() ? `${day(l.date, { day: "2-digit", month: "short" })} ${l.time}` : `${l.time} drive · ${l.min} min`, when: `${day(l.date)} · ${ago(l.date)}`, right: `${l.min} min`,
   meta: [l.events ? `<span class="badge">${l.events} Events</span>` : "", l.notes ? `<span class="badge acc">${l.notes} Note${l.notes > 1 ? "s" : ""}</span>` : "", l.warn ? `<span class="badge warn">${l.warn}</span>` : ""].join("") });
-const repItem = (r) => ({ k: "r", route: "report", title: S.v === "B" ? `${day(r.date, { day: "2-digit", month: "short" })} ${r.time}` : `Diagnostic Report`, when: `${day(r.date)} · ${r.time} · ${ago(r.date)}`, right: r.mil ? "MIL ON" : "MIL off",
+const repItem = (r) => ({ time: r.time, dcap: day(r.date, { weekday: "short", day: "numeric", month: "short" }), sub: "Diagnostic Report", st: r.mil ? "On" : "Off", stc: r.mil ? "bad" : "ok", stl: "MIL",
+  k: "r", route: "report", title: DENSE() ? `${day(r.date, { day: "2-digit", month: "short" })} ${r.time}` : `Diagnostic Report`, when: `${day(r.date)} · ${r.time} · ${ago(r.date)}`, right: r.mil ? "MIL ON" : "MIL off",
   meta: [r.mil ? `<span class="badge bad">MIL on</span>` : `<span class="badge ok">MIL off</span>`, r.stored ? `<span class="badge bad">${r.stored} stored</span>` : "", r.pending ? `<span class="badge warn">${r.pending} pending</span>` : "", r.incomplete ? `<span class="badge">${r.incomplete} monitors incomplete</span>` : `<span class="badge ok">monitors ready</span>`, r.notes ? `<span class="badge acc">${r.notes} Note</span>` : ""].join("") });
 
 // ===================================================================================
@@ -603,6 +742,15 @@ const SCREENS = {
     const feed = [...REPORTS.filter((x) => x.veh === v.id).map((x) => ({ ...repItem(x), d: x.date + x.time })), ...LOGS.filter((x) => x.veh === v.id).map((x) => ({ ...logItem(x), d: x.date + x.time }))].sort((a, b) => b.d.localeCompare(a.d)).slice(0, 7);
     let status;
     if (!r) status = `<div class="status"><span class="lamp" style="background:var(--surface2);color:var(--muted)">${I.doc}</span><div><b>No diagnostic report yet</b><p>Add an OBDLink Diagnostic Report to see codes and monitors.</p></div></div>`;
+    else if (S.v === "D") status = `<button class="bstatus" data-go="report"><div class="cap">Latest report · ${day(r.date, { day: "numeric", month: "short" })} · ${ago(r.date)}</div>
+        <div class="bigword ${r.mil ? "bad" : "ok"}">MIL ${r.mil ? "On" : "Off"}</div><div class="bdelta">P0401 stored &amp; permanent · <b>+1 pending</b> since 21 Aug</div>
+        <div class="bgrid"><div><b class="num" style="color:var(--bad)">${r.stored}</b><small>Stored</small></div><div><b class="num" style="color:var(--warn)">${r.pending}</b><small class="up">Pending ▲1</small></div><div><b class="num">${r.monitors - r.incomplete}<span style="font-size:20px;color:var(--muted)">/${r.monitors}</span></b><small>Ready ▲1</small></div></div></button>`;
+    else if (S.v === "F") status = `<button class="tilebox" data-go="report"><div class="tiles">
+        <div class="tile ${r.mil ? "bad" : "ok"}"><span class="k">MIL</span><b>${r.mil ? "ON" : "OFF"}</b><span class="s">was ON</span></div>
+        <div class="tile ${r.stored ? "bad" : "ok"}"><span class="k">Stored</span><b>${r.stored}</b><span class="s">no change</span></div>
+        <div class="tile ${r.pending ? "warn" : "ok"}"><span class="k">Pending</span><b>${r.pending}</b><span class="s up">+1</span></div>
+        <div class="tile ${r.incomplete ? "warn" : "ok"}"><span class="k">Monitors</span><b>${r.monitors - r.incomplete}/${r.monitors}</b><span class="s">+1 ready</span></div></div>
+        <div class="tilefoot"><span>Latest report ${day(r.date, { day: "numeric", month: "short" })} · ${ago(r.date)} · P0401 permanent</span>${I.chev}</div></button>`;
     else if (S.v === "B") status = `<button class="cluster" data-go="report">
         <div><div class="k">MIL</div><div class="lampv" style="${r.mil ? "" : "color:var(--muted);filter:none"}">${I.engine}${r.mil ? "ON" : "OFF"}</div></div>
         <div><div class="k">Stored</div><div class="v ${r.stored ? "bad" : ""}">${r.stored}</div></div>
@@ -615,21 +763,21 @@ const SCREENS = {
         <div class="stats"><div><b>${r.stored}</b><span>stored</span></div><div><b>${r.pending}</b><span>pending</span></div><div><b>${r.incomplete}</b><span>monitors incomplete</span></div></div></button>`;
     else status = `<button class="status" data-go="report"><span class="lamp">${I.engine}</span><div style="flex:1"><b>${r.mil ? "MIL on" : "MIL off"} · P0401</b><p>Latest report ${day(r.date)}, ${ago(r.date)}</p>
         <div class="facts"><span class="badge bad">${r.stored} stored</span><span class="badge warn">${r.pending} pending</span><span class="badge">${r.incomplete} of ${r.monitors} monitors incomplete</span></div></div>${I.chev}</button>`;
-    return `<div class="wrap">${S.v === "A" ? `<h1 class="big">Recent</h1>` : S.v === "C" ? `<h1 class="big">Hello, ${esc(v.label.split(" ").slice(1).join(" "))}</h1>` : ""}
+    return `<div class="wrap">${["A", "D", "E"].includes(S.v) ? `<h1 class="big">Recent</h1>` : S.v === "C" ? `<h1 class="big">Hello, ${esc(v.label.split(" ").slice(1).join(" "))}</h1>` : ""}
       ${status}<div class="sec">Recent uploads<span class="r">${v.reports} reports · ${v.logs} drive logs</span></div>${itemCells(feed)}</div>`;
   },
-  reports() { return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Reports</h1>` : `<div class="sec">Diagnostic Reports · ${esc(veh().label)}</div>`}${itemCells(REPORTS.filter((x) => x.veh === S.veh).map(repItem))}</div>`; },
+  reports() { return `<div class="wrap">${!["B", "F"].includes(S.v) ? `<h1 class="big">Reports</h1>` : `<div class="sec">Diagnostic Reports · ${esc(veh().label)}</div>`}${itemCells(REPORTS.filter((x) => x.veh === S.veh).map(repItem))}</div>`; },
   logs() {
     const ls = LOGS.filter((x) => x.veh === S.veh), g = {};
     for (const l of ls) (g[l.date.slice(0, 7)] ||= []).push(l);
-    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Drive Logs</h1>` : ""}${Object.entries(g).map(([m, xs]) => `<div class="sec">${day(m + "-01", { month: "long", year: "numeric" })}</div>${itemCells(xs.map(logItem))}`).join("")}</div>`;
+    return `<div class="wrap">${!["B", "F"].includes(S.v) ? `<h1 class="big">Drive Logs</h1>` : ""}${Object.entries(g).map(([m, xs]) => `<div class="sec">${day(m + "-01", { month: "long", year: "numeric" })}</div>${itemCells(xs.map(logItem))}`).join("")}</div>`;
   },
   log: () => logViewer(false),
   ulog: () => logViewer(true),
   report: reportViewer,
   vehicles() {
-    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Vehicles</h1>` : ""}<div class="sec">${VEHICLES.length} vehicles · added from Diagnostic Reports</div>
-      ${VEHICLES.map((v) => `<div class="card"><h3>${S.v === "B" ? "" : `<span class="kind l">${I.car}</span>`}<span>${esc(v.label)}${v.id === S.veh ? ` <span class="badge acc">Current</span>` : ""}<br><small class="muted num" style="font-weight:400">${v.vin}</small></span></h3>
+    return `<div class="wrap">${!["B", "F"].includes(S.v) ? `<h1 class="big">Vehicles</h1>` : ""}<div class="sec">${VEHICLES.length} vehicles · added from Diagnostic Reports</div>
+      ${VEHICLES.map((v) => `<div class="card"><h3>${["B", "F", "D"].includes(S.v) ? "" : `<span class="kind l">${I.car}</span>`}<span>${esc(v.label)}${v.id === S.veh ? ` <span class="badge acc">Current</span>` : ""}<br><small class="muted num" style="font-weight:400">${v.vin}</small></span></h3>
         <div class="kv"><span>Profile</span><span class="v">${esc(v.profile)}</span><span>Rule Packs</span><span class="v">${Object.keys(S.packs[v.id]).filter((k) => S.packs[v.id][k]).map((k) => PACKS.find((p) => p.id === k).name).join(", ") || "none"}</span>
         <span>Reports · Drive Logs</span><span class="v">${v.reports} · ${v.logs}</span><span>Latest report</span><span class="v">${day(v.latest)}</span></div>
         <div class="btnrow" style="margin-top:12px">${v.id === S.veh ? "" : `<button class="btn primary" data-act="switchto" data-id="${v.id}">Switch to</button>`}<button class="btn" data-go="vsettings" data-id="${v.id}">Settings</button><button class="btn" data-act="export" data-scope="vehicle">Export…</button><button class="btn danger" data-act="delveh" data-id="${v.id}">Delete…</button></div></div>`).join("")}
@@ -645,13 +793,13 @@ const SCREENS = {
   },
   unassigned() {
     const sel = S.selUn;
-    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Unassigned</h1>` : ""}<p class="muted sm" style="margin:0 var(--gut) 8px">Drive Logs that belong to no Vehicle. They get generic Events only.</p>
+    return `<div class="wrap">${!["B", "F"].includes(S.v) ? `<h1 class="big">Unassigned</h1>` : ""}<p class="muted sm" style="margin:0 var(--gut) 8px">Drive Logs that belong to no Vehicle. They get generic Events only.</p>
       <div class="group">${UNASSIGNED.map((u) => `<label class="cell"><input type="checkbox" class="check" data-act="selun" data-id="${u.id}" ${sel.has(u.id) ? "checked" : ""}>
         <span class="tx"><b>${day(u.date)} · ${u.time}</b><small>${u.min} min${u.notes ? ` · ${u.notes} Note` : ""}</small></span><button class="btn" data-go="ulog" style="padding:5px 10px;min-height:32px">View</button></label>`).join("")}</div>
       <div class="btnrow" style="margin:12px var(--gut)"><button class="btn primary" ${sel.size ? "" : "disabled style=opacity:.5"} data-act="assign">Assign to…</button><button class="btn" ${sel.size ? "" : "disabled style=opacity:.5"} data-act="export" data-scope="unassigned">Export</button><button class="btn danger" ${sel.size ? "" : "disabled style=opacity:.5"} data-act="toast" data-m="Delete ${sel.size} Drive Log(s)? (confirm step)">Delete</button></div></div>`;
   },
   failed() {
-    return `<div class="wrap">${S.v !== "B" ? `<h1 class="big">Failed Uploads</h1>` : ""}<p class="muted sm" style="margin:0 var(--gut) 8px">These files were kept but could not be read. They are retried on every re-parse.</p>
+    return `<div class="wrap">${!["B", "F"].includes(S.v) ? `<h1 class="big">Failed Uploads</h1>` : ""}<p class="muted sm" style="margin:0 var(--gut) 8px">These files were kept but could not be read. They are retried on every re-parse.</p>
       ${FAILED.map((f) => `<div class="card"><h3><span class="kind x">${I.warn}</span><span style="min-width:0;overflow-wrap:anywhere">${esc(f.name)}<br><small class="muted" style="font-weight:400">Drive Log · uploaded ${f.up}</small></span></h3>
         <p class="sm" style="margin:0 0 12px;color:var(--bad)">${esc(f.err)}</p><div class="btnrow"><button class="btn" data-act="toast" data-m="Downloads the Original">Download original</button><button class="btn danger" data-act="toast" data-m="Delete (confirm step)">Delete</button></div></div>`).join("")}</div>`;
   },
@@ -672,7 +820,7 @@ function logViewer(un) {
   const notesCard = `<div class="card"><h3>Notes <span class="badge">${(un ? 0 : LOG_NOTES.length)}</span><button class="r btn" data-act="note" data-whole="1" style="padding:4px 10px;min-height:30px">Add</button></h3>
     ${(un ? [] : LOG_NOTES).map((n) => `<p class="note-text sm" style="margin:0 0 6px">${esc(n.text)}</p>`).join("") || `<p class="muted sm" style="margin:0">No Notes on the whole drive.</p>`}</div>`;
   const ch = Object.entries(CH);
-  return `<div class="wrap wide"><div class="vhead"><h2>${S.v === "B" ? "SAT 04 OCT · 17:22" : "Sat 4 Oct, 17:22"}</h2>
+  return `<div class="wrap wide"><div class="vhead"><h2>${DENSE() ? "SAT 04 OCT · 17:22" : "Sat 4 Oct, 17:22"}</h2>
       <div class="meta"><span>${un ? "Unassigned" : esc(veh().label)}</span><span>41 min · 1,230 rows</span>${un ? `<button class="refchip" data-act="assign">Assign to a Vehicle…</button>` : `<button class="refchip" data-act="ref"><i></i>Reference: 2 Oct report</button>`}</div></div>
     ${un ? "" : `<div class="notice">${I.warn.replace("<svg", '<svg style="width:16px;height:16px;flex:none;margin-top:1px"')}<span>EGR position rescaled from the pre-October decode.</span></div>`}
     <div class="lv"><div>
@@ -778,7 +926,7 @@ function reportViewer() {
   const cmp = S.cmp, st = { c: ["Complete", "ok"], i: ["Incomplete", "warn"], n: ["Not supported", ""] };
   const m6 = [...M6].sort((a, b) => S.m6sort === "headroom" ? hr(a) - hr(b) : 0);
   const sec = (title, right, body, open = true) => `<details class="rsec" ${open ? "open" : ""}><summary>${title}<span class="r">${right}</span></summary><div class="rbody">${body}</div></details>`;
-  return `<div class="wrap"><div class="vhead"><h2>${S.v === "B" ? "THU 02 OCT · 21:32" : "Thu 2 Oct, 21:32"}</h2><div class="meta"><span>${esc(veh().label)}</span><span>OBDLink Diagnostic Report</span></div></div>
+  return `<div class="wrap"><div class="vhead"><h2>${DENSE() ? "THU 02 OCT · 21:32" : "Thu 2 Oct, 21:32"}</h2><div class="meta"><span>${esc(veh().label)}</span><span>OBDLink Diagnostic Report</span></div></div>
     <div class="cmpbar"><span class="muted">Compared with</span><select data-act="cmp"><option value="r0821" ${cmp === "r0821" ? "selected" : ""}>Previous · 21 Aug</option><option value="r0610" ${cmp === "r0610" ? "selected" : ""}>10 Jun</option><option value="" ${cmp ? "" : "selected"}>No comparison</option></select></div>
     <div class="ovgrid"><div class="ov"><div class="k">MIL</div><div class="v bad">ON</div><div class="d">${cmp ? "was ON" : "&nbsp;"}</div></div>
       <div class="ov"><div class="k">Codes</div><div class="v bad">2</div><div class="d">${cmp ? '<span class="delta up">+1 pending</span>' : "1 stored · 1 pending"}</div></div>
@@ -914,9 +1062,9 @@ document.addEventListener("change", (e) => { if (e.target.dataset.act === "cmp")
 // ===================================================================================
 // prototype pill
 // ===================================================================================
-const VK = ["A", "B", "C"];
+const VK = ["A", "D", "E", "F"];   // round 2: the A baseline against three researched references
 function drawProto() { pLabel.innerHTML = `<em>PROTO</em>${S.v} · ${NAMES[S.v]}`; }
-function cycle(d) { S.v = VK[(VK.indexOf(S.v) + d + 3) % 3]; draw(); console.log("state", { variant: S.v, route: S.route, theme: S.theme }); }
+function cycle(d) { S.v = VK[(Math.max(0, VK.indexOf(S.v)) + d + VK.length) % VK.length]; draw(); console.log("state", { variant: S.v, route: S.route, theme: S.theme }); }
 pPrev.onclick = () => cycle(-1); pNext.onclick = () => cycle(1);
 pTheme.onclick = () => { S.theme = S.theme === "dark" ? "light" : "dark"; draw(); };
 pMenu.onclick = () => {
