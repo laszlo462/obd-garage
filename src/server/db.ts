@@ -253,6 +253,13 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
       (stmt("SELECT * FROM notes WHERE upload_id = ? ORDER BY id").all(uploadId) as Row[]).map(
         toNote,
       ),
+    getNote: (id: number) => {
+      const r = stmt("SELECT * FROM notes WHERE id = ?").get(id) as Row | undefined;
+      return r && toNote(r);
+    },
+    setNoteText: (id: number, text: string) => {
+      stmt("UPDATE notes SET text = ? WHERE id = ?").run(text, id);
+    },
     deleteNote: (id: number) => {
       stmt("DELETE FROM notes WHERE id = ?").run(id);
     },
