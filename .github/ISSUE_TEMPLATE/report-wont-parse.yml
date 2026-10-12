@@ -1,0 +1,39 @@
+name: Report will not parse
+description: An OBDLink report or log does not load, or loads with wrong data.
+labels: [needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        OBDLink exports contain the VIN. **Scrub the VIN before you attach or paste anything.**
+        Replace it with 17 times `X`. Remove other personal data too.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Say what you expected and what you saw. Include any error message.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: File type
+      options:
+        - Diagnostic Report (HTML)
+        - Drive log (CSV)
+    validations:
+      required: true
+  - type: textarea
+    id: export
+    attributes:
+      label: Scrubbed export
+      description: Attach the scrubbed file, or paste the part that fails. The first 20 lines of a CSV are enough.
+    validations:
+      required: true
+  - type: checkboxes
+    id: scrubbed
+    attributes:
+      label: Confirmation
+      options:
+        - label: I removed the VIN and other personal data.
+          required: true

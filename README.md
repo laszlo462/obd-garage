@@ -1,48 +1,73 @@
 # OBD Garage
 
-A self-hosted, phone-first web app for viewing OBDLink exports: **Diagnostic Reports** (HTML) and **drive
-logs** (CSV). It's spun off from a set of single-file viewers built while diagnosing a P0401 (EGR flow
-insufficient) fault on a 2012 F-250 6.7L Power Stroke.
+OBD Garage is a self-hosted web app for your phone. It shows the files that an OBDLink adapter exports:
+**Diagnostic Reports** (HTML) and **drive logs** (CSV). It runs as one Docker container.
 
-**Status (2026-10-08):** pre-wayfinding. No app code yet. The decisions below came out of the session that
-built the original viewers and prototype. Everything else is open.
+The first target is a 2012 Ford F-250 6.7L Power Stroke with a P0401 (EGR flow insufficient) fault. The
+design lets it grow to other vehicles and other logged PIDs.
 
-## Decided so far
+<!-- Screenshot: add one here when the first screens exist. -->
 
-- **Hosting:** a Docker container web app, not a static site. A backend allows shared storage, so reports
-  and logs added on a phone show up on every device. It could also host the optional LLM analysis later.
-- **Mobile layout:** variant **D** from the prototype has a bottom tab bar (Recent / Reports / Logs /
-  **+ Add**). Recent opens with a status card, and an item opens full screen with "‹ Back". See
-  [reference/prototype/](reference/prototype/).
-- **Scope:** one vehicle first, the F-250. It's expected to grow to other vehicles and to any set of logged PIDs.
-  - **Generic core:** CSV import, held-row collapse, charts with a channel picker and saved presets, the
-    Diagnostic Report viewer, and generic event rules. Those rules cover engine start, peaks, idle, cruise,
-    regen when logged, and freeze-frame look-alikes matched against the nearest saved report.
-  - **Vehicle profiles:** PID aliases, decode fixes (e.g. the 6.7's EGR position rescale), hidden columns,
-    default chart presets.
-  - **Rule packs** switched on per vehicle. The first is "6.7 P0401": the low-flow entry-window Event, its
-    chart overlay and the explanatory text that goes with them (owner **Notes** are separate and never come
-    from a Rule Pack).
-  - **Every report and log gets a vehicle ID from day one.** Reports carry the VIN; CSV logs don't, so
-    ask which vehicle when one is added.
-- **Events of interest:** about two-thirds of the hand-written events in the original project can be
-  detected by rules. The rest is interpretation and owner observations, covered by tap-to-annotate on the
-  chart. An optional "Analyze with Claude" step would need a server-side API key, and the app must work
-  without it.
+> **Warning: OBD Garage has no built-in login.** Anyone who can reach the app can read and delete your
+> data. Run it behind a reverse proxy that does the authentication. Do not publish the app port to the
+> internet. See [docs/deployment.md](docs/deployment.md).
 
-## Open questions (for wayfinding)
+## Project state
 
-- Stack: backend language and framework, storage (files plus SQLite?), how the frontend is built.
-- Where it runs, how it's reached from the phone (reverse proxy, https for install and offline), and auth.
-- How much of the existing viewers to port as is, or rewrite into the core / profile / rule-pack split.
-- Rule test set: the original project's six annotated drive logs (events JSON plus CSV) are the natural
-  fixtures. Decide how to bring sample data in without committing personal data (VINs).
+The project is early. The current state, the decisions and the next steps are in the
+[wayfinder map](https://github.com/laszlo462/obd-garage/issues/1). This README does not copy them.
+
+## About this project
+
+This project is vibe-coded. An AI assistant (Claude) writes most of the code and the docs. A human owner
+sets the direction and reviews the work. The tests and the CI checks are there to catch mistakes. Read the
+code before you trust it with data that matters.
+
+## Quick start
+
+Save this as `compose.yaml`:
+
+```yaml
+services:
+  obd-garage:
+    image: ghcr.io/laszlo462/obd-garage:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - ./data:/data
+    ports:
+      - 127.0.0.1:8080:8080
+    restart: unless-stopped
+```
+
+Then run `docker compose up -d` and open <http://localhost:8080>. The `:develop` tag follows the `main`
+branch. The `:latest` tag follows the newest release. No release image exists until the first release.
+
+For a real install, with a reverse proxy and authentication, use the
+[deployment guide](docs/deployment.md) and the example in [deploy/](deploy/).
+
+## Development
+
+You need Node 24 (see `.node-version`).
+
+```sh
+npm ci
+npm run dev        # start the dev loop
+npm run typecheck  # tsc --noEmit
+npm run lint       # Biome
+npm test           # Vitest
+npm run build      # build the web client
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) before you open a pull request. See [DESIGN.md](DESIGN.md) for the
+UI design and [GLOSSARY.md](GLOSSARY.md) for the domain terms.
 
 ## Reference
 
-- [reference/viewers/](reference/viewers/): the original single-file viewers and their Node builders, as
-  they stood on 2026-10-08. The report viewer already parses reports in the browser. The drive-log viewer
-  parses at build time in `build_viewer.js`.
-- [reference/prototype/](reference/prototype/): the throwaway layout prototype (variants A–D). Open
-  `prototype_phones.html` to see all four at phone size. The prototype embeds built viewer pages that
-  aren't in this repo, so its panes will be empty here. It's kept for the layout, not the content.
+[reference/](reference/) is a frozen copy of the original single-file viewers and the layout prototype. It
+is the source to port from. Do not edit it.
+
+## Licence
+
+[MIT](LICENSE)
