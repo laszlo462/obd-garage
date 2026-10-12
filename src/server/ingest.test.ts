@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "./app.ts";
 import { type Db, openDb } from "./db.ts";
 import { createIngest, MAX_UPLOAD_BYTES, type UploadResult } from "./ingest.ts";
-import { GENERIC_ONLY_REGISTRY, type ProfileRegistry } from "./registry.ts";
+import { DEFAULT_REGISTRY as registry } from "./registry.ts";
 
 const fixture = (folder: string, name: string) =>
   readFileSync(new URL(`../../test/fixtures/${folder}/${name}`, import.meta.url));
@@ -13,18 +13,6 @@ const OCT = fixture("reports", "Diagnostic_Report_2026-10-02_213218.html");
 const AUG = fixture("reports", "Diagnostic Report 2026-08-21 215710.html");
 const LOG = fixture("drive-logs", "CSVLog_20261002_175845.csv");
 const text = (b: Buffer) => b.toString("utf8");
-
-// A stand-in for the 6.7 Profile (built in its own slice): same VIN prefix, one suggested pack.
-const FIXTURE_VIN_PREFIX = "1FT7W2BT";
-const registry: ProfileRegistry = {
-  ...GENERIC_ONLY_REGISTRY,
-  matchVin: (vin) =>
-    vin.startsWith(FIXTURE_VIN_PREFIX)
-      ? { profileId: "test-67", suggestedPackIds: ["test-pack"] }
-      : GENERIC_ONLY_REGISTRY.matchVin(vin),
-  profile: (id) => (id === "test-67" ? {} : GENERIC_ONLY_REGISTRY.profile(id)),
-  pack: (id) => (id === "test-pack" ? { id, name: "Test pack", rules: [] } : undefined),
-};
 
 const NOW = () => new Date("2026-10-12T10:00:00Z");
 
@@ -69,11 +57,12 @@ describe("POST /api/uploads with real files", () => {
     expect(first.body.kind).toBe("report");
     expect(first.body.vehicleCreated).toMatchObject({
       label: "2012 Ford S-Duty F250-F550",
-      profile: "test-67",
-      packs: ["test-pack"],
+      profile: "6.7",
+      packs: ["p0401"],
       sameDayUnassigned: [],
     });
-    expect(db.listVehicles()[0]?.packIds).toEqual(["test-pack"]);
+    // The suggestion is stored; the pack itself resolves once the 6.7 P0401 Rule Pack lands.
+    expect(db.listVehicles()[0]?.packIds).toEqual(["p0401"]);
 
     const again = await upload(OCT, { filename: "again.html" });
     expect(again.body).toMatchObject({

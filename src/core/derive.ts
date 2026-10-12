@@ -30,6 +30,8 @@ export type Profile = {
   catalogue?: Catalogue;
   collapseKeys?: readonly ChannelKey[];
   decodeFixes?: readonly DecodeFix[];
+  /** Overrides for generic rule parameters. The context's own `params` win over these. */
+  params?: Params;
 };
 
 export const GENERIC_PROFILE: Profile = {};
@@ -96,6 +98,7 @@ export function derive(original: string | Uint8Array, ctx: VehicleContext): Deri
     notices.push(...fixed.notices);
   }
 
+  const params: Params = { ...ctx.profile.params, ...ctx.params };
   const view = toView(channels);
   const ruleLog = { t: log.t, channels: view };
   const events: Event[] = [];
@@ -122,7 +125,7 @@ export function derive(original: string | Uint8Array, ctx: VehicleContext): Deri
       continue;
     }
     const result = rule.run(ruleLog, {
-      params: ctx.params,
+      params,
       ...(ctx.referenceReport === undefined ? {} : { reference: ctx.referenceReport }),
     });
     if (!Array.isArray(result)) {

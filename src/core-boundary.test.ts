@@ -34,9 +34,33 @@ describe("findBoundaryViolations", () => {
   });
 });
 
+describe("src/profiles", () => {
+  const forbidden = ["src/server", "src/web"];
+
+  it("flags an import of the server or the web app", () => {
+    const file = "src/profiles/x.ts";
+    expect(
+      findBoundaryViolations(file, `import a from "../server/db.ts";`, forbidden),
+    ).toHaveLength(1);
+    expect(findBoundaryViolations(file, `import a from "../core/derive.ts";`, forbidden)).toEqual(
+      [],
+    );
+  });
+
+  it("imports core only, never the server or the web app", () => {
+    const files = globSync("src/profiles/**/*.{ts,tsx}").map((f) => f.replaceAll("\\", "/"));
+    expect(files.length).toBeGreaterThan(0);
+    const violations = files.flatMap((f) =>
+      findBoundaryViolations(f, readFileSync(f, "utf8"), forbidden),
+    );
+    expect(violations).toEqual([]);
+  });
+});
+
 describe("src/core", () => {
   it("imports nothing from profiles/ or rule-packs/", () => {
     const files = globSync("src/core/**/*.{ts,tsx}").map((f) => f.replaceAll("\\", "/"));
+    expect(files.length).toBeGreaterThan(0);
     const violations = files.flatMap((f) => findBoundaryViolations(f, readFileSync(f, "utf8")));
     expect(violations).toEqual([]);
   });

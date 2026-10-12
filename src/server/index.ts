@@ -7,6 +7,7 @@ import { createApp } from "./app.ts";
 import { loadConfig } from "./config.ts";
 import { openDb } from "./db.ts";
 import { sweepTmp } from "./originals.ts";
+import { DEFAULT_REGISTRY } from "./registry.ts";
 
 const config = loadConfig();
 
@@ -20,7 +21,12 @@ const appVersion = (
     version: string;
   }
 ).version;
-const api = createApp({ db, dataDir: config.dataDir, appVersion });
+const api = createApp({
+  db,
+  dataDir: config.dataDir,
+  appVersion,
+  registry: DEFAULT_REGISTRY,
+});
 
 // One process serves the API and the built web bundle (`dist/web`).
 const server = new Hono()
