@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-Rules for working in this repo. Current state and decisions live in [README.md](README.md) (until a
-wayfinder map issue exists, at which point that map is the source of truth). Don't copy state into this file.
+Rules for working in this repo. Current state and decisions live in the wayfinder map issue (labelled
+`wayfinder:map`). Don't copy state into this file.
 
 ## Rules
 
