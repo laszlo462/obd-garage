@@ -1,0 +1,252 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20260725_185037.csv, paired with its closest report 1`] = `
+{
+  "events": [],
+  "outcome": {
+    "events": 0,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic Report 2026-08-21 215710.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20260726_175556.csv, paired with its closest report 1`] = `
+{
+  "events": [
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 63.503,
+      "t1": 65.506,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 2 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 179.002,
+      "t1": 182.006,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 3 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 234.006,
+      "t1": 237.007,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 3 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 288.507,
+      "t1": 293.003,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 4.5 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 296.003,
+      "t1": 301.002,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 5 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 340.503,
+      "t1": 342.507,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 2 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 442.506,
+      "t1": 446.008,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 3.5 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 484.007,
+      "t1": 486.005,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 2 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 604.509,
+      "t1": 607.507,
+      "text": "All 7 Channels shared with the freeze frame (Barometric pressure, Control module voltage, Ambient air temperature, Engine oil temperature, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 3 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+  ],
+  "outcome": {
+    "events": 9,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic Report 2026-08-21 215710.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20260726_221700.csv, paired with its closest report 1`] = `
+{
+  "events": [
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 439.485,
+      "t1": 441.481,
+      "text": "All 8 Channels shared with the freeze frame (Engine load, Engine RPM, Vehicle speed, Barometric pressure, Accelerator pedal position, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 2 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 1632.48,
+      "t1": 1635.484,
+      "text": "All 8 Channels shared with the freeze frame (Engine load, Engine RPM, Vehicle speed, Barometric pressure, Accelerator pedal position, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 3 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+  ],
+  "outcome": {
+    "events": 2,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic Report 2026-08-21 215710.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20260821_212246.csv, paired with its closest report 1`] = `
+{
+  "events": [
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 887.499,
+      "t1": 889.503,
+      "text": "All 8 Channels shared with the freeze frame (Engine load, Engine RPM, Vehicle speed, Barometric pressure, Accelerator pedal position, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 2 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-08-21 report)",
+    },
+  ],
+  "outcome": {
+    "events": 1,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic Report 2026-08-21 215710.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20261002_175845.csv, paired with its closest report 1`] = `
+{
+  "events": [],
+  "outcome": {
+    "events": 0,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic_Report_2026-10-02_213218.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20261002_175949.csv, paired with its closest report 1`] = `
+{
+  "events": [],
+  "outcome": {
+    "events": 0,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic_Report_2026-10-02_213218.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20261002_182500.csv, paired with its closest report 1`] = `
+{
+  "events": [],
+  "outcome": {
+    "events": 0,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic_Report_2026-10-02_213218.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20261002_204254.csv, paired with its closest report 1`] = `
+{
+  "events": [
+    {
+      "category": "look-alike",
+      "kind": "span",
+      "packId": null,
+      "ruleId": "core.look-alike",
+      "t0": 610.479,
+      "t1": 612.478,
+      "text": "All 6 Channels shared with the freeze frame (Engine load, Engine RPM, Vehicle speed, Mass air flow, Engine coolant temperature, Intake manifold absolute pressure) stayed within their tolerance bands for 2 s.",
+      "title": "Looks like the freeze frame (P0401, 2026-10-02 report)",
+    },
+  ],
+  "outcome": {
+    "events": 1,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic_Report_2026-10-02_213218.html",
+}
+`;
+
+exports[`Look-alikes on the fixture Drive Logs > snapshots the Look-alikes in CSVLog_20261004_172256.csv, paired with its closest report 1`] = `
+{
+  "events": [],
+  "outcome": {
+    "events": 0,
+    "packId": null,
+    "ruleId": "core.look-alike",
+    "status": "ran",
+  },
+  "report": "Diagnostic_Report_2026-10-02_213218.html",
+}
+`;

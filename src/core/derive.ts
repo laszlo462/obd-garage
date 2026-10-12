@@ -12,7 +12,16 @@ import {
   parseDriveLog,
 } from "./drive-log.ts";
 import { GENERIC_RULES } from "./generic-rules.ts";
-import type { Event, Params, ReferenceReport, Rule, RuleOutcome, RulePack } from "./rules.ts";
+import { lookAlike } from "./look-alike.ts";
+import type {
+  Event,
+  EventCategory,
+  Params,
+  ReferenceReport,
+  Rule,
+  RuleOutcome,
+  RulePack,
+} from "./rules.ts";
 
 export type DecodedLog = { t: readonly number[]; channels: Record<ChannelKey, DriveLogChannel> };
 
@@ -105,7 +114,7 @@ export function derive(original: string | Uint8Array, ctx: VehicleContext): Deri
   const outcomes: RuleOutcome[] = [];
 
   const sources: { rule: Rule; packId: string | null }[] = [
-    ...GENERIC_RULES.map((rule) => ({ rule, packId: null })),
+    ...[...GENERIC_RULES, lookAlike].map((rule) => ({ rule, packId: null })),
     ...ctx.packs.flatMap((p) => p.rules.map((rule) => ({ rule, packId: p.id }))),
   ];
 
@@ -125,6 +134,7 @@ export function derive(original: string | Uint8Array, ctx: VehicleContext): Deri
       continue;
     }
     const result = rule.run(ruleLog, {
+      catalogue: ctx.profile.catalogue ?? STANDARD_CATALOGUE,
       params,
       ...(ctx.referenceReport === undefined ? {} : { reference: ctx.referenceReport }),
     });
@@ -132,8 +142,9 @@ export function derive(original: string | Uint8Array, ctx: VehicleContext): Deri
       outcomes.push({ ...id, status: "not-applicable", missing: [], reason: result.notApplicable });
       continue;
     }
-    // Packs write pack Events; look-alike rules will mark their own once they exist.
-    const category = packId === null ? "generic" : "pack";
+    // Packs write pack Events; a core rule that needs a Reference Report writes look-alikes.
+    const category: EventCategory =
+      packId !== null ? "pack" : rule.needsReferenceReport ? "look-alike" : "generic";
     for (const draft of result) events.push({ ...draft, ...id, category });
     outcomes.push({ ...id, status: "ran", events: result.length });
   }

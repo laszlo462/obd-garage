@@ -1,4 +1,4 @@
-import type { ChannelKey, ChannelView } from "./channels.ts";
+import type { Catalogue, ChannelKey, ChannelView } from "./channels.ts";
 import type { ParsedReport } from "./report.ts";
 
 /** The parsed Reference Report as rules see it. Nothing in core reads it yet (only look-alike rules will). */
@@ -14,7 +14,12 @@ export type RuleLog = {
   channels: ChannelView;
 };
 
-export type RuleContext = { reference?: ReferenceReport; params: Params };
+export type RuleContext = {
+  reference?: ReferenceReport;
+  params: Params;
+  /** The Profile's catalogue, for rules that map names outside the log (a Reference Report's PIDs). */
+  catalogue?: Catalogue;
+};
 
 /** An Event as a rule writes it. The engine adds `ruleId`, `packId` and `category`. */
 export type EventDraft = {
