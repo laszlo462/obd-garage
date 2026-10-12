@@ -41,6 +41,8 @@ export type IngestDeps = {
   appVersion?: string;
   /** The clock. Injected so tests can compare derived data exactly. */
   now?: () => Date;
+  /** Runs before each upload of the background re-derive. Injected so tests can step through it. */
+  yieldToRequests?: () => Promise<void>;
 };
 
 /** Naive local ISO time to a comparable number. Both sides come from the same clock (ADR 0004). */
@@ -84,8 +86,22 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
   const registry = deps.registry ?? GENERIC_ONLY_REGISTRY;
   const appVersion = deps.appVersion ?? "0.0.0";
   const now = deps.now ?? (() => new Date());
+  const yieldToRequests =
+    deps.yieldToRequests ?? (() => new Promise<void>((resolve) => setImmediate(resolve)));
 
   const metadataOf = (uploadId: number) => db.getDerived(uploadId)?.metadata as Metadata | null;
+
+  /** A new Vehicle for a Report's VIN, with the Profile and suggested Rule Packs the registry matches. */
+  function addVehicleFor(h: ParsedReport["header"]): Vehicle {
+    const match = registry.matchVin(h.vin);
+    const taken = new Set(db.listVehicles().map((v) => v.label));
+    return db.addVehicle({
+      vin: h.vin,
+      label: vehicleLabel(h, taken),
+      profileId: match.profileId,
+      packIds: [...match.suggestedPackIds],
+    });
+  }
 
   /** The closest-in-time Report of the Vehicle, before or after; the earlier one wins a tie. */
   function defaultReferenceReportId(vehicleId: number, recordedAt: string): number | null {
@@ -178,7 +194,69 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
 
   const deriveStored = (upload: Upload, bytes: Uint8Array) =>
     db.saveDerived(upload.id, computeDerived(upload, bytes));
-  const readOriginal = (u: Upload) => readFileSync(originalPath(dataDir, u.storedPath));
+
+  const reportsFirst = (uploads: readonly Upload[]) => [
+    ...uploads.filter((u) => u.kind === "report"),
+    ...uploads.filter((u) => u.kind === "drive-log"),
+  ];
+
+  const stampFailure = (reason: string): Derived => ({
+    appVersion,
+    derivedAt: now().toISOString(),
+    failedError: reason,
+    metadata: null,
+    channels: null,
+    parsedReport: null,
+    ruleOutcomes: [],
+    decodeNotices: [],
+    warnings: [],
+    warningCount: 0,
+    events: [],
+  });
+
+  /**
+   * Re-derives from the Original on disk (ADR 0003). A missing Original, a changed SHA-256 or a Report
+   * whose VIN changed becomes a Failed Upload; the owner data stays. An upload that failed before and
+   * now parses is restored: its recorded time and, for a Report, its Vehicle are filled in.
+   */
+  function deriveFromDisk(initial: Upload): void {
+    let bytes: Uint8Array;
+    try {
+      bytes = readFileSync(originalPath(dataDir, initial.storedPath));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      db.saveDerived(initial.id, stampFailure("Original missing"));
+      return;
+    }
+    if (createHash("sha256").update(bytes).digest("hex") !== initial.sha256) {
+      db.saveDerived(initial.id, stampFailure("Original changed on disk"));
+      return;
+    }
+
+    if (initial.kind === "report") {
+      const r = parseReport(bytes);
+      if (r.kind === "report") {
+        const h = r.report.header;
+        const vehicle = initial.vehicleId === null ? undefined : db.getVehicle(initial.vehicleId);
+        if (vehicle && vehicle.vin !== h.vin) {
+          db.saveDerived(
+            initial.id,
+            stampFailure("The VIN changed on re-parse, so the Report was not moved."),
+          );
+          return;
+        }
+        if (!vehicle)
+          db.assignVehicle(initial.id, (db.getVehicleByVin(h.vin) ?? addVehicleFor(h)).id);
+        if (initial.recordedAt !== h.date) db.setRecordedAt(initial.id, h.date);
+      }
+    } else {
+      // Settle the recorded time first, because the derive reads the Reference Report from it.
+      const d = derive(bytes, { profile: GENERIC_PROFILE, packs: [], params: {} });
+      if (d.kind === "derived" && initial.recordedAt !== d.metadata.startTime)
+        db.setRecordedAt(initial.id, d.metadata.startTime);
+    }
+    deriveStored(db.getUpload(initial.id) ?? initial, bytes);
+  }
 
   /**
    * Re-derives one upload from its Original plus the owner data, all-or-nothing in its own transaction.
@@ -188,20 +266,44 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
   function rederiveUpload(uploadId: number): boolean {
     const upload = db.getUpload(uploadId);
     if (!upload) return false;
-    db.transaction(() => deriveStored(upload, readOriginal(upload)));
+    db.transaction(() => {
+      deriveFromDisk(upload);
+      // A Report that changed (or was restored) can change its Vehicle's default Reference Reports.
+      const after = db.getUpload(uploadId);
+      if (after?.kind === "report" && after.vehicleId !== null)
+        rederiveChangedDefaults(after.vehicleId);
+    });
     return true;
   }
 
   /** Re-derives the given uploads, Reports first because Drive Logs read them as Reference Reports. */
   function rederiveUploads(uploadIds: readonly number[]): void {
-    const uploads = uploadIds.flatMap((id) => db.getUpload(id) ?? []);
-    const ordered = [
-      ...uploads.filter((u) => u.kind === "report"),
-      ...uploads.filter((u) => u.kind === "drive-log"),
-    ];
+    const ordered = reportsFirst(uploadIds.flatMap((id) => db.getUpload(id) ?? []));
     db.transaction(() => {
-      for (const u of ordered) deriveStored(u, readOriginal(u));
+      for (const u of ordered) deriveFromDisk(u);
     });
+  }
+
+  /**
+   * Re-derives every upload whose derived data is missing or stamped with another app version, in the
+   * background: one upload at a time, each in its own transaction, Reports first, yielding between
+   * uploads. Stale data is served until each upload is swapped. An upload that throws is skipped (and
+   * stays stale for the next start). Resolves with the number re-derived.
+   */
+  async function rederiveStale(): Promise<number> {
+    const stale = reportsFirst(
+      db.staleUploadIds(appVersion).flatMap((id) => db.getUpload(id) ?? []),
+    );
+    let done = 0;
+    for (const u of stale) {
+      await yieldToRequests();
+      try {
+        if (rederiveUpload(u.id)) done++;
+      } catch (err) {
+        console.error(`Re-derive of upload ${u.id} failed:`, err);
+      }
+    }
+    return done;
   }
 
   /** Re-derives every Drive Log of the Vehicle (a Profile or Rule Pack change). Returns the count. */
@@ -217,7 +319,7 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
       const d = db.getDerived(log.id);
       if (!d || d.failedError !== null || db.getReferenceReport(log.id)) continue;
       const before = metadataOf(log.id)?.referenceReportId ?? null;
-      if (before !== referenceReportIdFor(log)) deriveStored(log, readOriginal(log));
+      if (before !== referenceReportIdFor(log)) deriveFromDisk(log);
     }
   }
 
@@ -280,14 +382,7 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
           recordedAt = h.date;
           vehicle = db.getVehicleByVin(h.vin);
           if (!vehicle) {
-            const match = registry.matchVin(h.vin);
-            const taken = new Set(db.listVehicles().map((v) => v.label));
-            vehicle = created = db.addVehicle({
-              vin: h.vin,
-              label: vehicleLabel(h, taken),
-              profileId: match.profileId,
-              packIds: [...match.suggestedPackIds],
-            });
+            vehicle = created = addVehicleFor(h);
           } else if (
             db
               .listUploads({ kind: "report", vehicleId: vehicle.id })
@@ -354,12 +449,8 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
   function rebuildDerived(): void {
     db.wipeDerived();
     const all = db.listUploads();
-    const ordered = [
-      ...all.filter((u) => u.kind === "report"),
-      ...all.filter((u) => u.kind === "drive-log"),
-    ];
     db.transaction(() => {
-      for (const u of ordered) deriveStored(u, readOriginal(u));
+      for (const u of reportsFirst(all)) deriveFromDisk(u);
     });
   }
 
@@ -369,6 +460,7 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     rebuildDerived,
     rederiveUpload,
     rederiveUploads,
+    rederiveStale,
     rederiveVehicleLogs,
     rederiveChangedDefaults,
   };
