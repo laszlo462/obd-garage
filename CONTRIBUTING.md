@@ -37,6 +37,18 @@ OBDLink reports and logs contain the vehicle identification number (VIN). **Scru
 commit a fixture.** Also remove any other personal data, such as locations. Put scrubbed fixtures in
 `test/fixtures/`. Never put real exports in a commit, an issue or a pull request.
 
+Use the scrub script to make a fixture from a real export:
+
+```sh
+node scripts/scrub-fixture.ts --out test/fixtures/<name> [--deny "word,word"] <export files>...
+```
+
+It fakes the VIN serial in a Diagnostic Report, checks a Drive Log for a VIN, and removes free text
+(`note`, `subtitle`, `text`) from annotation JSON. `--deny` lists words, such as a place name, that
+must not appear in any output. Give them on the command line only; never store them in the repo.
+If anything fails, the script writes nothing. Run it with `--help` for details. Check the output by
+eye before you commit it. Do not name a fixtures folder `data`: `.gitignore` ignores that name.
+
 ## Code layout
 
 `src/core` must not import from `src/profiles` or `src/rule-packs`. A test enforces this. Put

@@ -3,6 +3,7 @@ data/
 *.csv
 !test/fixtures/**/*.csv
 Diagnostic*Report*.html
+!test/fixtures/**/*.html
 
 node_modules/
 .env
