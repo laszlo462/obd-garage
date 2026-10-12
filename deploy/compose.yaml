@@ -1,0 +1,29 @@
+# OBD Garage: example Docker Compose file.
+# Read docs/deployment.md before you use it.
+#
+# The app has no login of its own. Put it behind an authenticating reverse proxy.
+# Do not publish the port to the internet.
+
+services:
+  obd-garage:
+    image: ghcr.io/laszlo462/obd-garage:latest
+    container_name: obd-garage
+    environment:
+      - PUID=1000 # user ID that owns the files in /data
+      - PGID=1000 # group ID that owns the files in /data
+      # - PORT=8080      # port the app listens on in the container (default 8080)
+      # - DATA_DIR=/data # data root in the container (default /data)
+    volumes:
+      - ./data:/data # Originals and the SQLite database. Back up all of it.
+    # Open the port on the host only to test on your LAN. Leave it closed when a proxy
+    # on the same Docker network reaches the app.
+    # ports:
+    #   - 8080:8080
+    restart: unless-stopped
+    # Put the app on the same Docker network as your reverse proxy:
+    # networks:
+    #   - proxy
+
+# networks:
+#   proxy:
+#     external: true
