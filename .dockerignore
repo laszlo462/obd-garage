@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+.zed
+node_modules
+dist
+reference
+prototypes
+deploy
+docs
+scripts
+data
+*.csv
+Diagnostic*Report*.html
+.env

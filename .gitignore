@@ -15,3 +15,6 @@ CLAUDE.local.md
 
 # Personal Claude Code settings
 .claude/settings.local.json
+
+# Build output
+dist/
