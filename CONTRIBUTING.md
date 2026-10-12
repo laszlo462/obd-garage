@@ -7,6 +7,9 @@ uses. [CLAUDE.md](CLAUDE.md) has the rules for the code.
 
 1. Install Node 24 (see `.node-version`).
 2. Run `npm ci`.
+   - On Windows without the Visual Studio C++ build tools, run `npm ci --ignore-scripts` instead.
+     `better-sqlite3` ships a prebuilt Windows binary, but npm still tries to compile it from source,
+     and a failed compile aborts the install. Skipping install scripts makes it use the prebuilt binary.
 3. Run `npm run dev` to start the dev loop.
 
 ## Checks
