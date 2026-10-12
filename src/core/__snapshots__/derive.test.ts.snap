@@ -55,6 +55,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "ruleId": "core.regen",
       "status": "not-applicable",
     },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
+    },
   ],
 }
 `;
@@ -113,6 +119,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "packId": null,
       "ruleId": "core.regen",
       "status": "not-applicable",
+    },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
     },
   ],
 }
@@ -316,6 +328,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "ruleId": "core.regen",
       "status": "not-applicable",
     },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
+    },
   ],
 }
 `;
@@ -478,6 +496,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "ruleId": "core.regen",
       "status": "not-applicable",
     },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
+    },
   ],
 }
 `;
@@ -547,6 +571,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "packId": null,
       "ruleId": "core.regen",
       "status": "ran",
+    },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
     },
   ],
 }
@@ -647,6 +677,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "packId": null,
       "ruleId": "core.regen",
       "status": "ran",
+    },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
     },
   ],
 }
@@ -827,6 +863,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "packId": null,
       "ruleId": "core.regen",
       "status": "ran",
+    },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
     },
   ],
 }
@@ -1037,6 +1079,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "packId": null,
       "ruleId": "core.regen",
       "status": "ran",
+    },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
     },
   ],
 }
@@ -1287,6 +1335,12 @@ exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CS
       "packId": null,
       "ruleId": "core.regen",
       "status": "ran",
+    },
+    {
+      "packId": null,
+      "reason": "no-reference-report",
+      "ruleId": "core.look-alike",
+      "status": "skipped",
     },
   ],
 }
