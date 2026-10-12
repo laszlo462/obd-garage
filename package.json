@@ -12,7 +12,8 @@
     "start": "node src/server/index.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check ."
+    "lint": "biome check .",
+    "reparse": "node src/server/reparse.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.4",
