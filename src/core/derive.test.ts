@@ -125,6 +125,26 @@ describe("derive", () => {
     expect(r.events[0]?.ruleId).toBe("core.engine-start");
   });
 
+  it("hands a rule the Profile's parameter overrides, with the context's own params winning", () => {
+    let seen: unknown;
+    const spy: Rule = {
+      id: "test.spy",
+      needs: [],
+      run: (_log, ctx) => {
+        seen = ctx.params;
+        return [];
+      },
+    };
+    const run = (ctxParams: Record<string, unknown>) =>
+      derived(SMALL, {
+        profile: { params: { a: 1, b: 2 } },
+        packs: [{ id: "spy", name: "Spy", rules: [spy] }],
+        params: ctxParams,
+      });
+    run({ b: 3 });
+    expect(seen).toEqual({ a: 1, b: 3 });
+  });
+
   it("is pure: the same input twice gives deep-equal output", () => {
     expect(derive(SMALL, generic)).toEqual(derive(SMALL, generic));
   });
