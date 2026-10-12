@@ -1,0 +1,12 @@
+﻿# StartTime = 07/25/2026 06:50:37.9879 PM
+Time (sec), Control module voltage (V), Ambient Air Temperature (°F), Charge Air Cooler Temperature Bank 1  Sensor 1 (°F), Distance Since Diagnostic Trouble Codes Cleared (miles), Engine Coolant Temperature Sensor 1 (°F), Engine Coolant Temperature Sensor 2 (°F), Engine Oil Temperature (°F), Exhaust Gas Recirculation Temperature Bank 1  Sensor 1 (°F), Exhaust Gas Recirculation Throttle Plate Measured (%), Exhaust Gas Recirculation Throttle Position Commanded (%), Exhaust Gas Recirculation Valve Position (%), Exhaust Gas Recirculation Valve Position (V), Exhaust Gas Temperature 11 (°F), Exhaust Gas Temperature 12 (°F), Exhaust Gas Temperature 13 (°F), Exhaust Gas Temperature Bank 1  Sensor 4 (°F), Intake Air Temperature Bank 1 Sensor 1 (°F), Intake Manifold Absolute Pressure A (inHg), Number of Warm-ups Since DTCs Cleared, The distance travelled since the (MIL) was activated. (miles), The distance travelled since the (MIL) was activated. (miles), Turbocharger Wastegate (%), Variable Geometry Turbocharger (%)
+0.000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+1.142,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,74.84,74.84,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+2.408,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,74.84,74.84,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+3.472,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,71.24,74.84,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+5.147,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,71.24,78.26,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+7.217,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,74.84,78.26,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+9.670,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,74.84,78.26,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+12.330,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,74.84,74.84,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+14.387,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,78.26,74.84,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863
+15.951,12.5,77,77,4719.9473,73.4,73.4,71.6,75.2,0,0,17.254902,0.91308594,71.24,78.26,78.26,74.84,80.6,27.601416,208,26.718962,26.719028,90.196075,12.156863

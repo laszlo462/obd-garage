@@ -1,0 +1,48 @@
+{
+  "engineOffsetS": 0,
+  "freezeFrame": {
+    "vss": 54.68,
+    "rpm": 1346,
+    "load": 39.61,
+    "act": 60,
+    "maf": 5.92,
+    "ect1": 186.8
+  },
+  "events": [
+    {
+      "t0": 0.5,
+      "t1": 0.5,
+      "title": "Warm restart, ECT 172 °F, soot 94.4 %"
+    },
+    {
+      "t0": 121,
+      "t1": 121,
+      "title": "Freeze-frame-like point just before the regen"
+    },
+    {
+      "t0": 134,
+      "t1": 1314,
+      "title": "Active DPF regen: soot 100 → 26 %, ~19.7 min"
+    },
+    {
+      "t0": 199,
+      "t1": 205,
+      "title": "NOx rails at 900 ppm during the regen"
+    },
+    {
+      "t0": 1352,
+      "t1": 1364,
+      "title": "Freeze-frame look-alike after the regen"
+    },
+    {
+      "t0": 1757,
+      "t1": 1761,
+      "title": "Freeze-frame look-alike (MAF 4.8 lb/min)"
+    },
+    {
+      "t0": 1847,
+      "t1": 1847,
+      "title": "Log ends, 24.4 mi, soot 29.9 %"
+    }
+  ]
+}

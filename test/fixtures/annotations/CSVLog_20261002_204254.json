@@ -1,0 +1,54 @@
+{
+  "engineOffsetS": -3,
+  "freezeFrame": {
+    "vss": 54.68,
+    "rpm": 1346,
+    "load": 39.61,
+    "act": 60,
+    "maf": 5.92,
+    "ect1": 186.8,
+    "thrc": 72.94
+  },
+  "events": [
+    {
+      "t0": 0.5,
+      "t1": 2.5,
+      "title": "Pre-crank: EP − MAP 0.42 inHg"
+    },
+    {
+      "t0": 157,
+      "t1": 157,
+      "title": "ECT reaches 158 °F: entry window opens"
+    },
+    {
+      "t0": 606,
+      "t1": 614,
+      "title": "Freeze-frame look-alike, 11 batches"
+    },
+    {
+      "t0": 515,
+      "t1": 547,
+      "title": "Before the pass: 50 → 45 mph in top gear"
+    },
+    {
+      "t0": 547.5,
+      "t1": 556.5,
+      "title": "Passing manoeuvre (owner: felt sluggish)"
+    },
+    {
+      "t0": 918,
+      "t1": 929,
+      "title": "Closest freeze-frame match, 14 batches"
+    },
+    {
+      "t0": 1209,
+      "t1": 1219,
+      "title": "Freeze-frame look-alike, 10 batches"
+    },
+    {
+      "t0": 2817,
+      "t1": 2827,
+      "title": "Idling; log ends"
+    }
+  ]
+}

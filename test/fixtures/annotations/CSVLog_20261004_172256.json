@@ -1,0 +1,44 @@
+{
+  "engineOffsetS": -3.5,
+  "freezeFrame": {
+    "vss": 54.68,
+    "rpm": 1346,
+    "load": 39.61,
+    "act": 60,
+    "maf": 5.92,
+    "ect1": 186.8,
+    "thrc": 72.94
+  },
+  "events": [
+    {
+      "t0": 0.5,
+      "t1": 3,
+      "title": "Pre-crank: EP − MAP 0.73 inHg (cold)"
+    },
+    {
+      "t0": 267,
+      "t1": 267,
+      "title": "Cooler bypass switches to the cooler at ECT 115 °F"
+    },
+    {
+      "t0": 559,
+      "t1": 559,
+      "title": "ECT reaches 158 °F: entry window opens"
+    },
+    {
+      "t0": 697,
+      "t1": 720,
+      "title": "On-ramp: 16 → 75 mph"
+    },
+    {
+      "t0": 708,
+      "t1": 2040,
+      "title": "Highway cruise, 65–75 mph"
+    },
+    {
+      "t0": 2457,
+      "t1": 2464,
+      "title": "Idling; log ends"
+    }
+  ]
+}
