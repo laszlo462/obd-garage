@@ -1,0 +1,463 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20260725_185037.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 1.142,
+      "t1": 1.142,
+      "text": "Engine coolant temperature peaked at 23 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "missing": [
+        "rpm",
+      ],
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "not-applicable",
+    },
+    {
+      "events": 1,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20260726_175556.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 91.504,
+      "t1": 91.504,
+      "text": "Engine coolant temperature peaked at 90 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "missing": [
+        "rpm",
+      ],
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "not-applicable",
+    },
+    {
+      "events": 1,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20260726_221700.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "t0": 16.49,
+      "t1": 16.49,
+      "text": "Engine RPM rose from 0 to 708 rpm.",
+      "title": "Engine start",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 231.982,
+      "t1": 231.982,
+      "text": "Engine RPM peaked at 2965.5 rpm.",
+      "title": "Peak engine speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 1039.48,
+      "t1": 1039.48,
+      "text": "Vehicle speed peaked at 128 km/h.",
+      "title": "Peak vehicle speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 491.481,
+      "t1": 491.481,
+      "text": "Engine coolant temperature peaked at 94 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "events": 1,
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "ran",
+    },
+    {
+      "events": 3,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20260821_212246.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 1366.498,
+      "t1": 1366.498,
+      "text": "Engine RPM peaked at 2950 rpm.",
+      "title": "Peak engine speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 273.505,
+      "t1": 273.505,
+      "text": "Vehicle speed peaked at 110 km/h.",
+      "title": "Peak vehicle speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 1381.501,
+      "t1": 1381.501,
+      "text": "Engine coolant temperature peaked at 92 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "events": 0,
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "ran",
+    },
+    {
+      "events": 3,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20261002_175845.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 0.502,
+      "t1": 0.502,
+      "text": "Engine RPM peaked at 0 rpm.",
+      "title": "Peak engine speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 0.502,
+      "t1": 0.502,
+      "text": "Vehicle speed peaked at 0 km/h.",
+      "title": "Peak vehicle speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 0.502,
+      "t1": 0.502,
+      "text": "Engine coolant temperature peaked at 12 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "events": 0,
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "ran",
+    },
+    {
+      "events": 3,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20261002_175949.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 626.985,
+      "t1": 626.985,
+      "text": "Engine RPM peaked at 2577 rpm.",
+      "title": "Peak engine speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 640.989,
+      "t1": 640.989,
+      "text": "Vehicle speed peaked at 84 km/h.",
+      "title": "Peak vehicle speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 860.485,
+      "t1": 860.485,
+      "text": "Engine coolant temperature peaked at 83 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "events": 0,
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "ran",
+    },
+    {
+      "events": 3,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20261002_182500.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 415.502,
+      "t1": 415.502,
+      "text": "Engine RPM peaked at 2750 rpm.",
+      "title": "Peak engine speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 1312.993,
+      "t1": 1312.993,
+      "text": "Vehicle speed peaked at 100 km/h.",
+      "title": "Peak vehicle speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 166.004,
+      "t1": 166.004,
+      "text": "Engine coolant temperature peaked at 96 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "events": 0,
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "ran",
+    },
+    {
+      "events": 3,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20261002_204254.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "t0": 3.5,
+      "t1": 3.5,
+      "text": "Engine RPM rose from 0 to 598.5 rpm.",
+      "title": "Engine start",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 552.979,
+      "t1": 552.979,
+      "text": "Engine RPM peaked at 3209 rpm.",
+      "title": "Peak engine speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 556.479,
+      "t1": 556.479,
+      "text": "Vehicle speed peaked at 106 km/h.",
+      "title": "Peak vehicle speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 591.479,
+      "t1": 591.479,
+      "text": "Engine coolant temperature peaked at 93 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "events": 1,
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "ran",
+    },
+    {
+      "events": 3,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
+
+exports[`derive on the fixture Drive Logs > snapshots Events and outcomes for CSVLog_20261004_172256.csv 1`] = `
+{
+  "events": [
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "t0": 4.502,
+      "t1": 4.502,
+      "text": "Engine RPM rose from 0 to 736 rpm.",
+      "title": "Engine start",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 705.504,
+      "t1": 705.504,
+      "text": "Engine RPM peaked at 2784 rpm.",
+      "title": "Peak engine speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 718.507,
+      "t1": 718.507,
+      "text": "Vehicle speed peaked at 122 km/h.",
+      "title": "Peak vehicle speed",
+    },
+    {
+      "category": "generic",
+      "kind": "point",
+      "packId": null,
+      "ruleId": "core.peaks",
+      "t0": 838.003,
+      "t1": 838.003,
+      "text": "Engine coolant temperature peaked at 96 °C.",
+      "title": "Peak coolant temperature",
+    },
+  ],
+  "notices": [],
+  "outcomes": [
+    {
+      "events": 1,
+      "packId": null,
+      "ruleId": "core.engine-start",
+      "status": "ran",
+    },
+    {
+      "events": 3,
+      "packId": null,
+      "ruleId": "core.peaks",
+      "status": "ran",
+    },
+  ],
+}
+`;
