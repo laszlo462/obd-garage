@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { P0401_PACK } from "../rule-packs/6.7-p0401/index.ts";
 import { createApp } from "./app.ts";
 import { type Db, openDb } from "./db.ts";
 import { createIngest, MAX_UPLOAD_BYTES, type UploadResult } from "./ingest.ts";
@@ -61,8 +62,9 @@ describe("POST /api/uploads with real files", () => {
       packs: ["p0401"],
       sameDayUnassigned: [],
     });
-    // The suggestion is stored; the pack itself resolves once the 6.7 P0401 Rule Pack lands.
+    // The suggestion is stored, and with the real registry it resolves to the real pack.
     expect(db.listVehicles()[0]?.packIds).toEqual(["p0401"]);
+    expect(registry.pack("p0401")).toBe(P0401_PACK);
 
     const again = await upload(OCT, { filename: "again.html" });
     expect(again.body).toMatchObject({

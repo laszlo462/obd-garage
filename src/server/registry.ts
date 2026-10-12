@@ -1,12 +1,13 @@
 import { GENERIC_PROFILE, type Profile } from "../core/derive.ts";
 import type { RulePack } from "../core/rules.ts";
 import { VEHICLE_PROFILES, type VehicleProfiles } from "../profiles/index.ts";
+import { P0401_PACK } from "../rule-packs/6.7-p0401/index.ts";
 
 /** What a Vehicle Profile's VIN matcher says about a VIN. */
 export type VinMatch = { profileId: string; suggestedPackIds: readonly string[] };
 
 /**
- * The seam between ingest and the Vehicle Profiles and Rule Packs (built in their own slices). Ingest only
+ * The seam between ingest and the Vehicle Profiles and Rule Packs. Ingest only
  * asks this interface, so it never imports a Profile or a pack.
  */
 export type ProfileRegistry = {
@@ -26,7 +27,7 @@ export const GENERIC_ONLY_REGISTRY: ProfileRegistry = {
   pack: () => undefined,
 };
 
-/** Adapts the Vehicle Profiles to the ingest seam. Rule Packs have no home yet, so none resolve. */
+/** Adapts the Vehicle Profiles and the given Rule Packs (by id) to the ingest seam. */
 export function createProfileRegistry(
   profiles: VehicleProfiles,
   packs: ReadonlyMap<string, RulePack> = new Map(),
@@ -42,4 +43,7 @@ export function createProfileRegistry(
 }
 
 /** What the running server uses. */
-export const DEFAULT_REGISTRY: ProfileRegistry = createProfileRegistry(VEHICLE_PROFILES);
+export const DEFAULT_REGISTRY: ProfileRegistry = createProfileRegistry(
+  VEHICLE_PROFILES,
+  new Map([[P0401_PACK.id, P0401_PACK]]),
+);
