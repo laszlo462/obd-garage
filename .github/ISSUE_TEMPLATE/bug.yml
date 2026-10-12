@@ -1,0 +1,21 @@
+name: Bug report
+description: Something does not work as it should.
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Tell us what you did, what you expected and what you saw.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or image tag
+      placeholder: "0.1.0 or develop"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Remove the VIN and other personal data first.
