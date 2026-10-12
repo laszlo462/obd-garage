@@ -3,7 +3,7 @@ import type { DecodeFix } from "../core/derive.ts";
 import type { VehicleProfile } from "./types.ts";
 
 export const SIX_SEVEN_PROFILE_ID = "6.7";
-/** The "6.7 P0401" Rule Pack. The pack itself lands in its own slice. */
+/** The "6.7 P0401" Rule Pack (`src/rule-packs/6.7-p0401/`). */
 export const P0401_PACK_ID = "p0401";
 
 /**
