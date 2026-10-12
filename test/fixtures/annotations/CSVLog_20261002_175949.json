@@ -1,0 +1,43 @@
+{
+  "engineOffsetS": 0,
+  "freezeFrame": {
+    "vss": 54.68,
+    "rpm": 1346,
+    "load": 39.61,
+    "act": 60,
+    "maf": 5.92,
+    "ect1": 186.8
+  },
+  "events": [
+    {
+      "t0": 0.5,
+      "t1": 0.5,
+      "title": "Cold start, ECT 57 °F, soot 83.9 %"
+    },
+    {
+      "t0": 346,
+      "t1": 346,
+      "title": "Cooler bypass switches to the cooler at ECT 118 °F"
+    },
+    {
+      "t0": 375,
+      "t1": 382,
+      "title": "NOx sensor comes alive and rails at 900 ppm"
+    },
+    {
+      "t0": 639,
+      "t1": 639,
+      "title": "ECT1 reaches 158 °F (70 °C)"
+    },
+    {
+      "t0": 715.5,
+      "t1": 715.5,
+      "title": "Hardest pull: EP 118.0 inHg, MAP 47.0 inHg"
+    },
+    {
+      "t0": 918,
+      "t1": 918,
+      "title": "Log ends at the gas station, soot 94.4 %"
+    }
+  ]
+}

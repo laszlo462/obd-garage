@@ -1,0 +1,81 @@
+{
+  "engineOffsetS": -16.5,
+  "mapCorrectionInHg": 1.24,
+  "freezeFrame": {
+    "vss": 54.68,
+    "rpm": 1346,
+    "load": 39.61,
+    "act": 99.35,
+    "thrc": 72.94,
+    "maf": 5.92,
+    "ect1": 186.8,
+    "egrt": 210.2
+  },
+  "events": [
+    {
+      "t0": 2,
+      "t1": 2,
+      "title": "KOEO, ECT 125.6 °F"
+    },
+    {
+      "t0": 16.5,
+      "t1": 16.5,
+      "title": "Engine start"
+    },
+    {
+      "t0": 227,
+      "t1": 238,
+      "title": "EGR-closed pull 1: 2,966 rpm, EP 116.8 inHg"
+    },
+    {
+      "t0": 251.5,
+      "t1": 251.5,
+      "title": "ECT1 reaches 158 °F (70 °C)"
+    },
+    {
+      "t0": 294,
+      "t1": 300,
+      "title": "NOx comes alive, then peaks at 900 ppm"
+    },
+    {
+      "t0": 456.5,
+      "t1": 456.5,
+      "title": "Closest match to the freeze frame"
+    },
+    {
+      "t0": 545,
+      "t1": 545,
+      "title": "EGRT peak 361.4 °F"
+    },
+    {
+      "t0": 726.5,
+      "t1": 726.5,
+      "title": "Freeze-frame look-alike: throttle 74 % at EGR 53 %"
+    },
+    {
+      "t0": 975,
+      "t1": 999,
+      "title": "NOx excursion to 319 ppm on a hill"
+    },
+    {
+      "t0": 1036.5,
+      "t1": 1042,
+      "title": "EGR-closed pull 2: 79.5 mph, EGT11 peak 704 °F"
+    },
+    {
+      "t0": 1469,
+      "t1": 1475.5,
+      "title": "EGR-closed pull 3: NOx 555 to 677 ppm"
+    },
+    {
+      "t0": 1615,
+      "t1": 1634,
+      "title": "EGR command swings 21 to 99 % at a steady 54 mph"
+    },
+    {
+      "t0": 1915.5,
+      "t1": 1915.5,
+      "title": "Log ends, 25.5 mi logged"
+    }
+  ]
+}

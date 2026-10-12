@@ -1,0 +1,81 @@
+{
+  "engineOffsetS": 759.3,
+  "mapCorrectionInHg": 1.24,
+  "freezeFrame": {
+    "vss": 54.68,
+    "rpm": 1346,
+    "load": 39.61,
+    "act": 99.35,
+    "thrc": 72.94,
+    "maf": 5.92,
+    "ect1": 186.8,
+    "egrt": 210.2
+  },
+  "events": [
+    {
+      "t0": 0,
+      "t1": 0,
+      "title": "Log starts, about 12 min into the drive"
+    },
+    {
+      "t0": 2,
+      "t1": 150,
+      "title": "Tailpipe NOx decays from 595 to about 180 ppm"
+    },
+    {
+      "t0": 68,
+      "t1": 84,
+      "title": "Decel fuel cut: NOx stays at 132 to 168 ppm"
+    },
+    {
+      "t0": 259.5,
+      "t1": 271.5,
+      "title": "Hardest pull: EP 120.8 inHg, MAP 71.2 inHg"
+    },
+    {
+      "t0": 317,
+      "t1": 324,
+      "title": "Near the freeze-frame operating point (1 of 3)"
+    },
+    {
+      "t0": 530,
+      "t1": 530,
+      "title": "EGRT peak 366.8 °F"
+    },
+    {
+      "t0": 773,
+      "t1": 799,
+      "title": "EGR command swings 20 to 99 % at a steady 60 mph"
+    },
+    {
+      "t0": 779,
+      "t1": 779,
+      "title": "Freeze-frame look-alike: throttle 73 % at EGR 53 %"
+    },
+    {
+      "t0": 860,
+      "t1": 888,
+      "title": "Closest match to the freeze frame (2 of 3)"
+    },
+    {
+      "t0": 983,
+      "t1": 983,
+      "title": "Near the freeze-frame operating point (3 of 3)"
+    },
+    {
+      "t0": 1365,
+      "t1": 1369,
+      "title": "EGT11 peak 627.3 °F, RPM peak 2,950"
+    },
+    {
+      "t0": 1784,
+      "t1": 1784,
+      "title": "Second throttle look-alike: throttle 71 % at EGR 45 %"
+    },
+    {
+      "t0": 1925.5,
+      "t1": 1925.5,
+      "title": "Log ends, 21.7 mi logged"
+    }
+  ]
+}
