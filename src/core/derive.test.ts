@@ -38,10 +38,16 @@ describe("derive", () => {
 
   it("records one outcome per rule, naming missing Channels when not applicable", () => {
     const r = derived(csv("Time (sec), Vehicle speed (MPH)", ["0.1, 5", "0.2, 9"]));
-    expect(r.outcomes).toEqual([
+    expect(r.outcomes.slice(0, 2)).toEqual([
       { ruleId: "core.engine-start", packId: null, status: "not-applicable", missing: ["rpm"] },
       { ruleId: "core.peaks", packId: null, status: "ran", events: 1 },
     ]);
+    expect(r.outcomes.find((o) => o.ruleId === "core.regen")).toEqual({
+      ruleId: "core.regen",
+      packId: null,
+      status: "not-applicable",
+      missing: ["dpfRegen"],
+    });
   });
 
   it("marks Peaks not applicable naming all three channels when none exist", () => {
