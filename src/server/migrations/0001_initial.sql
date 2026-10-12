@@ -2,7 +2,7 @@
 -- reference a derived table (ADR 0003).
 
 CREATE TABLE vehicles (
-  id INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT, -- ids are never reused: clients hold Vehicle, upload and Note ids
   vin TEXT NOT NULL UNIQUE,
   label TEXT NOT NULL,
   profile_id TEXT NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE vehicles (
 );
 
 CREATE TABLE uploads (
-  id INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   kind TEXT NOT NULL CHECK (kind IN ('report', 'drive-log')),
   stored_path TEXT NOT NULL UNIQUE, -- relative to the originals directory, never renamed
   uploaded_filename TEXT NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE reference_reports (
 );
 
 CREATE TABLE notes (
-  id INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   upload_id INTEGER NOT NULL REFERENCES uploads (id) ON DELETE CASCADE,
   text TEXT NOT NULL,
   pinned_time_sec REAL, -- the Original's raw `Time (sec)`; NULL is a whole-upload Note

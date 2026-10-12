@@ -173,6 +173,21 @@ describe("owner data", () => {
     ]);
   });
 
+  it("never reuses a deleted Vehicle, upload or Note id", () => {
+    // Clients hold these ids (a remembered Vehicle, a link to a log), so a new row must not take one over.
+    const db = open_();
+    const { vehicle, report, log } = seed(db);
+    const [note] = db.listNotes(log.id);
+    db.deleteNote(note?.id ?? 0);
+    db.deleteUpload(log.id);
+    db.deleteUpload(report.id);
+    db.deleteVehicle(vehicle.id);
+    const again = seed(db);
+    expect(again.vehicle.id).toBeGreaterThan(vehicle.id);
+    expect(again.report.id).toBeGreaterThan(log.id);
+    expect(db.listNotes(again.log.id)[0]?.id).toBeGreaterThan(note?.id ?? 0);
+  });
+
   it("has no owner table that references a derived table", () => {
     const db = open_();
     expect(db.ownerReferencesToDerived()).toEqual([]);
