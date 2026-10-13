@@ -559,3 +559,60 @@ main {
   color: var(--muted);
   font-size: var(--fs-13);
 }
+
+/* Failed Uploads */
+.failed-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+}
+
+.failed-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  overflow-wrap: anywhere;
+}
+
+.failed-meta {
+  display: flex;
+  gap: 10px;
+  font-size: var(--fs-11);
+  color: var(--muted);
+}
+
+.failed-error {
+  color: var(--bad);
+  font-size: var(--fs-13);
+  overflow-wrap: anywhere;
+}
+
+.failed-panel p {
+  margin: 0;
+}
+
+.failed-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.btn-default {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.btn-danger {
+  color: var(--bad);
+}

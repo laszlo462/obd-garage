@@ -9,6 +9,8 @@ export type StubData = {
   vehicles?: VehicleRow[];
   unassigned?: UnassignedRow[];
   failed?: FailedRow[];
+  /** `DELETE /api/uploads/:id` records the id here and drops it from `failed`, like the server. */
+  deletedUploads?: number[];
   /** The Recent feed per Vehicle id, newest first. The stub pages it with `before` like the server. */
   uploads?: Record<number, FeedRow[]>;
   /** Rows per page of the Recent feed. */
@@ -55,17 +57,32 @@ export function stubApi(data: StubData = {}): Api {
               );
         },
       },
-      uploads: {
-        $get: (args: { query: { vehicle: string; before?: string } }) => {
-          const all = data.uploads?.[Number(args.query.vehicle)] ?? [];
-          const before = args.query.before;
-          const start =
-            before === undefined ? 0 : all.findIndex((r) => r.id === Number(before)) + 1;
-          const items = all.slice(start, start + (data.pageSize ?? 50));
-          const more = start + items.length < all.length;
-          return json({ items, nextBefore: more ? (items.at(-1)?.id ?? null) : null });
+      uploads: Object.assign(
+        {
+          $get: (args: { query: { vehicle: string; before?: string } }) => {
+            const all = data.uploads?.[Number(args.query.vehicle)] ?? [];
+            const before = args.query.before;
+            const start =
+              before === undefined ? 0 : all.findIndex((r) => r.id === Number(before)) + 1;
+            const items = all.slice(start, start + (data.pageSize ?? 50));
+            const more = start + items.length < all.length;
+            return json({ items, nextBefore: more ? (items.at(-1)?.id ?? null) : null });
+          },
         },
-      },
+        {
+          ":id": {
+            $delete: (args: { param: { id: string } }) => {
+              const id = Number(args.param.id);
+              data.deletedUploads?.push(id);
+              data.failed = data.failed?.filter((f) => f.id !== id);
+              return json({ deleted: id });
+            },
+            original: {
+              $path: (args: { param: { id: string } }) => `/api/uploads/${args.param.id}/original`,
+            },
+          },
+        },
+      ),
       reports: {
         $get: (args: { query: { vehicle?: string } }) =>
           json(data.reports?.[Number(args.query.vehicle)] ?? []),
