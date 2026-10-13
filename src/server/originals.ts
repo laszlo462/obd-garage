@@ -12,7 +12,7 @@ export function cleanFilename(name: string): string {
   return cleaned === "" || cleaned === "." || cleaned === ".." ? "upload" : cleaned;
 }
 
-function withSuffix(name: string, n: number): string {
+export function withSuffix(name: string, n: number): string {
   if (n === 1) return name;
   const dot = name.lastIndexOf(".");
   return dot > 0 ? `${name.slice(0, dot)}-${n}${name.slice(dot)}` : `${name}-${n}`;

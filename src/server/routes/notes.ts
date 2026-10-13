@@ -23,7 +23,7 @@ function timeAxis(db: Db, uploadId: number): TimeAxis | undefined {
 }
 
 /** The displayed row nearest `sec`; the earlier row wins a tie. Read from current data, so it follows collapse changes. */
-function snap(rows: readonly number[], sec: number): number | null {
+export function snap(rows: readonly number[], sec: number): number | null {
   let best: number | null = null;
   for (const t of rows) if (best === null || Math.abs(t - sec) < Math.abs(best - sec)) best = t;
   return best;
