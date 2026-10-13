@@ -32,7 +32,11 @@ export function AddButton(props: { label: string }) {
   const flow = useUploadFlow();
   return (
     <>
-      <button type="button" class="add-button" onClick={() => input.current?.click()}>
+      <button
+        type="button"
+        class="add-button"
+        onClick={() => (flow.running ? flow.showProgress() : input.current?.click())}
+      >
         {props.label === "Add" && (
           <span class="plus">
             <Plus aria-hidden="true" size={20} strokeWidth={1.8} />
@@ -53,7 +57,6 @@ export function AddButton(props: { label: string }) {
           void flow.pick(files);
         }}
       />
-      {flow.sheets}
     </>
   );
 }

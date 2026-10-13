@@ -159,6 +159,19 @@ except for Back, the menu and "more" (`…`), which carry an `aria-label`.
 - **Header:** the title on the left and one text action on the right (Close, Done or Cancel). The primary
   action is a full-width button at the foot.
 
+### When things go wrong
+Two patterns, shared by every screen. A screen never draws its own error line.
+- **A failed load: one banner.** A `--bad-t` strip under the app bar reads "✕ Couldn't load." with a **Retry**
+  button (`role="alert"`). There is at most one, never one per screen. Retry refreshes the app state, then reloads
+  every screen.
+  - A screen reports its failed load to app state and clears the report on success and on unmount.
+  - The rows already on screen stay under the banner. With no rows yet, the body stays empty.
+- **A failed action: one toast.** A short message in a `--bad` outline, above the tab bar (`role="status"`). It
+  clears after about 4 s, and a new toast replaces the current one. The control that failed stays usable
+  ("Couldn't delete the upload.", "Couldn't load older uploads.").
+- **A file the browser never got a 200 for** shows in the Batch result as "Not uploaded", in `--bad` with the
+  reason and no link. It never reached the server, so it is not on Failed Uploads.
+
 ### Drive Log viewer
 Order on a phone:
 - **Header:** the title "SAT 04 OCT · 17:22", then a meta line (Vehicle label, duration, row count) and a

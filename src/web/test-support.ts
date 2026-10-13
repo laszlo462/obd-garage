@@ -6,6 +6,19 @@ import type { UploadResult } from "./upload-batch.ts";
 export type VehicleRow = InferResponseType<Api["api"]["vehicles"]["$get"]>[number];
 export type UnassignedRow = InferResponseType<Api["api"]["drive-logs"]["$get"], 200>[number];
 export type FailedRow = InferResponseType<Api["api"]["failed-uploads"]["$get"]>[number];
+/** The stub routes that `StubData.fail` can break. `olderUploads` is the Recent feed with `before`. */
+export type FailRoute =
+  | "health"
+  | "vehicles"
+  | "status"
+  | "uploads"
+  | "olderUploads"
+  | "reports"
+  | "driveLogs"
+  | "failedUploads"
+  | "deleteUpload"
+  | "assign";
+
 export type StubData = {
   vehicles?: VehicleRow[];
   unassigned?: UnassignedRow[];
@@ -32,43 +45,68 @@ export type StubData = {
   assignCalls?: unknown[];
   /** Each `GET /api/vehicles` pushes a marker here. */
   vehicleLoads?: unknown[];
+  /**
+   * Break a route: "status" answers 500, "throw" rejects like a dead network. Mutable, so a test can
+   * mend a route between a failed load and a Retry.
+   */
+  fail?: Partial<Record<FailRoute, "status" | "throw">>;
   /** Never answer `GET /api/vehicles`, to see the screen before the first load. */
   pending?: boolean;
 };
 
 const json = (body: unknown) => Promise.resolve(Response.json(body));
 
+/** Wraps a route so it fails the way `data.fail` says, and answers normally otherwise. */
+const route =
+  <A extends unknown[]>(
+    data: StubData,
+    name: FailRoute,
+    answer: (...args: A) => Promise<Response>,
+  ) =>
+  (...args: A): Promise<Response> => {
+    const mode = data.fail?.[name];
+    if (mode === "throw") return Promise.reject(new TypeError("Failed to fetch"));
+    if (mode === "status")
+      return Promise.resolve(Response.json({ error: "Stub failure." }, { status: 500 }));
+    return answer(...args);
+  };
+
 /** A stand-in for the `hc<AppType>` client. Row types come from the real client type. */
 export function stubApi(data: StubData = {}): Api {
   return {
     api: {
-      health: { $get: () => json({ status: "ok", version: data.version ?? "0.0.0" }) },
+      health: {
+        $get: route(data, "health", () => json({ status: "ok", version: data.version ?? "0.0.0" })),
+      },
       vehicles: Object.assign(
         {
-          $get: () => {
+          $get: route(data, "vehicles", () => {
             data.vehicleLoads?.push(1);
             return data.pending ? new Promise<Response>(() => {}) : json(data.vehicles ?? []);
-          },
+          }),
         },
         {
           ":id": {
             status: {
-              $get: (args: { param: { id: string } }) =>
+              $get: route(data, "status", (args: { param: { id: string } }) =>
                 json(data.status?.[Number(args.param.id)] ?? { report: null, previous: null }),
+              ),
             },
           },
         },
       ),
       "drive-logs": {
         assign: {
-          $post: (args: { json: unknown }) => {
+          $post: route(data, "assign", (args: { json: unknown }) => {
             data.assignCalls?.push(args.json);
             return json({ assigned: 0 });
-          },
+          }),
         },
         $get: (args?: { query?: { unassigned?: string; vehicle?: string } }) => {
           if (args?.query?.vehicle !== undefined)
-            return json(data.driveLogs?.[Number(args.query.vehicle)] ?? []);
+            return route(data, "driveLogs", () =>
+              json(data.driveLogs?.[Number(args?.query?.vehicle)] ?? []),
+            )();
           return args?.query?.unassigned === "1"
             ? json(data.unassigned ?? [])
             : Promise.resolve(
@@ -109,24 +147,25 @@ export function stubApi(data: StubData = {}): Api {
               );
             return json(result);
           },
-          $get: (args: { query: { vehicle: string; before?: string } }) => {
-            const all = data.uploads?.[Number(args.query.vehicle)] ?? [];
-            const before = args.query.before;
-            const start =
-              before === undefined ? 0 : all.findIndex((r) => r.id === Number(before)) + 1;
-            const items = all.slice(start, start + (data.pageSize ?? 50));
-            const more = start + items.length < all.length;
-            return json({ items, nextBefore: more ? (items.at(-1)?.id ?? null) : null });
-          },
+          $get: (args: { query: { vehicle: string; before?: string } }) =>
+            route(data, args.query.before === undefined ? "uploads" : "olderUploads", () => {
+              const all = data.uploads?.[Number(args.query.vehicle)] ?? [];
+              const before = args.query.before;
+              const start =
+                before === undefined ? 0 : all.findIndex((r) => r.id === Number(before)) + 1;
+              const items = all.slice(start, start + (data.pageSize ?? 50));
+              const more = start + items.length < all.length;
+              return json({ items, nextBefore: more ? (items.at(-1)?.id ?? null) : null });
+            })(),
         },
         {
           ":id": {
-            $delete: (args: { param: { id: string } }) => {
+            $delete: route(data, "deleteUpload", (args: { param: { id: string } }) => {
               const id = Number(args.param.id);
               data.deletedUploads?.push(id);
               data.failed = data.failed?.filter((f) => f.id !== id);
               return json({ deleted: id });
-            },
+            }),
             original: {
               $path: (args: { param: { id: string } }) => `/api/uploads/${args.param.id}/original`,
             },
@@ -134,10 +173,11 @@ export function stubApi(data: StubData = {}): Api {
         },
       ),
       reports: {
-        $get: (args: { query: { vehicle?: string } }) =>
+        $get: route(data, "reports", (args: { query: { vehicle?: string } }) =>
           json(data.reports?.[Number(args.query.vehicle)] ?? []),
+        ),
       },
-      "failed-uploads": { $get: () => json(data.failed ?? []) },
+      "failed-uploads": { $get: route(data, "failedUploads", () => json(data.failed ?? [])) },
     },
   } as unknown as Api;
 }

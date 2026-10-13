@@ -121,7 +121,11 @@ export function BatchResultSheet(props: { results: FileResult[]; onClose: () => 
                 <span class="word">{line.word}</span>
                 {line.reason && <span class="sub">{line.reason}</span>}
               </span>
-              {line.link && <a href={line.link.href}>{line.link.label}</a>}
+              {line.link && (
+                <a href={line.link.href} onClick={props.onClose}>
+                  {line.link.label}
+                </a>
+              )}
             </li>
           );
         })}

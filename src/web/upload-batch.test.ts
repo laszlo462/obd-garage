@@ -71,6 +71,16 @@ describe("resultLine", () => {
     });
   });
 
+  it("reads a file the browser never got an answer for as red 'Not uploaded', with no link", () => {
+    const line = resultLine({ outcome: "not-sent", reason: "Failed to fetch." });
+    expect(line).toEqual({
+      icon: "cross",
+      tone: "bad",
+      word: "Not uploaded",
+      reason: "Failed to fetch.",
+    });
+  });
+
   it("reads a refused file as muted, with no link", () => {
     const line = resultLine(
       result({ outcome: "refused", kind: "unknown", reason: "Not a report." }),
@@ -188,13 +198,13 @@ describe("runBatch: the Vehicle question", () => {
 });
 
 describe("runBatch: results", () => {
-  it("turns a thrown upload into a failed line with the error's message and carries on", async () => {
+  it("turns a thrown upload into a not-sent line with the error's message and carries on", async () => {
     const h = harness({ "a.csv": new Error("The server answered 500.") });
     const out = await runBatch([csv("a.csv"), csv("b.csv")], h.deps);
     expect(h.calls.map((c) => c.name)).toEqual(["a.csv", "b.csv"]);
     expect(out.results[0]).toMatchObject({
       name: "a.csv",
-      result: { outcome: "failed", reason: "The server answered 500." },
+      result: { outcome: "not-sent", reason: "The server answered 500." },
     });
     expect(out.results[1]?.result.outcome).toBe("added");
   });

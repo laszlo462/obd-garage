@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { renderApp } from "./test-render.tsx";
-import { feedLog, feedReport, statusReport, vehicleRow } from "./test-support.ts";
+import { feedLog, feedReport, type StubData, statusReport, vehicleRow } from "./test-support.ts";
 
 beforeEach(() => history.replaceState(null, "", "/"));
 afterEach(cleanup);
@@ -64,6 +64,21 @@ describe("Recent", () => {
       ["/drive-logs/3", "/drive-logs/2", "/drive-logs/1"],
     );
     expect(screen.queryByRole("button", { name: "Show older" })).toBeNull();
+  });
+
+  it("toasts and re-enables Show older when paging fails, and works on a second try", async () => {
+    const rows = [3, 2, 1].map((id) => feedLog({ id, recordedAt: `2026-10-0${id}T10:00:00` }));
+    const fail: StubData["fail"] = { olderUploads: "status" };
+    renderApp({ vehicles, uploads: { 4: rows }, pageSize: 2, fail });
+    await screen.findAllByRole("link", { name: /LOG/ });
+    fireEvent.click(screen.getByRole("button", { name: "Show older" }));
+    const toast = await screen.findByRole("status");
+    expect(toast.textContent).toBe("Couldn't load older uploads.");
+    const button = screen.getByRole("button", { name: "Show older" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    delete fail.olderUploads;
+    fireEvent.click(button);
+    await waitFor(() => expect(screen.getAllByRole("link", { name: /LOG/ })).toHaveLength(3));
   });
 
   it("shows another Vehicle's uploads after the Current Vehicle changes", async () => {

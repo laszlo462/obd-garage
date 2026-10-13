@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { useAppState } from "./AppState.tsx";
 import { useApi } from "./api.tsx";
 import type { FailedUploadRow as FailedRow } from "./api-types.ts";
@@ -12,14 +12,35 @@ export function FailedUploads() {
   const state = useAppState();
   const [confirming, setConfirming] = useState<FailedRow | null>(null);
   const [rows, setRows] = useState<FailedRow[] | null>(null);
+  const owner = useRef({});
+  // Reloads on `revision`. A failure goes to the shell banner and the old rows stay.
+  const revision = state.revision.value;
   useEffect(() => {
-    api.api["failed-uploads"].$get().then(okJson).then(setRows);
-  }, []);
+    let stale = false;
+    api.api["failed-uploads"]
+      .$get()
+      .then(okJson)
+      .then(
+        (loaded) => {
+          if (stale) return;
+          state.reportLoad(owner.current, false);
+          setRows(loaded);
+        },
+        () => !stale && state.reportLoad(owner.current, true),
+      );
+    return () => {
+      stale = true;
+    };
+  }, [revision]);
+  useEffect(() => () => state.reportLoad(owner.current, false), [state]);
   if (rows === null) return null;
   async function remove(row: FailedRow) {
     setConfirming(null);
-    const res = await api.api.uploads[":id"].$delete({ param: { id: String(row.id) } });
-    if (!res.ok) return;
+    const deleted = await api.api.uploads[":id"]
+      .$delete({ param: { id: String(row.id) } })
+      .then((res) => res.ok)
+      .catch(() => false);
+    if (!deleted) return state.toast("Couldn't delete the upload.");
     setRows((current) => current?.filter((r) => r.id !== row.id) ?? null);
     await state.refresh();
     state.invalidate();

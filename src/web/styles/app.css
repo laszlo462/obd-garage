@@ -721,3 +721,35 @@ main {
 .btn-danger {
   color: var(--bad);
 }
+
+/* Load banner: the one strip for a failed load, under the app bar */
+.load-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px var(--gutter);
+  background: var(--bad-t);
+  color: var(--bad);
+  font-size: var(--fs-13);
+}
+
+.load-banner .message {
+  flex: 1;
+}
+
+/* Toast: the one shared message for a failed action, above the tab bar and any sheet */
+.toast {
+  position: fixed;
+  z-index: 50;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 12px;
+  background: var(--surface);
+  color: var(--bad);
+  border: 1px solid var(--bad);
+  border-radius: var(--radius-control);
+  font-size: var(--fs-13);
+}

@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { renderApp } from "./test-render.tsx";
-import { type FailedRow, vehicleRow } from "./test-support.ts";
+import { type FailedRow, type StubData, vehicleRow } from "./test-support.ts";
 
 afterEach(cleanup);
 
@@ -67,4 +67,33 @@ describe("Failed Uploads", () => {
     const row = screen.getByRole("link", { name: /Failed Uploads/ });
     await waitFor(() => expect(within(row).getByText("1")).toBeTruthy());
   });
+});
+
+describe("Failed Uploads: errors", () => {
+  beforeEach(() => history.replaceState(null, "", "/failed-uploads"));
+
+  it("shows the banner when the list fails to load, and Retry loads it", async () => {
+    const fail: StubData["fail"] = { failedUploads: "status" };
+    renderApp({ vehicles: [vehicleRow()], failed: [failedRow()], fail });
+    await screen.findByRole("alert");
+    expect(screen.queryByText("broken.html")).toBeNull();
+    delete fail.failedUploads;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await screen.findByText("broken.html");
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
+
+  it.each(["status", "throw"] as const)(
+    "toasts and keeps the panel when a delete fails (%s)",
+    async (mode) => {
+      renderApp({ vehicles: [vehicleRow()], failed: [failedRow()], fail: { deleteUpload: mode } });
+      const panel = (await screen.findByText("broken.html")).closest("article") as HTMLElement;
+      fireEvent.click(within(panel).getByRole("button", { name: "Delete" }));
+      fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
+      const toast = await screen.findByRole("status");
+      expect(toast.textContent).toBe("Couldn't delete the upload.");
+      expect(screen.getByText("broken.html")).toBeTruthy();
+      expect(screen.queryByRole("dialog")).toBeNull();
+    },
+  );
 });
