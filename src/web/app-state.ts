@@ -10,6 +10,8 @@ export function createAppState(api: Api, storage: Storage) {
   const unassignedCount = signal(0);
   const failedCount = signal(0);
   const loaded = signal(false);
+  /** Bumped by `invalidate()`. List screens load on `[currentVehicle.id, revision]`. */
+  const revision = signal(0);
   const version = signal<string | null>(null);
   const needsAttention = computed(() => unassignedCount.value > 0 || failedCount.value > 0);
 
@@ -25,6 +27,11 @@ export function createAppState(api: Api, storage: Storage) {
     needsAttention,
     version,
     loaded,
+    revision,
+    /** Call after data changes (an upload, a delete, an assignment) so the list screens reload. */
+    invalidate() {
+      revision.value++;
+    },
     selectVehicle(id: number) {
       storedId.value = id;
       writeStoredVehicleId(storage, id);

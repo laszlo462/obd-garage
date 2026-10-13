@@ -115,4 +115,39 @@ describe("app stylesheet", () => {
     expect(z(".scrim")).toBeGreaterThan(z(".app-bar"));
     expect(z(".scrim")).toBeGreaterThan(z(".tab-bar"));
   });
+
+  it("tints each badge kind with its DESIGN.md ink and a matching fill", () => {
+    for (const [tone, ink, fill] of [
+      ["bad", "--bad", "--bad-t"],
+      ["warn", "--warn", "--warn-t"],
+      ["ok", "--ok", "--ok-t"],
+      ["accent", "--accent", "--accent-t"],
+    ] as const) {
+      expect(rule(`.badge-${tone}`), tone).toContain(`color: var(${ink})`);
+      expect(rule(`.badge-${tone}`), tone).toContain(`background: var(${fill})`);
+    }
+    expect(rule(".badge-neutral")).toMatch(/background:\s*var\(--surface2\)/);
+  });
+
+  it("draws badges in 11px 600 mono with a 4px radius", () => {
+    const badge = rule(".badge") ?? "";
+    expect(badge).toMatch(/font-family:\s*var\(--font-mono\)/);
+    expect(badge).toMatch(/font-size:\s*var\(--fs-11\)/);
+    expect(badge).toMatch(/font-weight:\s*600/);
+    expect(badge).toMatch(/border-radius:\s*var\(--radius-control\)/);
+  });
+
+  it("colours the row kind label --c1 for LOG and --warn for REPORT", () => {
+    expect(rule(".kind-log")).toMatch(/color:\s*var\(--c1\)/);
+    expect(rule(".kind-report")).toMatch(/color:\s*var\(--warn\)/);
+  });
+
+  it("colours stat values by tone", () => {
+    for (const [tone, colour] of [
+      ["ok", "--ok"],
+      ["warn", "--warn"],
+      ["bad", "--bad"],
+    ] as const)
+      expect(rule(`.tone-${tone}`), tone).toContain(`color: var(${colour})`);
+  });
 });

@@ -21,9 +21,33 @@ describe("MenuSheet", () => {
     renderWithApp(<MenuSheet onClose={() => {}} />, {
       vehicles,
       unassigned: [
-        { id: 1, filename: "a.csv", recordedAt: null, durationSec: null, noteCount: 0 },
-        { id: 2, filename: "b.csv", recordedAt: null, durationSec: null, noteCount: 0 },
-        { id: 3, filename: "c.csv", recordedAt: null, durationSec: null, noteCount: 0 },
+        {
+          id: 1,
+          filename: "a.csv",
+          recordedAt: null,
+          durationSec: null,
+          noteCount: 0,
+          eventCount: 0,
+          skippedRows: 0,
+        },
+        {
+          id: 2,
+          filename: "b.csv",
+          recordedAt: null,
+          durationSec: null,
+          noteCount: 0,
+          eventCount: 0,
+          skippedRows: 0,
+        },
+        {
+          id: 3,
+          filename: "c.csv",
+          recordedAt: null,
+          durationSec: null,
+          noteCount: 0,
+          eventCount: 0,
+          skippedRows: 0,
+        },
       ],
       failed: [
         { id: 4, kind: "report", filename: "d.html", error: "bad", uploadedAt: "2026-10-01" },

@@ -46,7 +46,15 @@ describe("app state", () => {
       stubApi({
         vehicles: two,
         unassigned: [
-          { id: 1, filename: "a.csv", recordedAt: null, durationSec: null, noteCount: 0 },
+          {
+            id: 1,
+            filename: "a.csv",
+            recordedAt: null,
+            durationSec: null,
+            noteCount: 0,
+            eventCount: 0,
+            skippedRows: 0,
+          },
         ],
         failed: [
           { id: 2, kind: "report", filename: "b.html", error: "bad", uploadedAt: "2026-10-01" },
@@ -73,5 +81,12 @@ describe("app state", () => {
     const state = createAppState(stubApi({ version: "1.4.0" }), memory());
     await state.refresh();
     expect(state.version.value).toBe("1.4.0");
+  });
+
+  it("bumps the revision when data changes, so the list screens reload", () => {
+    const state = createAppState(stubApi(), memory());
+    const before = state.revision.value;
+    state.invalidate();
+    expect(state.revision.value).toBe(before + 1);
   });
 });

@@ -4,6 +4,7 @@ import { bodyLimit } from "hono/body-limit";
 import type { Db, Upload } from "../db.ts";
 import { type Ingest, MAX_UPLOAD_BYTES, tooLargeResult } from "../ingest.ts";
 import { originalPath, removeOriginal } from "../originals.ts";
+import { type ReportBadges, storedReportBadges } from "../report-badges.ts";
 
 const parseId = (text: string) => (/^\d+$/.test(text) ? Number(text) : Number.NaN);
 
@@ -11,9 +12,8 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
 /** One row of the Vehicle's Recent feed. */
-export type FeedItem = {
+type FeedBase = {
   id: number;
-  kind: Upload["kind"];
   filename: string;
   recordedAt: string | null;
   uploadedAt: string;
@@ -23,6 +23,11 @@ export type FeedItem = {
   /** Drive Logs only. */
   durationSec: number | null;
 };
+
+/** A Report row carries its badge fields; a Drive Log row carries its skipped-row count. */
+export type FeedItem =
+  | (FeedBase & { kind: "report" } & ReportBadges)
+  | (FeedBase & { kind: "drive-log"; skippedRows: number });
 
 /** Newest recording first; the id breaks a tie so the order is total. */
 export const newestFirst = (a: Upload, b: Upload) =>
@@ -71,10 +76,10 @@ export function uploadsRoute(deps: { db: Db; ingest: Ingest }) {
       const events = db.eventCounts();
       const items = page.map((u): FeedItem => {
         const d = db.getDerivedSummary(u.id);
-        const duration = (d?.metadata as { duration?: number } | null)?.duration;
-        return {
+        const meta = d?.metadata as { duration?: number; rows?: { skipped?: number } } | null;
+        const duration = meta?.duration;
+        const base: FeedBase = {
           id: u.id,
-          kind: u.kind,
           filename: u.uploadedFilename,
           recordedAt: u.recordedAt,
           uploadedAt: u.uploadedAt,
@@ -83,6 +88,9 @@ export function uploadsRoute(deps: { db: Db; ingest: Ingest }) {
           warningCount: d?.warningCount ?? 0,
           durationSec: u.kind === "drive-log" ? (duration ?? null) : null,
         };
+        return u.kind === "report"
+          ? { ...base, kind: "report", ...storedReportBadges(db, u.id) }
+          : { ...base, kind: "drive-log", skippedRows: meta?.rows?.skipped ?? 0 };
       });
       const last = page.at(-1);
       const more = last !== undefined && start + page.length < sorted.length;

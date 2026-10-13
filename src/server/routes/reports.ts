@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import type { ParsedReport } from "../../core/report.ts";
 import type { Db } from "../db.ts";
+import { type ReportBadges, storedReportBadges } from "../report-badges.ts";
 import { newestFirst } from "./uploads.ts";
 
 const parseId = (text: string) => (/^\d+$/.test(text) ? Number(text) : Number.NaN);
 
 /** One row of a Vehicle's Report list. */
-export type ReportListItem = {
+export type ReportListItem = ReportBadges & {
   id: number;
   filename: string;
   vehicleId: number | null;
@@ -37,6 +38,7 @@ export function reportsRoute(deps: { db: Db }) {
             recordedAt: u.recordedAt,
             uploadedAt: u.uploadedAt,
             noteCount: notes.get(u.id) ?? 0,
+            ...storedReportBadges(db, u.id),
           }),
         );
       return c.json(items);
