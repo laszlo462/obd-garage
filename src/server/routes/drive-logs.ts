@@ -6,13 +6,16 @@ import { newestFirst } from "./uploads.ts";
 
 const parseId = (text: string) => (/^\d+$/.test(text) ? Number(text) : Number.NaN);
 
-/** One row of the Unassigned list. */
-export type UnassignedItem = {
+/** One row of the Unassigned list, and of a Vehicle's Drive Logs list. */
+export type DriveLogListItem = {
   id: number;
   filename: string;
   recordedAt: string | null;
   durationSec: number | null;
   noteCount: number;
+  eventCount: number;
+  /** Rows the parser tolerated and dropped. */
+  skippedRows: number;
 };
 
 /** One Event as the viewer draws it. */
@@ -49,21 +52,32 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
 
   return new Hono()
     .get("/", (c) => {
-      if (c.req.query("unassigned") !== "1")
-        return c.json({ error: "Expected ?unassigned=1." }, 400);
+      const vehicleText = c.req.query("vehicle");
+      let vehicleId: number | null = null;
+      if (vehicleText !== undefined) {
+        vehicleId = parseId(vehicleText);
+        if (!db.getVehicle(vehicleId)) return c.json({ error: "Unknown vehicle." }, 400);
+      } else if (c.req.query("unassigned") !== "1")
+        return c.json({ error: "Expected ?unassigned=1 or ?vehicle=<id>." }, 400);
       const notes = db.noteCounts();
+      const events = db.eventCounts();
       const items = db
-        .listUploads({ kind: "drive-log", vehicleId: null })
+        .listUploads({ kind: "drive-log", vehicleId })
         .filter((u) => !db.getDerivedSummary(u.id)?.failedError)
         .sort(newestFirst)
-        .map((u): UnassignedItem => {
-          const meta = db.getDerivedSummary(u.id)?.metadata as { duration?: number } | null;
+        .map((u): DriveLogListItem => {
+          const meta = db.getDerivedSummary(u.id)?.metadata as {
+            duration?: number;
+            rows?: { skipped?: number };
+          } | null;
           return {
             id: u.id,
             filename: u.uploadedFilename,
             recordedAt: u.recordedAt,
             durationSec: meta?.duration ?? null,
             noteCount: notes.get(u.id) ?? 0,
+            eventCount: events.get(u.id) ?? 0,
+            skippedRows: meta?.rows?.skipped ?? 0,
           };
         });
       return c.json(items);

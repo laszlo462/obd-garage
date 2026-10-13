@@ -71,10 +71,12 @@ describe("App shell on a phone", () => {
   });
 
   it("moves between the tab routes when a tab is tapped", async () => {
-    renderApp();
-    expect(screen.getByRole("main").textContent).toContain("Recent uploads");
+    renderApp({ vehicles: [vehicleRow({ id: 4 })] });
+    await waitFor(() => expect(screen.getByRole("main").textContent).toContain("Recent uploads"));
     fireEvent.click(screen.getByRole("tab", { name: "Drive Logs" }));
-    await waitFor(() => expect(screen.getByRole("main").textContent).toContain("Drive Logs list"));
+    await waitFor(() =>
+      expect(screen.getByRole("main").textContent).toContain("No drive logs yet."),
+    );
     expect(location.pathname).toBe("/drive-logs");
     expect(screen.getByRole("tab", { name: "Drive Logs" }).getAttribute("aria-selected")).toBe(
       "true",

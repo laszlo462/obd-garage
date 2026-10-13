@@ -325,6 +325,13 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
         warningCount: r.warning_count as number,
       };
     },
+    /** The parsed Report only: no Channels blob or Events. `null` for a Drive Log or Failed Upload. */
+    getParsedReport(uploadId: number): unknown {
+      const r = stmt("SELECT parsed_report FROM derived_uploads WHERE upload_id = ?").get(
+        uploadId,
+      ) as Row | undefined;
+      return r ? unjson(r.parsed_report) : null;
+    },
     getDerived(uploadId: number): Derived | undefined {
       const r = stmt("SELECT * FROM derived_uploads WHERE upload_id = ?").get(uploadId) as
         | Row

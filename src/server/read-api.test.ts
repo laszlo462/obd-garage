@@ -88,6 +88,27 @@ describe("GET /api/uploads (Recent feed)", () => {
     expect(nextBefore).toBeNull();
   });
 
+  it("gives Report rows their badge fields and Drive Log rows their skipped-row count", async () => {
+    const { vehicleId, octId } = await setup();
+    const skippy = await upload(
+      `${LOG.toString("utf8").trimEnd()}
+not,a,row
+`,
+      "skippy.csv",
+      vehicleId,
+    );
+    const { items } = (await getJson(`/uploads?vehicle=${vehicleId}`)) as {
+      items: Record<string, unknown>[];
+    };
+    expect(items.find((i) => i.id === octId)).toMatchObject({
+      mil: "on",
+      storedCodes: ["P0401", "B1B58-11", "P0401-00"],
+      incompleteMonitors: 0,
+      totalMonitors: 22,
+    });
+    expect(items.find((i) => i.id === skippy.uploadId)).toMatchObject({ skippedRows: 1 });
+  });
+
   it("pages with limit and before", async () => {
     const { vehicleId, augId, octId, logId } = await setup();
     const first = (await getJson(`/uploads?vehicle=${vehicleId}&limit=2`)) as {
@@ -146,11 +167,61 @@ describe("GET /api/vehicles/:id/status", () => {
     expect(Number.isInteger(body.report.incompleteMonitors)).toBe(true);
   });
 
+  it("also returns the Report before it, with permanent codes and the monitor total", async () => {
+    const { vehicleId, augId, octId } = await setup();
+    const body = (await getJson(`/vehicles/${vehicleId}/status`)) as {
+      report: Record<string, unknown>;
+      previous: Record<string, unknown>;
+    };
+    expect(body.report).toMatchObject({
+      id: octId,
+      permanentCodes: ["P0401"],
+      totalMonitors: 22,
+    });
+    expect(body.previous).toMatchObject({
+      id: augId,
+      mil: "on",
+      storedCodes: ["P0401", "B1B58-11", "P0401-00"],
+      permanentCodes: [],
+      incompleteMonitors: 0,
+      totalMonitors: 22,
+    });
+  });
+
+  it("skips a newer Report that has no parsed data", async () => {
+    const { vehicleId, augId, octId } = await setup();
+    db.addUpload({
+      kind: "report",
+      storedPath: "reports/2026-12/unparsed.html",
+      uploadedFilename: "unparsed.html",
+      sha256: "f".repeat(64),
+      uploadedAt: "2026-12-01T00:00:00Z",
+      recordedAt: "2026-12-01T09:00:00",
+      vehicleId,
+    });
+    const body = (await getJson(`/vehicles/${vehicleId}/status`)) as {
+      report: { id: number };
+      previous: { id: number };
+    };
+    expect(body.report.id).toBe(octId);
+    expect(body.previous.id).toBe(augId);
+  });
+
+  it("has no previous Report when there is only one", async () => {
+    const { vehicleId, augId } = await setup();
+    await send(`/uploads/${augId}`, "DELETE");
+    const body = (await getJson(`/vehicles/${vehicleId}/status`)) as { previous: unknown };
+    expect(body.previous).toBeNull();
+  });
+
   it("says there is no diagnostic report yet once the Reports are gone", async () => {
     const { vehicleId, augId, octId } = await setup();
     await send(`/uploads/${augId}`, "DELETE");
     await send(`/uploads/${octId}`, "DELETE");
-    expect(await getJson(`/vehicles/${vehicleId}/status`)).toEqual({ report: null });
+    expect(await getJson(`/vehicles/${vehicleId}/status`)).toEqual({
+      report: null,
+      previous: null,
+    });
   });
 
   it("404s an unknown Vehicle", async () => {
@@ -175,7 +246,36 @@ describe("GET /api/drive-logs?unassigned=1", () => {
     expect(items.map((i) => i.id)).not.toContain(logId);
   });
 
-  it("requires unassigned=1", async () => {
+  it("lists a Vehicle's Drive Logs newest first with Event and skipped-row counts", async () => {
+    const { vehicleId, logId } = await setup();
+    const later = await upload(
+      `${BIG.toString("utf8").trimEnd()}
+not,a,row
+`,
+      "later.csv",
+      vehicleId,
+    );
+    await upload(LOG, "loose.csv");
+    await failedLog(vehicleId);
+    const items = (await getJson(`/drive-logs?vehicle=${vehicleId}`)) as {
+      id: number;
+      eventCount: number;
+      skippedRows: number;
+      noteCount: number;
+      durationSec: number;
+    }[];
+    expect(items.map((i) => i.id)).toEqual([later.uploadId, logId]);
+    expect(items[0]?.skippedRows).toBe(1);
+    expect(items[1]?.skippedRows).toBe(0);
+    expect(items[1]?.eventCount).toBe(db.getDerived(logId)?.events.length);
+    expect(items[1]?.durationSec).toBeGreaterThan(0);
+  });
+
+  it("404s an unknown Vehicle", async () => {
+    expect((await send("/drive-logs?vehicle=999")).status).toBe(400);
+  });
+
+  it("requires unassigned=1 or a vehicle", async () => {
     expect((await send("/drive-logs")).status).toBe(400);
   });
 });
@@ -284,6 +384,18 @@ describe("GET /api/reports", () => {
     expect(one.id).toBe(octId);
     expect(one.filename).toBe("oct.html");
     expect(one.report.header.date).toBe(db.getUpload(octId)?.recordedAt);
+  });
+
+  it("gives each Report row its badge fields", async () => {
+    const { vehicleId, octId } = await setup();
+    const list = (await getJson(`/reports?vehicle=${vehicleId}`)) as Record<string, unknown>[];
+    expect(list.find((r) => r.id === octId)).toMatchObject({
+      mil: "on",
+      storedCodes: ["P0401", "B1B58-11", "P0401-00"],
+      pendingCodes: ["P0401", "B1B58-11", "P0401-00"],
+      incompleteMonitors: 0,
+      totalMonitors: 22,
+    });
   });
 
   it("404s a Drive Log id, 409s a failed Report, 400s an unknown Vehicle", async () => {
