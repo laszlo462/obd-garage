@@ -14,7 +14,7 @@ export type ProfileRegistry = {
   /** The Profile whose VIN matcher claims `vin`; the Generic Profile when none does. */
   matchVin(vin: string): VinMatch;
   /** `undefined` for an id the registry does not know (the caller falls back to Generic). */
-  profile(id: string): Profile | undefined;
+  profile(id: string): (Profile & { hiddenColumns?: readonly string[] }) | undefined;
   pack(id: string): RulePack | undefined;
   /** Every Profile, for the settings picker. */
   profiles(): { id: string; name: string }[];

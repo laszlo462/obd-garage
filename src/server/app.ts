@@ -30,7 +30,7 @@ export function createApp(deps: AppDeps) {
     .route("/vehicles", vehiclesRoute({ db, ingest, registry }))
     .route("/profiles", profilesRoute({ registry }))
     .route("/rule-packs", rulePacksRoute({ registry }))
-    .route("/drive-logs", driveLogsRoute({ db, ingest }))
+    .route("/drive-logs", driveLogsRoute({ db, ingest, registry }))
     .route("/reports", reportsRoute({ db }))
     .route("/failed-uploads", failedUploadsRoute({ db }))
     .route(
