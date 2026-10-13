@@ -178,7 +178,9 @@ describe("Notes are owner data", () => {
     expect(db.listNotes(logId)).toEqual(before);
 
     db.wipeDerived();
-    createIngest({ db, dataDir: dir, registry, now: NOW, appVersion: "test" }).rebuildDerived();
+    createIngest({ db, dataDir: dir, registry, now: NOW, appVersion: "test" }).rederiveUploads(
+      db.listUploads().map((u) => u.id),
+    );
     expect(db.listNotes(logId)).toEqual(before);
     const listed = (await (await send(`/uploads/${logId}/notes`, "GET")).json()) as {
       text: string;

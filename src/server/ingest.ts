@@ -458,22 +458,9 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     );
   }
 
-  /**
-   * Drops every derived row and rebuilds it from the Originals plus the owner data. Reports go first,
-   * because Drive Logs read them as Reference Reports.
-   */
-  function rebuildDerived(): void {
-    db.wipeDerived();
-    const all = db.listUploads();
-    db.transaction(() => {
-      for (const u of reportsFirst(all)) deriveFromDisk(u);
-    });
-  }
-
   return {
     dataDir,
     ingest,
-    rebuildDerived,
     rederiveUpload,
     rederiveUploads,
     rederiveStale,

@@ -211,7 +211,10 @@ describe("Reference Report routes", () => {
     const before = [logId, secondId].map((id) => metaOf(id)?.referenceReportId);
     const owner = db.ownerSnapshot();
 
-    createIngest({ db, dataDir: dir, registry, now: NOW, appVersion: "test" }).rebuildDerived();
+    db.wipeDerived();
+    createIngest({ db, dataDir: dir, registry, now: NOW, appVersion: "test" }).rederiveUploads(
+      db.listUploads().map((u) => u.id),
+    );
 
     expect([logId, secondId].map((id) => metaOf(id)?.referenceReportId)).toEqual(before);
     expect(before).toEqual([augId, null]);

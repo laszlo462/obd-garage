@@ -223,8 +223,9 @@ const pidRow = (r: Row): PidRow => ({
   units: r.Units ?? "",
 });
 
-function monitorState(status: string): MonitorState {
+export function monitorState(status: string): MonitorState {
   if (/not support/i.test(status)) return "na";
+  if (/incomplete/i.test(status)) return "incomplete";
   return /has completed|complete$/i.test(status) && !/not/i.test(status)
     ? "complete"
     : "incomplete";

@@ -253,8 +253,8 @@ describe("warnings", () => {
   });
 });
 
-describe("wipe and rebuild", () => {
-  it("rebuilds derived data equal to what ingest wrote, leaving owner data alone", async () => {
+describe("wipe and re-derive", () => {
+  it("re-derives data equal to what ingest wrote, leaving owner data alone", async () => {
     const aug = await upload(AUG);
     const vehicle = aug.body.vehicleCreated?.id;
     const log = await upload(LOG, { vehicle });
@@ -276,7 +276,10 @@ describe("wipe and rebuild", () => {
     const before = snapshotDerived();
     expect(before.some((x) => (x.d?.events.length ?? 0) > 0)).toBe(true);
 
-    createIngest({ db, dataDir: dir, registry, now: NOW, appVersion: "test" }).rebuildDerived();
+    db.wipeDerived();
+    createIngest({ db, dataDir: dir, registry, now: NOW, appVersion: "test" }).rederiveUploads(
+      db.listUploads().map((u) => u.id),
+    );
 
     expect(db.ownerSnapshot()).toEqual(owner);
     expect(snapshotDerived()).toEqual(before);
