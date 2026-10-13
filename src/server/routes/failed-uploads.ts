@@ -18,7 +18,7 @@ export function failedUploadsRoute(deps: { db: Db }) {
       db
         .listUploads()
         .flatMap((u): FailedUploadItem[] => {
-          const error = db.getDerived(u.id)?.failedError;
+          const error = db.getDerivedSummary(u.id)?.failedError;
           return error
             ? [
                 {

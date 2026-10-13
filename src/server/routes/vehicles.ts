@@ -45,7 +45,7 @@ const hasStatus = (statuses: string[], word: string) =>
 function status(db: Db, vehicleId: number): VehicleStatus {
   const latest = db
     .listUploads({ kind: "report", vehicleId })
-    .filter((u) => !db.getDerived(u.id)?.failedError)
+    .filter((u) => !db.getDerivedSummary(u.id)?.failedError)
     .sort((a, b) => (b.recordedAt ?? "").localeCompare(a.recordedAt ?? "") || b.id - a.id)[0];
   const parsed = latest && (db.getDerived(latest.id)?.parsedReport as ParsedReport | null);
   if (!latest || !parsed) return { report: null };

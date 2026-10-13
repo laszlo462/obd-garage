@@ -54,10 +54,10 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
       const notes = db.noteCounts();
       const items = db
         .listUploads({ kind: "drive-log", vehicleId: null })
-        .filter((u) => !db.getDerived(u.id)?.failedError)
+        .filter((u) => !db.getDerivedSummary(u.id)?.failedError)
         .sort(newestFirst)
         .map((u): UnassignedItem => {
-          const meta = db.getDerived(u.id)?.metadata as { duration?: number } | null;
+          const meta = db.getDerivedSummary(u.id)?.metadata as { duration?: number } | null;
           return {
             id: u.id,
             filename: u.uploadedFilename,
@@ -164,7 +164,7 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
         const report = db.getUpload(reportId as number);
         if (report?.kind !== "report" || report.vehicleId !== log.vehicleId)
           return c.json({ error: "That Report does not belong to the Drive Log's Vehicle." }, 400);
-        if (db.getDerived(report.id)?.failedError !== null)
+        if (db.getDerivedSummary(report.id)?.failedError !== null)
           return c.json(
             { error: "That Report is a Failed Upload, so it cannot be the Reference Report." },
             400,

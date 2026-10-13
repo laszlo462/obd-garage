@@ -27,7 +27,7 @@ export function reportsRoute(deps: { db: Db }) {
       const notes = db.noteCounts();
       const items = db
         .listUploads({ kind: "report", ...(vehicleId === undefined ? {} : { vehicleId }) })
-        .filter((u) => !db.getDerived(u.id)?.failedError)
+        .filter((u) => !db.getDerivedSummary(u.id)?.failedError)
         .sort(newestFirst)
         .map(
           (u): ReportListItem => ({

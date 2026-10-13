@@ -194,6 +194,29 @@ describe("owner data", () => {
   });
 });
 
+describe("listUploads", () => {
+  it("filters by kind and by Vehicle, where null is Unassigned, in id order", () => {
+    const db = open_();
+    const { vehicle, report, log } = seed(db);
+    const loose = db.addUpload({
+      kind: "drive-log",
+      storedPath: "drive-logs/2026-03/x.csv",
+      uploadedFilename: "x.csv",
+      sha256: sha(),
+      uploadedAt: NOW,
+      recordedAt: null,
+      vehicleId: null,
+    });
+    const ids = (f?: Parameters<Db["listUploads"]>[0]) => db.listUploads(f).map((u) => u.id);
+    expect(ids()).toEqual([report.id, log.id, loose.id]);
+    expect(ids({ kind: "drive-log" })).toEqual([log.id, loose.id]);
+    expect(ids({ vehicleId: vehicle.id })).toEqual([report.id, log.id]);
+    expect(ids({ vehicleId: null })).toEqual([loose.id]);
+    expect(ids({ kind: "report", vehicleId: vehicle.id })).toEqual([report.id]);
+    expect(ids({ kind: "report", vehicleId: null })).toEqual([]);
+  });
+});
+
 describe("derived data", () => {
   it("saves, reads back and replaces a derive result", () => {
     const db = open_();
@@ -208,6 +231,36 @@ describe("derived data", () => {
     derive(db, log.id, "2.0.0");
     expect(db.getDerived(log.id)?.events).toHaveLength(1);
     expect(db.getDerived(log.id)?.appVersion).toBe("2.0.0");
+  });
+
+  it("reads a derived row's failed_error and metadata without the rest", () => {
+    const db = open_();
+    const { log, report } = seed(db);
+    expect(db.getDerivedSummary(log.id)).toBeUndefined();
+    derive(db, log.id);
+    expect(db.getDerivedSummary(log.id)).toEqual({
+      failedError: null,
+      metadata: { rows: 2 },
+      warningCount: 1,
+    });
+    db.saveDerived(report.id, {
+      appVersion: "1.0.0",
+      derivedAt: NOW,
+      failedError: "bad",
+      metadata: null,
+      channels: null,
+      parsedReport: null,
+      ruleOutcomes: [],
+      decodeNotices: [],
+      warnings: [],
+      warningCount: 0,
+      events: [],
+    });
+    expect(db.getDerivedSummary(report.id)).toEqual({
+      failedError: "bad",
+      metadata: null,
+      warningCount: 0,
+    });
   });
 
   it("lists uploads whose derived data is missing or stamped with another app version", () => {

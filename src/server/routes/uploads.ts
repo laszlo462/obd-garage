@@ -54,7 +54,7 @@ export function uploadsRoute(deps: { db: Db; ingest: Ingest }) {
       if (!(count >= 1)) return c.json({ error: "limit must be a positive integer." }, 400);
 
       // Failed Uploads have their own screen; Unassigned logs have no Vehicle, so neither is here.
-      const failed = (u: Upload) => Boolean(db.getDerived(u.id)?.failedError);
+      const failed = (u: Upload) => Boolean(db.getDerivedSummary(u.id)?.failedError);
       const sorted = db
         .listUploads({ vehicleId })
         .filter((u) => !failed(u))
@@ -70,7 +70,7 @@ export function uploadsRoute(deps: { db: Db; ingest: Ingest }) {
       const notes = db.noteCounts();
       const events = db.eventCounts();
       const items = page.map((u): FeedItem => {
-        const d = db.getDerived(u.id);
+        const d = db.getDerivedSummary(u.id);
         const duration = (d?.metadata as { duration?: number } | null)?.duration;
         return {
           id: u.id,
