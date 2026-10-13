@@ -4,6 +4,7 @@ import type { Db } from "./db.ts";
 import { createIngest, type IngestDeps } from "./ingest.ts";
 import { GENERIC_ONLY_REGISTRY } from "./registry.ts";
 import { driveLogsRoute } from "./routes/drive-logs.ts";
+import { exportRoute } from "./routes/export.ts";
 import { failedUploadsRoute } from "./routes/failed-uploads.ts";
 import { health } from "./routes/health.ts";
 import { notesRoute } from "./routes/notes.ts";
@@ -32,6 +33,16 @@ export function createApp(deps: AppDeps) {
     .route("/drive-logs", driveLogsRoute({ db, ingest }))
     .route("/reports", reportsRoute({ db }))
     .route("/failed-uploads", failedUploadsRoute({ db }))
+    .route(
+      "/export",
+      exportRoute({
+        db,
+        dataDir: deps.dataDir,
+        registry,
+        appVersion: deps.appVersion ?? "0.0.0",
+        now: deps.now ?? (() => new Date()),
+      }),
+    )
     .route("/", notesRoute({ db, ...(deps.now ? { now: deps.now } : {}) }));
 }
 
