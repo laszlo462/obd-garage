@@ -37,8 +37,12 @@ export function notesRoute(deps: { db: Db; now?: () => Date }) {
   const { db } = deps;
   const now = deps.now ?? (() => new Date());
 
-  const view = (note: Note): NoteView => {
-    const axis = note.pinnedTimeSec === null ? undefined : timeAxis(db, note.uploadId);
+  /** `axisOf` is called only for a pinned Note, so a request can share one decode across its Notes. */
+  const view = (
+    note: Note,
+    axisOf: () => TimeAxis | undefined = () => timeAxis(db, note.uploadId),
+  ): NoteView => {
+    const axis = note.pinnedTimeSec === null ? undefined : axisOf();
     return {
       ...note,
       snappedTimeSec:
@@ -50,7 +54,12 @@ export function notesRoute(deps: { db: Db; now?: () => Date }) {
     .get("/uploads/:id/notes", (c) => {
       const upload = db.getUpload(parseId(c.req.param("id")));
       if (!upload) return c.json({ error: "Unknown upload." }, 404);
-      return c.json(db.listNotes(upload.id).map(view));
+      let axis: { value: TimeAxis | undefined } | undefined;
+      const axisOnce = () => {
+        axis ??= { value: timeAxis(db, upload.id) };
+        return axis.value;
+      };
+      return c.json(db.listNotes(upload.id).map((n) => view(n, axisOnce)));
     })
     .post("/uploads/:id/notes", async (c) => {
       const upload = db.getUpload(parseId(c.req.param("id")));

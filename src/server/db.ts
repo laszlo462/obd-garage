@@ -67,6 +67,9 @@ export type Derived = {
   events: DerivedEvent[];
 };
 
+/** The cheap part of a derived row: what list routes and ingest read without the blobs and Events. */
+export type DerivedSummary = Pick<Derived, "failedError" | "metadata" | "warningCount">;
+
 export type OwnerSnapshot = {
   vehicles: Vehicle[];
   uploads: Upload[];
@@ -203,14 +206,23 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
       const r = stmt("SELECT * FROM uploads WHERE sha256 = ?").get(sha256) as Row | undefined;
       return r && toUpload(r);
     },
-    listUploads: (filter: { kind?: UploadKind; vehicleId?: number | null } = {}) =>
-      (stmt("SELECT * FROM uploads ORDER BY id").all() as Row[])
-        .map(toUpload)
-        .filter(
-          (u) =>
-            (filter.kind === undefined || u.kind === filter.kind) &&
-            (filter.vehicleId === undefined || u.vehicleId === filter.vehicleId),
-        ),
+    /** `vehicleId: null` is Unassigned. Filters in SQL (`IS ?` matches null), in id order. */
+    listUploads: (filter: { kind?: UploadKind; vehicleId?: number | null } = {}) => {
+      const where: string[] = [];
+      const args: (string | number | null)[] = [];
+      if (filter.kind !== undefined) {
+        where.push("kind = ?");
+        args.push(filter.kind);
+      }
+      if (filter.vehicleId !== undefined) {
+        where.push("vehicle_id IS ?");
+        args.push(filter.vehicleId);
+      }
+      const clause = where.length > 0 ? ` WHERE ${where.join(" AND ")}` : "";
+      return (stmt(`SELECT * FROM uploads${clause} ORDER BY id`).all(...args) as Row[]).map(
+        toUpload,
+      );
+    },
     /** Assigns, reassigns or (with `null`) unassigns an upload. */
     assignVehicle: (uploadId: number, vehicleId: number | null) => {
       stmt("UPDATE uploads SET vehicle_id = ? WHERE id = ?").run(vehicleId, uploadId);
@@ -300,6 +312,18 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
         for (const e of d.events)
           insertEvent.run(uploadId, e.ruleId, e.startSec, e.endSec, JSON.stringify(e.data ?? {}));
       })();
+    },
+    /** `failed_error`, `metadata` and the warning count only: no Channels blob, Report or Events. */
+    getDerivedSummary(uploadId: number): DerivedSummary | undefined {
+      const r = stmt(
+        "SELECT failed_error, metadata, warning_count FROM derived_uploads WHERE upload_id = ?",
+      ).get(uploadId) as Row | undefined;
+      if (!r) return undefined;
+      return {
+        failedError: r.failed_error as string | null,
+        metadata: unjson(r.metadata),
+        warningCount: r.warning_count as number,
+      };
     },
     getDerived(uploadId: number): Derived | undefined {
       const r = stmt("SELECT * FROM derived_uploads WHERE upload_id = ?").get(uploadId) as

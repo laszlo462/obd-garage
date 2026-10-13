@@ -48,7 +48,7 @@ export function main(
       ingest.rederiveUploads(db.listUploads().map((u) => u.id));
       out.log(`Re-derived ${db.listUploads().length} uploads.`);
     }
-    const failed = db.listUploads().filter((u) => db.getDerived(u.id)?.failedError);
+    const failed = db.listUploads().filter((u) => db.getDerivedSummary(u.id)?.failedError);
     if (failed.length > 0) out.log(`${failed.length} Failed Upload(s) remain.`);
     return 0;
   } catch (err) {

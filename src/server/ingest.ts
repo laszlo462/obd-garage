@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { type DeriveResult, derive, GENERIC_PROFILE } from "../core/derive.ts";
+import { parseDriveLog } from "../core/drive-log.ts";
 import { type ParsedReport, parseReport } from "../core/report.ts";
 import type { Db, Derived, Upload, Vehicle } from "./db.ts";
 import { originalPath, saveOriginal, type UploadKind } from "./originals.ts";
@@ -68,14 +69,17 @@ type Recognised =
   | { kind: "failed"; upload: UploadKind; reason: string }
   | { kind: "unknown" };
 
-/** Recognises by content, never by file name. */
+/**
+ * Recognises by content, never by file name. A Drive Log is tried first because its parse is cheap and
+ * returns `not-drive-log` fast; only other files pay for the Report's DOM build.
+ */
 function recognise(bytes: Uint8Array): Recognised {
+  const d = parseDriveLog(bytes);
+  if (d.kind === "drive-log") return { kind: "drive-log", startTime: d.log.startTime };
+  if (d.kind === "failed") return { kind: "failed", upload: "drive-log", reason: d.reason };
   const r = parseReport(bytes);
   if (r.kind === "report") return { kind: "report", report: r.report };
   if (r.kind === "failed") return { kind: "failed", upload: "report", reason: r.reason };
-  const d = derive(bytes, { profile: GENERIC_PROFILE, packs: [], params: {} });
-  if (d.kind === "derived") return { kind: "drive-log", startTime: d.metadata.startTime };
-  if (d.kind === "failed") return { kind: "failed", upload: "drive-log", reason: d.reason };
   return { kind: "unknown" };
 }
 
@@ -89,7 +93,8 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
   const yieldToRequests =
     deps.yieldToRequests ?? (() => new Promise<void>((resolve) => setImmediate(resolve)));
 
-  const metadataOf = (uploadId: number) => db.getDerived(uploadId)?.metadata as Metadata | null;
+  const metadataOf = (uploadId: number) =>
+    db.getDerivedSummary(uploadId)?.metadata as Metadata | null;
 
   /** A new Vehicle for a Report's VIN, with the Profile and suggested Rule Packs the registry matches. */
   function addVehicleFor(h: ParsedReport["header"]): Vehicle {
@@ -111,7 +116,7 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     const at = asMs(recordedAt);
     let best: { id: number; gap: number; at: number } | null = null;
     for (const r of db.listUploads({ kind: "report", vehicleId })) {
-      if (!r.recordedAt || db.getDerived(r.id)?.failedError !== null) continue;
+      if (!r.recordedAt || db.getDerivedSummary(r.id)?.failedError !== null) continue;
       const rAt = asMs(r.recordedAt);
       const gap = Math.abs(rAt - at);
       if (
@@ -133,14 +138,14 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     const chosen = db.getReferenceReport(upload.id);
     if (
       chosen &&
-      (chosen.reportId === null || db.getDerived(chosen.reportId)?.failedError === null)
+      (chosen.reportId === null || db.getDerivedSummary(chosen.reportId)?.failedError === null)
     )
       return chosen.reportId;
     return defaultReferenceReportId(upload.vehicleId, upload.recordedAt);
   }
 
   /** Everything derived from one Original, as the rows to store. */
-  function computeDerived(upload: Upload, bytes: Uint8Array): Derived {
+  function computeDerived(upload: Upload, bytes: Uint8Array, parsed?: ParsedReport): Derived {
     const base = { appVersion, derivedAt: now().toISOString() };
     const empty = {
       metadata: null,
@@ -155,16 +160,20 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     const failed = (reason: string): Derived => ({ ...base, ...empty, failedError: reason });
 
     if (upload.kind === "report") {
-      const r = parseReport(bytes);
-      if (r.kind === "failed") return failed(r.reason);
-      if (r.kind === "not-report")
-        return failed("The file is no longer read as a Diagnostic Report.");
+      let report = parsed;
+      if (!report) {
+        const r = parseReport(bytes);
+        if (r.kind === "failed") return failed(r.reason);
+        if (r.kind === "not-report")
+          return failed("The file is no longer read as a Diagnostic Report.");
+        report = r.report;
+      }
       return {
         ...base,
         ...empty,
         failedError: null,
-        metadata: { header: r.report.header },
-        parsedReport: r.report,
+        metadata: { header: report.header },
+        parsedReport: report,
       };
     }
 
@@ -208,8 +217,9 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     };
   }
 
-  const deriveStored = (upload: Upload, bytes: Uint8Array) =>
-    db.saveDerived(upload.id, computeDerived(upload, bytes));
+  /** `parsed` is the Report the caller already parsed from `bytes`, so it is not parsed twice. */
+  const deriveStored = (upload: Upload, bytes: Uint8Array, parsed?: ParsedReport) =>
+    db.saveDerived(upload.id, computeDerived(upload, bytes, parsed));
 
   const reportsFirst = (uploads: readonly Upload[]) => [
     ...uploads.filter((u) => u.kind === "report"),
@@ -249,9 +259,11 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
       return;
     }
 
+    let parsed: ParsedReport | undefined;
     if (initial.kind === "report") {
       const r = parseReport(bytes);
       if (r.kind === "report") {
+        parsed = r.report;
         const h = r.report.header;
         const vehicle = initial.vehicleId === null ? undefined : db.getVehicle(initial.vehicleId);
         if (vehicle && vehicle.vin !== h.vin) {
@@ -267,11 +279,11 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
       }
     } else {
       // Settle the recorded time first, because the derive reads the Reference Report from it.
-      const d = derive(bytes, { profile: GENERIC_PROFILE, packs: [], params: {} });
-      if (d.kind === "derived" && initial.recordedAt !== d.metadata.startTime)
-        db.setRecordedAt(initial.id, d.metadata.startTime);
+      const d = parseDriveLog(bytes);
+      if (d.kind === "drive-log" && initial.recordedAt !== d.log.startTime)
+        db.setRecordedAt(initial.id, d.log.startTime);
     }
-    deriveStored(db.getUpload(initial.id) ?? initial, bytes);
+    deriveStored(db.getUpload(initial.id) ?? initial, bytes, parsed);
   }
 
   /**
@@ -332,9 +344,9 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
   /** Re-derives the Vehicle's Drive Logs whose resolved Reference Report changed. */
   function rederiveChangedDefaults(vehicleId: number): void {
     for (const log of db.listUploads({ kind: "drive-log", vehicleId })) {
-      const d = db.getDerived(log.id);
+      const d = db.getDerivedSummary(log.id);
       if (!d || d.failedError !== null) continue;
-      const before = metadataOf(log.id)?.referenceReportId ?? null;
+      const before = (d.metadata as Metadata | null)?.referenceReportId ?? null;
       if (before !== referenceReportIdFor(log)) deriveFromDisk(log);
     }
   }
@@ -421,7 +433,7 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
           recordedAt,
           vehicleId: vehicle?.id ?? null,
         });
-        deriveStored(upload, bytes);
+        deriveStored(upload, bytes, rec.kind === "report" ? rec.report : undefined);
 
         if (rec.kind === "failed")
           return { outcome: "failed", kind, uploadId: upload.id, reason: rec.reason, warnings };
