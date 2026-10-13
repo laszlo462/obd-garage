@@ -119,6 +119,35 @@ describe("POST /api/uploads with real files", () => {
     expect(db.getUpload(oct.body.uploadId as number)?.vehicleId).toBe(vehicle);
     expect(refOf()).toBe(oct.body.uploadId);
   });
+
+  describe("the default Reference Report on a tie", () => {
+    const reportAt = (time: string) =>
+      text(OCT).replace(/(<b>Date:<\/b> 10\/2\/2026 )9:32:14\s?PM/, `$1${time}`);
+    // Recorded 17:58:45, exactly two hours from 3:58:45 PM and from 7:58:45 PM.
+    const logAtFivePm = () =>
+      text(LOG).replace("10/02/2026 05:58:45.9486 PM", "10/02/2026 05:58:45.0000 PM");
+    const refOf = (id: number | undefined) =>
+      (db.getDerived(id as number)?.metadata as { referenceReportId: number } | null)
+        ?.referenceReportId;
+
+    it("goes to the earlier-recorded Report, not the first uploaded", async () => {
+      const later = await upload(reportAt("7:58:45 PM"));
+      const earlier = await upload(reportAt("3:58:45 PM"));
+      expect(earlier.body.outcome).toMatch(/added|warned/);
+      const vehicle = later.body.vehicleCreated?.id;
+      const log = await upload(logAtFivePm(), { vehicle });
+      expect(db.getUpload(log.body.uploadId as number)?.recordedAt).toBe("2026-10-02T17:58:45.000");
+      expect(refOf(log.body.uploadId)).toBe(earlier.body.uploadId);
+    });
+
+    it("goes to the lower id when the Reports were recorded at the same time", async () => {
+      const first = await upload(reportAt("3:58:45 PM"));
+      const second = await upload(`${reportAt("3:58:45 PM")}<!-- re-export -->`);
+      expect(second.body.outcome).toBe("warned"); // stored, flagged as the same recording
+      const log = await upload(logAtFivePm(), { vehicle: first.body.vehicleCreated?.id });
+      expect(refOf(log.body.uploadId)).toBe(first.body.uploadId);
+    });
+  });
 });
 
 describe("POST /api/uploads with synthetic files", () => {
