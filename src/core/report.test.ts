@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { type ParsedReport, parseReport } from "./report.ts";
+import { monitorState, type ParsedReport, parseReport } from "./report.ts";
 
 const fixture = (name: string) =>
   readFileSync(new URL(`../../test/fixtures/reports/${name}`, import.meta.url), "utf8");
@@ -187,5 +187,27 @@ describe("parseReport failures and variants", () => {
     expect(name).toContain("fire");
     expect(name).not.toMatch(/[<>]/);
     expect(JSON.stringify(r)).not.toMatch(/<script|<img|<b>/);
+  });
+});
+
+describe("monitorState", () => {
+  it("reads a bare 'Incomplete' as incomplete", () => {
+    expect(monitorState("Incomplete")).toBe("incomplete");
+  });
+
+  it("reads 'Test incomplete' as incomplete", () => {
+    expect(monitorState("Test incomplete")).toBe("incomplete");
+  });
+
+  it("reads 'ECU has completed this test' as complete", () => {
+    expect(monitorState("ECU has completed this test")).toBe("complete");
+  });
+
+  it("reads 'ECU has not completed this test' as incomplete", () => {
+    expect(monitorState("ECU has not completed this test")).toBe("incomplete");
+  });
+
+  it("reads 'not supported' as na", () => {
+    expect(monitorState("not supported")).toBe("na");
   });
 });

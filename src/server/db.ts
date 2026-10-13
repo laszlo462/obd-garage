@@ -351,7 +351,7 @@ export function openDb(file: string, options: { migrationsDir?: string } = {}) {
     },
 
     // Test and guard helpers
-    /** All owner data, for the wipe-and-rebuild comparison. */
+    /** All owner data, for the wipe-and-re-derive comparison. */
     ownerSnapshot(): OwnerSnapshot {
       return {
         vehicles: (stmt("SELECT * FROM vehicles ORDER BY id").all() as Row[]).map(toVehicle),
