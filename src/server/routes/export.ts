@@ -7,12 +7,30 @@ import { originalPath, withSuffix } from "../originals.ts";
 import type { ProfileRegistry } from "../registry.ts";
 import { snap } from "./notes.ts";
 
-/** The first free name in the Bundle: `-2`, `-3`, … on a clash. */
-function freeName(used: Set<string>, name: string): string {
+/** An uploaded name made safe as one Bundle entry name: no separators, `.`/`..` segments. */
+function safeName(name: string): string {
+  const safe = name
+    .replace(/\p{Cc}/gu, "")
+    .split(/[/\\]/)
+    .filter((part) => part !== "" && part !== "." && part !== "..")
+    .join("_");
+  return safe === "" ? "upload" : safe;
+}
+
+/** Sidecars written beside each kind of Original. */
+const LOG_SIDECARS = [".events.json", ".notes.json", ".channels.csv"];
+const REPORT_SIDECARS = [".notes.json"];
+
+/**
+ * The first free name in the Bundle (`-2`, `-3`, … on a clash). The Original and all its sidecars are
+ * reserved together, so no two entries can share a name.
+ */
+function freeName(used: Set<string>, name: string, sidecars: string[]): string {
+  const all = (base: string) => [base, ...sidecars.map((s) => `${base}${s}`)];
   let n = 1;
-  while (used.has(withSuffix(name, n))) n++;
+  while (all(withSuffix(name, n)).some((entry) => used.has(entry))) n++;
   const free = withSuffix(name, n);
-  used.add(free);
+  for (const entry of all(free)) used.add(entry);
   return free;
 }
 
@@ -76,7 +94,11 @@ export function exportRoute(deps: {
     const timeline: { at: string; line: string; notes: string[] }[] = [];
     const noteTexts = (id: number) => db.listNotes(id).map((n) => n.text);
     const driveLogs = [...plan.logs].sort(chronological).map((log) => {
-      const file = freeName(usedNames, `drive-logs/${log.uploadedFilename}`);
+      const file = freeName(
+        usedNames,
+        `drive-logs/${safeName(log.uploadedFilename)}`,
+        LOG_SIDECARS,
+      );
       files[`${file}.events.json`] = text(
         (db.getDerived(log.id)?.events ?? []).map((e) => ({
           ruleId: e.ruleId,
@@ -135,7 +157,11 @@ export function exportRoute(deps: {
     const referenceOnly: { line: string; notes: string[] }[] = [];
     const reportFiles = new Map<number, string>();
     const reports = [...referenced.values()].sort(chronological).map((report) => {
-      const file = freeName(usedNames, `reports/${report.uploadedFilename}`);
+      const file = freeName(
+        usedNames,
+        `reports/${safeName(report.uploadedFilename)}`,
+        REPORT_SIDECARS,
+      );
       reportFiles.set(report.id, file);
       files[`${file}.notes.json`] = text(
         db

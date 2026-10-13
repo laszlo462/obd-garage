@@ -605,3 +605,51 @@ describe("Notes nested in README bullets", () => {
     );
   });
 });
+
+describe("Bundle entry names", () => {
+  /** Distinct bytes per index (uploads with the same bytes are deduplicated). */
+  const logBytes = (i: number) => Buffer.concat([LOG, Buffer.from("\n".repeat(i))]);
+  const exportLogs = async (names: string[]) => {
+    const { vehicleId } = await vehicleWithReport();
+    for (const [i, name] of names.entries()) await upload(logBytes(i), name, vehicleId);
+    return exportZip(`vehicle=${vehicleId}&from=2026-10-02&to=2026-10-02`);
+  };
+
+  it("keeps a path-traversal name inside drive-logs/ and the manifest keeps the original name", async () => {
+    const files = await exportLogs(["../../evil.csv"]);
+    for (const path of Object.keys(files)) expect(path.split("/")).not.toContain("..");
+    const manifest = json(files, "manifest.json");
+    expect(manifest.driveLogs[0].originalFilename).toBe("../../evil.csv");
+    expect(manifest.driveLogs[0].file).toMatch(/^drive-logs\/[^/]+$/);
+    expect(Buffer.from(files[manifest.driveLogs[0].file] as Uint8Array).equals(LOG)).toBe(true);
+  });
+
+  it("adds no line or heading to README.md for a name containing a newline", async () => {
+    const files = await exportLogs(["a.csv\n# Injected\n- fake"]);
+    const lines = new TextDecoder().decode(files["README.md"]).split("\n");
+    const hits = lines.filter((l) => l.includes("Injected"));
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatch(/^- /);
+    expect(lines.filter((l) => l.includes("fake"))).toEqual(hits);
+  });
+
+  it("gives no duplicate entry names when an upload is named like another's sidecar", async () => {
+    const files = await exportLogs(["trip.csv", "trip.csv.notes.json"]);
+    const manifest = json(files, "manifest.json");
+    const entry = (n: string) =>
+      manifest.driveLogs.find((l: { originalFilename: string }) => l.originalFilename === n);
+    // Each manifest entry points at its own Original's bytes, and every entry name is distinct.
+    for (const [i, n] of ["trip.csv", "trip.csv.notes.json"].entries()) {
+      const log = entry(n);
+      expect(Buffer.from(files[log.file] as Uint8Array).equals(logBytes(i))).toBe(true);
+      expect(log.sha256).toBe(sha256(logBytes(i)));
+      expect(json(files, `${log.file}.notes.json`)).toEqual([]);
+    }
+    expect(entry("trip.csv").file).not.toBe(entry("trip.csv.notes.json").file);
+  });
+
+  it("falls back to 'upload' when a name is only separators and control characters", async () => {
+    const files = await exportLogs(["/\\\u0001\u0007/"]);
+    expect(json(files, "manifest.json").driveLogs[0].file).toBe("drive-logs/upload");
+  });
+});
