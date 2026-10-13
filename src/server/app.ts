@@ -25,7 +25,7 @@ export function createApp(deps: AppDeps) {
   return new Hono()
     .basePath("/api")
     .use(compress())
-    .route("/health", health)
+    .route("/health", health({ appVersion: deps.appVersion ?? "0.0.0" }))
     .route("/uploads", uploadsRoute({ db, ingest }))
     .route("/vehicles", vehiclesRoute({ db, ingest, registry }))
     .route("/profiles", profilesRoute({ registry }))
