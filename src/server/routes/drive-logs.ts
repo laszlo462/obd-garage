@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Db } from "../db.ts";
 import type { Ingest } from "../ingest.ts";
+import type { ProfileRegistry } from "../registry.ts";
 import { newestFirst } from "./uploads.ts";
 
 const parseId = (text: string) => (/^\d+$/.test(text) ? Number(text) : Number.NaN);
@@ -32,15 +33,15 @@ type ChannelView = { label: string; unit?: string; values: (number | null)[] };
 export type ChannelsPayload = {
   t: number[];
   channels: Record<string, ChannelView>;
-  /** Channels the Vehicle Profile hides by default. No Profile hides any yet. */
+  /** Channels the Vehicle Profile hides by default; only keys present in `channels`. Empty when Unassigned. */
   hidden: string[];
 };
 
 export type ReferenceState = "default" | "set" | "cleared";
 
 /** Reading, assignment and Reference Report state of Drive Logs. Each change re-derives the log. */
-export function driveLogsRoute(deps: { db: Db; ingest: Ingest }) {
-  const { db, ingest } = deps;
+export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: ProfileRegistry }) {
+  const { db, ingest, registry } = deps;
   const driveLog = (idText: string) => {
     const u = db.getUpload(parseId(idText));
     return u?.kind === "drive-log" ? u : undefined;
@@ -96,7 +97,10 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest }) {
         rows: unknown;
         referenceReportId: number | null;
       };
-      const payload: ChannelsPayload = { t: blob.t, channels, hidden: [] };
+      const vehicle = log.vehicleId === null ? undefined : db.getVehicle(log.vehicleId);
+      const profile = vehicle && registry.profile(vehicle.profileId);
+      const hidden = (profile?.hiddenColumns ?? []).filter((key) => key in channels);
+      const payload: ChannelsPayload = { t: blob.t, channels, hidden };
       return c.json({
         id: log.id,
         filename: log.uploadedFilename,

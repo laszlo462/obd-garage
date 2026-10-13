@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { hc } from "hono/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { SIX_SEVEN } from "../profiles/six-seven.ts";
 import { type AppType, createApp } from "./app.ts";
 import { type Db, openDb } from "./db.ts";
 import type { UploadResult } from "./ingest.ts";
@@ -204,12 +205,40 @@ describe("GET /api/drive-logs/:id", () => {
     expect(keys.length).toBeGreaterThan(0);
     for (const ch of Object.values(body.channels.channels))
       expect(ch.values).toHaveLength(body.channels.t.length);
-    expect(body.channels.hidden).toEqual([]);
     expect(body.events).toHaveLength(db.getDerived(logId)?.events.length as number);
     expect(body.ruleOutcomes.length).toBeGreaterThan(0);
     expect(Array.isArray(body.decodeNotices)).toBe(true);
     expect(Array.isArray(body.warnings)).toBe(true);
     expect(body.referenceReport).toEqual({ id: octId, state: "default" });
+  });
+
+  it("hides the 6.7 Profile's hidden Channels that occur in the log", async () => {
+    const { logId } = await setup();
+    const { channels } = (await getJson(`/drive-logs/${logId}`)) as {
+      channels: { channels: Record<string, unknown>; hidden: string[] };
+    };
+    expect(channels.hidden.length).toBeGreaterThan(0);
+    const profileHidden = SIX_SEVEN.hiddenColumns as readonly string[];
+    for (const key of channels.hidden) {
+      expect(profileHidden).toContain(key);
+      expect(Object.keys(channels.channels)).toContain(key);
+    }
+    expect(channels.hidden).toEqual(profileHidden.filter((k) => k in channels.channels));
+  });
+
+  it("hides nothing once the Vehicle uses the Generic Profile", async () => {
+    const { logId, vehicleId } = await setup();
+    await send(`/vehicles/${vehicleId}`, "PATCH", { profileId: "generic" });
+    const body = (await getJson(`/drive-logs/${logId}`)) as { channels: { hidden: string[] } };
+    expect(body.channels.hidden).toEqual([]);
+  });
+
+  it("hides nothing in an Unassigned log", async () => {
+    const big = await upload(BIG, "big.csv");
+    const body = (await getJson(`/drive-logs/${big.uploadId}`)) as {
+      channels: { hidden: string[] };
+    };
+    expect(body.channels.hidden).toEqual([]);
   });
 
   it("reports the Reference Report state: default, set, cleared", async () => {
