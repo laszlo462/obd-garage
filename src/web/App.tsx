@@ -1,23 +1,25 @@
-import { useEffect, useState } from "preact/hooks";
-import { client } from "./client.ts";
+import { LocationProvider, useLocation } from "preact-iso";
+import { AppBar } from "./AppBar.tsx";
+import { AppStateProvider } from "./AppState.tsx";
+import { Routes } from "./routes.tsx";
+import { isTabPath, TabBar } from "./TabBar.tsx";
+import { safeStorage } from "./vehicle-store.ts";
+import { useIsDesktop } from "./viewport.ts";
 
-export function App() {
-  const [health, setHealth] = useState<string>("checking...");
+function Chrome() {
+  const { path } = useLocation();
+  const desktop = useIsDesktop();
+  return isTabPath(path) && !desktop ? <TabBar /> : null;
+}
 
-  useEffect(() => {
-    client.api.health
-      .$get()
-      .then((res) => res.json())
-      .then((body) => setHealth(body.status))
-      .catch(() => setHealth("unreachable"));
-  }, []);
-
+export function App(props: { storage?: Storage }) {
   return (
-    <main>
-      <h1>OBD Garage</h1>
-      <p>
-        API health: <strong data-testid="health">{health}</strong>
-      </p>
-    </main>
+    <LocationProvider>
+      <AppStateProvider storage={props.storage ?? safeStorage()}>
+        <AppBar />
+        <Routes />
+        <Chrome />
+      </AppStateProvider>
+    </LocationProvider>
   );
 }

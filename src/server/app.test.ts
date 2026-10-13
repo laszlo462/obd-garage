@@ -17,7 +17,17 @@ describe("GET /api/health", () => {
     try {
       const res = await createApp({ db, dataDir: dir }).request("/api/health");
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ status: "ok" });
+      expect(await res.json()).toEqual({ status: "ok", version: "0.0.0" });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("reports the app version it was given", async () => {
+    const db = openDb(join(dir, "t.db"));
+    try {
+      const res = await createApp({ db, dataDir: dir, appVersion: "1.2.3" }).request("/api/health");
+      expect(await res.json()).toEqual({ status: "ok", version: "1.2.3" });
     } finally {
       db.close();
     }
