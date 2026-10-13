@@ -28,6 +28,9 @@ Project agents live in `.claude/agents/` so cloud sessions have them too.
 - `implementer` (Sonnet) for implementation: one build issue, test-first.
 - `shipper` (Haiku) to commit, push and open a PR once the owner asks to ship.
 - Merging stays with the owner.
+- When a PR is ready, also list its known gaps. Name the open issue that should own each gap, and offer to
+  post a "Follow-up from #N" checklist comment there. Skip gaps that a later issue already covers in its
+  scope.
 
 ## Agent skills
 
