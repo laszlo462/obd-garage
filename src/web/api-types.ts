@@ -6,3 +6,4 @@ export type FeedRow = InferResponseType<Api["api"]["uploads"]["$get"], 200>["ite
 export type ReportRow = InferResponseType<Api["api"]["reports"]["$get"], 200>[number];
 export type DriveLogRow = InferResponseType<Api["api"]["drive-logs"]["$get"], 200>[number];
 export type StatusData = InferResponseType<Api["api"]["vehicles"][":id"]["status"]["$get"], 200>;
+export type FailedUploadRow = InferResponseType<Api["api"]["failed-uploads"]["$get"], 200>[number];

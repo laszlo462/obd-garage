@@ -64,3 +64,13 @@ export function daysAgo(naive: string | null, today: Date): string {
   const days = Math.max(0, Math.round((now - then) / 86_400_000));
   return days === 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
 }
+
+/** "12 Oct 10:05" from an ISO UTC instant, in the viewer's local time. "–" when it is not a date. */
+export function localDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "–";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return compactDateTime(
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`,
+  );
+}

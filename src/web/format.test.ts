@@ -4,6 +4,7 @@ import {
   count,
   daysAgo,
   duration,
+  localDateTime,
   monthKey,
   monthLabel,
   shortDate,
@@ -71,5 +72,16 @@ describe("daysAgo", () => {
     expect(daysAgo("2026-10-02T21:32:14", today)).toBe("9 days ago");
     expect(daysAgo("2026-10-10T23:59:00", today)).toBe("yesterday");
     expect(daysAgo("2026-10-11T00:01:00", today)).toBe("today");
+  });
+});
+
+describe("localDateTime", () => {
+  it("shows an ISO UTC instant in the viewer's local time", () => {
+    const utc = new Date(2026, 9, 12, 10, 5).toISOString();
+    expect(localDateTime(utc)).toBe("12 Oct 10:05");
+  });
+
+  it("shows a dash for text that is not a date", () => {
+    expect(localDateTime("nope")).toBe("–");
   });
 });

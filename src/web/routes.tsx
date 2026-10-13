@@ -1,6 +1,7 @@
 import { Route, Router, useLocation } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
 import { DriveLogs } from "./DriveLogs.tsx";
+import { FailedUploads } from "./FailedUploads.tsx";
 import { NoVehicles } from "./NoVehicles.tsx";
 import { Recent } from "./Recent.tsx";
 import { Reports } from "./Reports.tsx";
@@ -21,6 +22,7 @@ export function Routes() {
         <Route path="/" component={Recent} />
         <Route path="/reports" component={Reports} />
         <Route path="/drive-logs" component={DriveLogs} />
+        <Route path="/failed-uploads" component={FailedUploads} />
         <Route path="/reports/:id" component={ReportViewer} />
         <Route path="/drive-logs/:id" component={DriveLogViewer} />
       </Router>
