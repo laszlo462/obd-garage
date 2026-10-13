@@ -103,14 +103,23 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     });
   }
 
-  /** The closest-in-time Report of the Vehicle, before or after; the earlier one wins a tie. */
+  /**
+   * The closest-in-time Report of the Vehicle, before or after. On an equal gap the earlier-recorded
+   * one wins, then the lower id (not upload order).
+   */
   function defaultReferenceReportId(vehicleId: number, recordedAt: string): number | null {
     const at = asMs(recordedAt);
-    let best: { id: number; gap: number } | null = null;
+    let best: { id: number; gap: number; at: number } | null = null;
     for (const r of db.listUploads({ kind: "report", vehicleId })) {
       if (!r.recordedAt || db.getDerived(r.id)?.failedError !== null) continue;
-      const gap = Math.abs(asMs(r.recordedAt) - at);
-      if (best === null || gap < best.gap) best = { id: r.id, gap };
+      const rAt = asMs(r.recordedAt);
+      const gap = Math.abs(rAt - at);
+      if (
+        best === null ||
+        gap < best.gap ||
+        (gap === best.gap && (rAt < best.at || (rAt === best.at && r.id < best.id)))
+      )
+        best = { id: r.id, gap, at: rAt };
     }
     return best?.id ?? null;
   }
