@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { useAppState } from "./AppState.tsx";
 import { useApi } from "./api.tsx";
 import type { FeedRow, StatusData } from "./api-types.ts";
 import { appendPage } from "./paging.ts";
@@ -11,6 +12,7 @@ type Feed = { rows: FeedRow[]; nextBefore: number | null };
 /** The Recent tab: the status strip, then both kinds of upload, newest first, paged with `before`. */
 export function Recent() {
   const api = useApi();
+  const app = useAppState();
   const { vehicleId, result } = useVehicleLoad(async (id) => {
     const [status, page] = await Promise.all([
       api.api.vehicles[":id"].status.$get({ param: { id: String(id) } }).then(okJson),
@@ -26,7 +28,6 @@ export function Recent() {
   }, [loaded]);
 
   if (vehicleId === undefined) return null;
-  if (result.state === "error") return <p class="list-note">Could not load. Try again later.</p>;
   if (!loaded) return null;
   const status: StatusData = loaded.status;
 
@@ -38,6 +39,8 @@ export function Recent() {
         .$get({ query: { vehicle: String(vehicleId), before: String(feed.nextBefore) } })
         .then(okJson);
       setFeed((f) => ({ rows: appendPage(f.rows, page.items), nextBefore: page.nextBefore }));
+    } catch {
+      app.toast("Couldn't load older uploads.");
     } finally {
       setPaging(false);
     }

@@ -4,6 +4,12 @@ import type { Api } from "./api.tsx";
 /** What `POST /api/uploads` answers, taken from the real client type. */
 export type UploadResult = InferResponseType<Api["api"]["uploads"]["$post"], 200>;
 
+/**
+ * A file the browser never got a 200 for (network down, unreadable file, a non-200 answer).
+ * It is not on the server's Failed Uploads screen, so it has its own outcome and no link.
+ */
+export type NotSent = { outcome: "not-sent"; reason: string };
+
 /** A cheap guess at what a picked file is. The server still decides the kind. */
 export type Sniffed = "report" | "log";
 
@@ -44,7 +50,9 @@ export type ResultLine = {
 };
 
 /** Maps an upload result to the DESIGN.md Batch result row. */
-export function resultLine(result: UploadResult): ResultLine {
+export function resultLine(result: UploadResult | NotSent): ResultLine {
+  if (result.outcome === "not-sent")
+    return { icon: "cross", tone: "bad", word: "Not uploaded", reason: result.reason };
   const reason = result.reason ?? result.warnings.join(" ");
   switch (result.outcome) {
     case "added":
@@ -75,7 +83,7 @@ export function resultLine(result: UploadResult): ResultLine {
 }
 
 export type VehicleChoice = number | "unassigned";
-export type FileResult = { name: string; result: UploadResult };
+export type FileResult = { name: string; result: UploadResult | NotSent };
 
 export type BatchDeps = {
   /** Vehicles that exist when the batch starts. */
@@ -124,14 +132,13 @@ export async function runBatch(files: readonly File[], deps: BatchDeps) {
     }
     deps.onProgress(i + 1, ordered.length, file.name);
     const result = await deps.upload(file, isLog ? logVehicle : "unassigned").catch(
-      (error: unknown): UploadResult => ({
-        outcome: "failed",
-        kind: "unknown",
-        warnings: [],
+      (error: unknown): NotSent => ({
+        outcome: "not-sent",
         reason: error instanceof Error ? error.message : "The upload failed.",
       }),
     );
-    if (result.vehicleCreated) newVehicles.push(result.vehicleCreated);
+    if (result.outcome !== "not-sent" && result.vehicleCreated)
+      newVehicles.push(result.vehicleCreated);
     results.push({ name: file.name, result });
   }
   return { results, newVehicles };

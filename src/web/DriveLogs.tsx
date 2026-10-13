@@ -10,8 +10,8 @@ export function DriveLogs() {
     api.api["drive-logs"].$get({ query: { vehicle: String(id) } }).then(okJson),
   );
   if (vehicleId === undefined) return null;
-  if (result.state === "error") return <p class="list-note">Could not load. Try again later.</p>;
-  if (result.state === "loading") return null;
+  // A failed load shows in the shell banner; with no rows to keep, the body stays empty.
+  if (result.state !== "ready") return null;
   if (result.data.length === 0) return <p class="list-note">No drive logs yet.</p>;
   const groups: { key: string; rows: typeof result.data }[] = [];
   for (const row of result.data) {

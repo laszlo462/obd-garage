@@ -3,7 +3,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/pr
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useAppState } from "./AppState.tsx";
 import { AddButton } from "./TabBar.tsx";
-import { renderWithApp } from "./test-render.tsx";
+import { pickFiles, renderWithApp } from "./test-render.tsx";
 import { vehicleRow } from "./test-support.ts";
 import type { UploadResult } from "./upload-batch.ts";
 
@@ -24,19 +24,11 @@ describe("AddButton", () => {
 const html = (name: string) => new File(["<html><body>"], name);
 const csv = (name: string) => new File(["Time,RPM\n0,800\n"], name);
 
-/** Picks files on the hidden input the way the Files picker does. */
-function pick(...files: File[]) {
-  const input = screen.getByLabelText("Choose files") as HTMLInputElement;
-  Object.defineProperty(input, "files", { value: files, configurable: true });
-  fireEvent.change(input);
-  return input;
-}
-
 describe("AddButton: a batch", () => {
   it("with no Vehicles uploads Reports before logs, skips the question and shows the result", async () => {
     const uploadCalls: unknown[] = [];
     renderWithApp(<AddButton label="Add" />, { uploadCalls });
-    pick(csv("log.csv"), html("report.html"));
+    pickFiles(csv("log.csv"), html("report.html"));
     await screen.findByRole("dialog", { name: "2 files added" });
     expect(uploadCalls.map((c) => (c as { query: { filename: string } }).query)).toEqual([
       { filename: "report.html", vehicle: "unassigned" },
@@ -54,7 +46,7 @@ describe("AddButton: the Vehicle question", () => {
       vehicleRow({ id: 2, label: "2012 Ford F-250" }),
     ];
     renderWithApp(<AddButton label="Add" />, { uploadCalls, vehicles });
-    pick(csv("a.csv"), csv("b.csv"));
+    pickFiles(csv("a.csv"), csv("b.csv"));
     await screen.findByRole("dialog", { name: "2 Drive Logs: which Vehicle?" });
     expect(
       (screen.getByRole("radio", { name: /2018 Honda Civic/ }) as HTMLInputElement).checked,
@@ -77,7 +69,7 @@ describe("AddButton: progress", () => {
       release = resolve;
     });
     renderWithApp(<AddButton label="Add" />, { uploadGates: { "a.csv": uploadGate } });
-    pick(csv("a.csv"));
+    pickFiles(csv("a.csv"));
     await screen.findByRole("dialog", { name: "Uploading" });
     expect(screen.getByText("1 of 1 · a.csv")).toBeTruthy();
     release();
@@ -97,7 +89,7 @@ describe("AddButton: progress", () => {
     renderWithApp(<AddButton label="Add" />, {
       uploadGates: { "a.csv": gate, "b.csv": secondGate },
     });
-    pick(csv("a.csv"), csv("b.csv"));
+    pickFiles(csv("a.csv"), csv("b.csv"));
     await screen.findByText("1 of 2 · a.csv");
     fireEvent.click(screen.getByRole("button", { name: "Hide" }));
     expect(screen.queryByRole("dialog", { name: "Uploading" })).toBeNull();
@@ -134,7 +126,7 @@ describe("AddButton: a new Vehicle", () => {
       assignCalls,
       uploadResults: { "r.html": newVinReport },
     });
-    pick(html("r.html"));
+    pickFiles(html("r.html"));
     await screen.findByRole("dialog", { name: "1 file added" });
     expect(screen.queryByRole("dialog", { name: "New vehicle added" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
@@ -153,7 +145,7 @@ describe("AddButton: a new Vehicle", () => {
       assignCalls,
       uploadResults: { "r.html": newVinReport },
     });
-    pick(html("r.html"));
+    pickFiles(html("r.html"));
     await screen.findByRole("dialog", { name: "1 file added" });
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     await screen.findByRole("dialog", { name: "New vehicle added" });
@@ -174,7 +166,7 @@ describe("AddButton: a failing file", () => {
         "bad.csv": { outcome: "failed", kind: "drive-log", warnings: [], reason: "No data rows." },
       },
     });
-    pick(csv("bad.csv"), csv("good.csv"));
+    pickFiles(csv("bad.csv"), csv("good.csv"));
     await screen.findByRole("dialog", { name: "1 added, 1 not" });
     expect(uploadCalls).toHaveLength(2);
     const bad = screen.getByRole("listitem", { name: "bad.csv" });
@@ -185,11 +177,14 @@ describe("AddButton: a failing file", () => {
     );
   });
 
-  it("lists a file as failed with the server's message when the request errors", async () => {
+  it("lists a file as Not uploaded, with the reason and no link, when the request errors", async () => {
     renderWithApp(<AddButton label="Add" />, { uploadError: { status: 500, error: "Disk full." } });
-    pick(csv("a.csv"), csv("b.csv"));
+    pickFiles(csv("a.csv"), csv("b.csv"));
     await screen.findByRole("dialog", { name: "0 added, 2 not" });
     expect(screen.getAllByText("Disk full.")).toHaveLength(2);
+    const first = screen.getByRole("listitem", { name: "a.csv" });
+    expect(within(first).getByText("Not uploaded")).toBeTruthy();
+    expect(within(first).queryByRole("link")).toBeNull();
   });
 });
 
@@ -215,7 +210,7 @@ describe("AddButton: refresh", () => {
     );
     await screen.findByText("loaded revision 0");
     const before = vehicleLoads.length;
-    pick(csv("a.csv"));
+    pickFiles(csv("a.csv"));
     await screen.findByText("loaded revision 1");
     await waitFor(() => expect(vehicleLoads.length).toBeGreaterThan(before));
   });
@@ -230,7 +225,7 @@ describe("AddButton: refresh", () => {
       { vehicleLoads, uploadResults: { "r.html": newVinReport } },
     );
     await screen.findByText("loaded revision 0");
-    pick(html("r.html"));
+    pickFiles(html("r.html"));
     await screen.findByRole("dialog", { name: "1 file added" });
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     await screen.findByRole("dialog", { name: "New vehicle added" });
@@ -247,7 +242,7 @@ describe("AddButton: the input", () => {
     const input = screen.getByLabelText("Choose files") as HTMLInputElement;
     // A real picker leaves the chosen path in `value`; a plain property stands in for it.
     Object.defineProperty(input, "value", { value: "C:\fakepatha.csv", writable: true });
-    pick(csv("a.csv"));
+    pickFiles(csv("a.csv"));
     expect(input.value).toBe("");
     await screen.findByRole("dialog", { name: "1 file added" });
   });
@@ -257,7 +252,7 @@ describe("AddButton: the input", () => {
       vehicles: [vehicleRow({ id: 1, label: "2018 Honda Civic" })],
       uploadResults: { "r.html": newVinReport },
     });
-    pick(csv("l.csv"), html("r.html"));
+    pickFiles(csv("l.csv"), html("r.html"));
     await screen.findByRole("dialog", { name: "1 Drive Log: which Vehicle?" });
     const ford = screen.getByRole("radio", { name: /2012 Ford F-250.*New/ }) as HTMLInputElement;
     expect(ford.checked).toBe(true);

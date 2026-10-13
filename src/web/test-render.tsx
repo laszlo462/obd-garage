@@ -1,9 +1,10 @@
-import { render } from "@testing-library/preact";
+import { fireEvent, render, screen } from "@testing-library/preact";
 import type { ComponentChildren } from "preact";
 import { App } from "./App.tsx";
 import { AppStateProvider } from "./AppState.tsx";
 import { ApiProvider } from "./api.tsx";
 import { type StubData, stubApi } from "./test-support.ts";
+import { UploadFlowProvider } from "./use-upload-flow.tsx";
 
 export const memoryStorage = (seed: Record<string, string> = {}): Storage => {
   const m = new Map(Object.entries(seed));
@@ -21,7 +22,9 @@ export function renderWithApp(
 ) {
   return render(
     <ApiProvider value={stubApi(data)}>
-      <AppStateProvider storage={storage}>{ui}</AppStateProvider>
+      <AppStateProvider storage={storage}>
+        <UploadFlowProvider>{ui}</UploadFlowProvider>
+      </AppStateProvider>
     </ApiProvider>,
   );
 }
@@ -33,4 +36,12 @@ export function renderApp(data: StubData = {}, storage = memoryStorage()) {
       <App storage={storage} />
     </ApiProvider>,
   );
+}
+
+/** Picks files on the hidden input the way the Files picker does. */
+export function pickFiles(...files: File[]) {
+  const input = screen.getByLabelText("Choose files") as HTMLInputElement;
+  Object.defineProperty(input, "files", { value: files, configurable: true });
+  fireEvent.change(input);
+  return input;
 }

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createAppState } from "./app-state.ts";
-import { stubApi, vehicleRow } from "./test-support.ts";
+import { type StubData, stubApi, vehicleRow } from "./test-support.ts";
 
 const memory = (seed: Record<string, string> = {}): Storage => {
   const m = new Map(Object.entries(seed));
@@ -88,5 +88,55 @@ describe("app state", () => {
     const before = state.revision.value;
     state.invalidate();
     expect(state.revision.value).toBe(before + 1);
+  });
+});
+
+describe("app state: a failed refresh", () => {
+  it("does not reject, keeps the old data and flags the load as failed until a refresh succeeds", async () => {
+    const fail: StubData["fail"] = {};
+    const state = createAppState(stubApi({ vehicles: two, fail }), memory());
+    await state.refresh();
+    expect(state.loadFailed.value).toBe(false);
+    fail.health = "throw";
+    await expect(state.refresh()).resolves.toBeUndefined();
+    expect(state.loadFailed.value).toBe(true);
+    expect(state.vehicles.value).toHaveLength(2);
+    delete fail.health;
+    await state.refresh();
+    expect(state.loadFailed.value).toBe(false);
+  });
+});
+
+describe("app state: a failed screen load", () => {
+  it("flags the load as failed until every failing screen has cleared its report", () => {
+    const state = createAppState(stubApi(), memory());
+    const a = {};
+    const b = {};
+    state.reportLoad(a, true);
+    state.reportLoad(b, true);
+    expect(state.loadFailed.value).toBe(true);
+    state.reportLoad(a, false);
+    expect(state.loadFailed.value).toBe(true);
+    state.reportLoad(b, false);
+    expect(state.loadFailed.value).toBe(false);
+  });
+});
+
+describe("app state: the toast", () => {
+  it("clears after about 4 s, and a new toast replaces the current one and restarts the timer", () => {
+    vi.useFakeTimers();
+    try {
+      const state = createAppState(stubApi(), memory());
+      state.toast("First.");
+      vi.advanceTimersByTime(3000);
+      state.toast("Second.");
+      expect(state.toastMessage.value).toBe("Second.");
+      vi.advanceTimersByTime(3000);
+      expect(state.toastMessage.value).toBe("Second.");
+      vi.advanceTimersByTime(1500);
+      expect(state.toastMessage.value).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
