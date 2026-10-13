@@ -115,11 +115,18 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     return best?.id ?? null;
   }
 
-  /** The owner's choice if there is one, else the default. Unassigned Drive Logs have none. */
+  /**
+   * The owner's choice if there is one and it parsed, else the default. A chosen Report that is a
+   * Failed Upload stays stored but is not used until it parses again. Unassigned Drive Logs have none.
+   */
   function referenceReportIdFor(upload: Upload): number | null {
     if (upload.vehicleId === null || !upload.recordedAt) return null;
     const chosen = db.getReferenceReport(upload.id);
-    if (chosen) return chosen.reportId;
+    if (
+      chosen &&
+      (chosen.reportId === null || db.getDerived(chosen.reportId)?.failedError === null)
+    )
+      return chosen.reportId;
     return defaultReferenceReportId(upload.vehicleId, upload.recordedAt);
   }
 
@@ -313,11 +320,11 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     return logs.length;
   }
 
-  /** Re-derives the Vehicle's Drive Logs whose default Reference Report changed. */
+  /** Re-derives the Vehicle's Drive Logs whose resolved Reference Report changed. */
   function rederiveChangedDefaults(vehicleId: number): void {
     for (const log of db.listUploads({ kind: "drive-log", vehicleId })) {
       const d = db.getDerived(log.id);
-      if (!d || d.failedError !== null || db.getReferenceReport(log.id)) continue;
+      if (!d || d.failedError !== null) continue;
       const before = metadataOf(log.id)?.referenceReportId ?? null;
       if (before !== referenceReportIdFor(log)) deriveFromDisk(log);
     }

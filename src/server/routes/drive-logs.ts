@@ -86,17 +86,20 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
           values: ch.values,
         };
       const chosen = db.getReferenceReport(log.id);
-      const state: ReferenceState = chosen
-        ? chosen.reportId === null
-          ? "cleared"
-          : "set"
-        : "default";
       const meta = derived.metadata as {
         startTime: string;
         duration: number;
         rows: unknown;
         referenceReportId: number | null;
       };
+      // A chosen Report that is a Failed Upload is kept but not used: derive fell back to the default.
+      const state: ReferenceState = !chosen
+        ? "default"
+        : chosen.reportId === null
+          ? "cleared"
+          : chosen.reportId === meta.referenceReportId
+            ? "set"
+            : "default";
       const vehicle = log.vehicleId === null ? undefined : db.getVehicle(log.vehicleId);
       const profile = vehicle && registry.profile(vehicle.profileId);
       const hidden = (profile?.hiddenColumns ?? []).filter((key) => key in channels);
@@ -161,6 +164,11 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
         const report = db.getUpload(reportId as number);
         if (report?.kind !== "report" || report.vehicleId !== log.vehicleId)
           return c.json({ error: "That Report does not belong to the Drive Log's Vehicle." }, 400);
+        if (db.getDerived(report.id)?.failedError !== null)
+          return c.json(
+            { error: "That Report is a Failed Upload, so it cannot be the Reference Report." },
+            400,
+          );
       }
       db.transaction(() => {
         db.setReferenceReport(log.id, reportId as number | null);
