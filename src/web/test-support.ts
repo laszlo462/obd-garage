@@ -1,6 +1,7 @@
 import type { InferResponseType } from "hono/client";
 import type { Api } from "./api.tsx";
 import type { DriveLogRow, FeedRow, ReportRow, StatusData } from "./api-types.ts";
+import type { UploadResult } from "./upload-batch.ts";
 
 export type VehicleRow = InferResponseType<Api["api"]["vehicles"]["$get"]>[number];
 export type UnassignedRow = InferResponseType<Api["api"]["drive-logs"]["$get"], 200>[number];
@@ -19,6 +20,18 @@ export type StubData = {
   driveLogs?: Record<number, DriveLogRow[]>;
   status?: Record<number, StatusData>;
   version?: string;
+  /** Each `POST /api/uploads` is pushed here as { query, body }. */
+  uploadCalls?: unknown[];
+  /** The upload result per filename; a file not listed is added as a Drive Log. */
+  uploadResults?: Record<string, UploadResult>;
+  /** An upload waits for the promise under its filename before it answers. */
+  uploadGates?: Record<string, Promise<unknown>>;
+  /** Answer every upload with an error status. */
+  uploadError?: { status: number; error: string };
+  /** Each `POST /api/drive-logs/assign` body is pushed here. */
+  assignCalls?: unknown[];
+  /** Each `GET /api/vehicles` pushes a marker here. */
+  vehicleLoads?: unknown[];
   /** Never answer `GET /api/vehicles`, to see the screen before the first load. */
   pending?: boolean;
 };
@@ -32,7 +45,10 @@ export function stubApi(data: StubData = {}): Api {
       health: { $get: () => json({ status: "ok", version: data.version ?? "0.0.0" }) },
       vehicles: Object.assign(
         {
-          $get: () => (data.pending ? new Promise<Response>(() => {}) : json(data.vehicles ?? [])),
+          $get: () => {
+            data.vehicleLoads?.push(1);
+            return data.pending ? new Promise<Response>(() => {}) : json(data.vehicles ?? []);
+          },
         },
         {
           ":id": {
@@ -44,6 +60,12 @@ export function stubApi(data: StubData = {}): Api {
         },
       ),
       "drive-logs": {
+        assign: {
+          $post: (args: { json: unknown }) => {
+            data.assignCalls?.push(args.json);
+            return json({ assigned: 0 });
+          },
+        },
         $get: (args?: { query?: { unassigned?: string; vehicle?: string } }) => {
           if (args?.query?.vehicle !== undefined)
             return json(data.driveLogs?.[Number(args.query.vehicle)] ?? []);
@@ -59,6 +81,34 @@ export function stubApi(data: StubData = {}): Api {
       },
       uploads: Object.assign(
         {
+          $post: async (
+            args: { query: { vehicle?: string; filename?: string } },
+            opts?: { init?: { body?: unknown } },
+          ) => {
+            data.uploadCalls?.push({ query: args.query, body: opts?.init?.body });
+            await data.uploadGates?.[args.query.filename ?? ""];
+            if (data.uploadError)
+              return Promise.resolve(
+                Response.json(
+                  { error: data.uploadError.error },
+                  { status: data.uploadError.status },
+                ),
+              );
+            const fallback: UploadResult = { outcome: "added", kind: "drive-log", warnings: [] };
+            const result = data.uploadResults?.[args.query.filename ?? ""] ?? fallback;
+            // Like the server, a new VIN adds a Vehicle that the next `GET /api/vehicles` lists.
+            const made = result.vehicleCreated;
+            if (made && data.vehicles)
+              data.vehicles.push(
+                vehicleRow({
+                  id: made.id,
+                  label: made.label,
+                  vin: made.vin,
+                  profileId: made.profile,
+                }),
+              );
+            return json(result);
+          },
           $get: (args: { query: { vehicle: string; before?: string } }) => {
             const all = data.uploads?.[Number(args.query.vehicle)] ?? [];
             const before = args.query.before;

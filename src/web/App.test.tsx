@@ -154,3 +154,11 @@ describe("App shell at 900 px and up", () => {
     expect(within(screen.getByRole("banner")).getByRole("tablist")).toBeTruthy();
   });
 });
+
+describe("routes", () => {
+  it("has a placeholder for Vehicle settings, the target of the New vehicle sheet's Change link", async () => {
+    history.replaceState(null, "", "/vehicles/8/settings");
+    renderApp({ vehicles: [vehicleRow({ id: 8 })] });
+    expect(await screen.findByText("Vehicle settings")).toBeTruthy();
+  });
+});

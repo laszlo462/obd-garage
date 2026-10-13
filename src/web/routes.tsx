@@ -10,6 +10,7 @@ import { isTabPath } from "./TabBar.tsx";
 /** Placeholders until the viewer slices land. */
 const ReportViewer = () => <p class="list-note">Report viewer</p>;
 const DriveLogViewer = () => <p class="list-note">Drive Log viewer</p>;
+const VehicleSettings = () => <p class="list-note">Vehicle settings</p>;
 
 export function Routes() {
   const state = useAppState();
@@ -25,6 +26,7 @@ export function Routes() {
         <Route path="/failed-uploads" component={FailedUploads} />
         <Route path="/reports/:id" component={ReportViewer} />
         <Route path="/drive-logs/:id" component={DriveLogViewer} />
+        <Route path="/vehicles/:id/settings" component={VehicleSettings} />
       </Router>
     </main>
   );

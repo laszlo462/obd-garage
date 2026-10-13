@@ -1,5 +1,7 @@
 import { Activity, Clock, FileText, Plus } from "lucide-preact";
+import { useRef } from "preact/hooks";
 import { useLocation } from "preact-iso";
+import { useUploadFlow } from "./use-upload-flow.tsx";
 
 export const TABS = [
   { path: "/", label: "Recent", Icon: Clock },
@@ -24,17 +26,35 @@ export function Tabs() {
   );
 }
 
-/** A placeholder until the upload-flow slice. `+ Add` sits in the app bar, `Add` in the tab bar. */
+/** Opens the Files picker; never navigates. `+ Add` sits in the app bar, `Add` in the tab bar. */
 export function AddButton(props: { label: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  const flow = useUploadFlow();
   return (
-    <button type="button" class="add-button">
-      {props.label === "Add" && (
-        <span class="plus">
-          <Plus aria-hidden="true" size={20} strokeWidth={1.8} />
-        </span>
-      )}
-      {props.label}
-    </button>
+    <>
+      <button type="button" class="add-button" onClick={() => input.current?.click()}>
+        {props.label === "Add" && (
+          <span class="plus">
+            <Plus aria-hidden="true" size={20} strokeWidth={1.8} />
+          </span>
+        )}
+        {props.label}
+      </button>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        hidden
+        aria-label="Choose files"
+        onChange={(e) => {
+          const files = [...(e.currentTarget.files ?? [])];
+          // Copy first: the FileList is live. Then reset, so the same file can be picked again.
+          e.currentTarget.value = "";
+          void flow.pick(files);
+        }}
+      />
+      {flow.sheets}
+    </>
   );
 }
 

@@ -378,6 +378,111 @@ main {
   font-weight: 600;
 }
 
+.btn-primary {
+  margin: 0 var(--gutter) var(--gutter);
+  width: calc(100% - 2 * var(--gutter));
+  min-height: var(--touch);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+}
+
+/* Upload flow */
+.upload-bar {
+  height: 8px;
+  margin: 12px;
+  background: var(--line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.upload-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.result-list {
+  list-style: none;
+  padding: 0;
+}
+
+.result-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+}
+
+.result-line .main {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.result-line .filename {
+  font: var(--fs-13) var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.result-line .word {
+  font-weight: 600;
+}
+
+.result-line .sub {
+  color: var(--ink2);
+  font-size: var(--fs-12);
+}
+
+.result-line a {
+  color: var(--accent);
+}
+
+.tone-ok {
+  color: var(--ok);
+}
+
+.tone-warn {
+  color: var(--warn);
+}
+
+.tone-bad {
+  color: var(--bad);
+}
+
+.tone-muted {
+  color: var(--muted);
+}
+
+.result-line .filename {
+  color: var(--ink);
+}
+
+.vehicle-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 9px 12px;
+}
+
+.vehicle-facts dt {
+  color: var(--muted);
+}
+
+.vehicle-facts dd {
+  margin: 0;
+}
+
+.vehicle-facts .mono {
+  font-family: var(--font-mono);
+}
+
 /* Lists and badges */
 .upload-row {
   display: flex;
