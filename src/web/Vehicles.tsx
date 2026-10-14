@@ -20,14 +20,18 @@ export function Vehicles() {
             {current?.id === v.id && <span class="badge badge-accent">Current</span>}
           </h2>
           <p class="mono">{v.vin}</p>
-          <p>{catalogue?.profiles.find((p) => p.id === v.profileId)?.name}</p>
-          <p>
-            {v.packIds.length === 0
-              ? "No Rule Packs"
-              : v.packIds
-                  .map((id) => catalogue?.rulePacks.find((p) => p.id === id)?.name ?? id)
-                  .join(", ")}
-          </p>
+          <dl class="panel-facts">
+            <dt>Profile</dt>
+            <dd>{catalogue?.profiles.find((p) => p.id === v.profileId)?.name}</dd>
+            <dt>Rule Packs</dt>
+            <dd>
+              {v.packIds.length === 0
+                ? "No Rule Packs"
+                : v.packIds
+                    .map((id) => catalogue?.rulePacks.find((p) => p.id === id)?.name ?? id)
+                    .join(", ")}
+            </dd>
+          </dl>
           <p class="failed-meta">
             <span>{count(v.reportCount, "report")}</span>
             <span>{count(v.driveLogCount, "drive log")}</span>

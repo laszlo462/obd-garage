@@ -51,6 +51,16 @@ describe("Vehicles", () => {
     expect(within(second).getByText("0 reports")).toBeTruthy();
   });
 
+  it("labels the Profile and the Rule Packs on each panel", async () => {
+    renderApp({ vehicles, profiles, rulePacks });
+    const first = await panelOf("2012 Ford F-250");
+    await within(first).findByText("Ford 6.7");
+    const fact = (label: string) =>
+      within(first).getByText(label, { selector: "dt" }).nextElementSibling?.textContent;
+    expect(fact("Profile")).toBe("Ford 6.7");
+    expect(fact("Rule Packs")).toBe("6.7 P0401");
+  });
+
   it("switches the Current Vehicle with Switch to, in the same store as the switcher", async () => {
     const storage = memoryStorage();
     renderApp({ vehicles }, storage);

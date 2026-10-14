@@ -45,7 +45,7 @@ export function VehicleSettings() {
       ))}
       <h2 class="section-label">Rule Packs</h2>
       {catalogue.rulePacks.map((p) => (
-        <label key={p.id} class="radio-row">
+        <label key={p.id} class="radio-row switch-row">
           <input
             type="checkbox"
             role="switch"
