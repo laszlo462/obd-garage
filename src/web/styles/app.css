@@ -753,3 +753,103 @@ main {
   border-radius: var(--radius-control);
   font-size: var(--fs-13);
 }
+
+.app-bar .bar-title {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-15);
+  font-weight: 600;
+}
+
+/* Vehicles and Vehicle settings */
+.vehicle-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-15);
+}
+
+.vehicle-panel .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+}
+
+.vehicle-panel .failed-actions {
+  flex-wrap: wrap;
+}
+
+/* Profile and Rule Packs on a Vehicles panel */
+.panel-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.panel-facts dt {
+  color: var(--muted);
+  font-size: var(--fs-13);
+  line-height: 1.6;
+}
+
+.panel-facts dd {
+  margin: 0;
+}
+
+/* Back: chevron and label on one line, centred like the other bar controls */
+.app-bar a.bar-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Switch row: description first, the 46 × 28 switch at the end (DESIGN.md Components) */
+.switch-row {
+  flex-direction: row-reverse;
+  justify-content: space-between;
+}
+
+.switch-row .sub {
+  font-family: var(--font-text);
+  font-size: var(--fs-13);
+}
+
+.switch-row input[role="switch"] {
+  appearance: none;
+  position: relative;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  border-radius: var(--radius-control);
+  background: var(--surface2);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.switch-row input[role="switch"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+
+.switch-row input[role="switch"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch-row input[role="switch"]:checked::before {
+  transform: translateX(18px);
+}
+
+.switch-row input[role="switch"]:disabled {
+  opacity: 0.5;
+}

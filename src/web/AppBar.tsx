@@ -1,8 +1,9 @@
 import { ChevronDown, ChevronLeft, Menu } from "lucide-preact";
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { useLocation } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
 import { MenuSheet } from "./MenuSheet.tsx";
+import { screenName } from "./screen-name.ts";
 import { AddButton, isTabPath, Tabs } from "./TabBar.tsx";
 import { VehicleSwitcherSheet } from "./VehicleSwitcherSheet.tsx";
 import { useIsDesktop } from "./viewport.ts";
@@ -12,6 +13,13 @@ export function AppBar() {
   const { path } = useLocation();
   const desktop = useIsDesktop();
   const [sheet, setSheet] = useState<"switcher" | "menu" | null>(null);
+  const last = useRef(path);
+  useEffect(() => {
+    if (path === last.current) return;
+    state.previousPath.value = last.current;
+    last.current = path;
+  }, [path]);
+  const back = state.previousPath.value ?? "/";
   return (
     <>
       <header class="app-bar">
@@ -21,9 +29,17 @@ export function AppBar() {
             <ChevronDown aria-hidden="true" />
           </button>
         ) : (
-          <a class="bar-control" href="/">
+          <a
+            class="bar-control"
+            href={back}
+            onClick={(e) => {
+              if (state.previousPath.value === null) return;
+              e.preventDefault();
+              history.back();
+            }}
+          >
             <ChevronLeft aria-hidden="true" />
-            Back
+            {screenName(back)}
           </a>
         )}
         {desktop && isTabPath(path) && (
@@ -32,7 +48,7 @@ export function AppBar() {
             <AddButton label="+ Add" />
           </>
         )}
-        <span class="spacer" />
+        {isTabPath(path) ? <span class="spacer" /> : <h1 class="bar-title">{screenName(path)}</h1>}
         <button
           type="button"
           class="bar-control menu-button"

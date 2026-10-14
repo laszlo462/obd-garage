@@ -1,5 +1,6 @@
 import { computed, signal } from "@preact/signals";
 import type { Api } from "./api.tsx";
+import type { VehicleRow } from "./api-types.ts";
 import { pickCurrentVehicle } from "./current-vehicle.ts";
 import { readStoredVehicleId, writeStoredVehicleId } from "./vehicle-store.ts";
 
@@ -19,6 +20,8 @@ export function createAppState(api: Api, storage: Storage) {
   const failingScreens = signal<ReadonlySet<object>>(new Set());
   /** Bumped by `invalidate()`. List screens load on `[currentVehicle.id, revision]`. */
   const revision = signal(0);
+  /** The path of the screen before this one, set only by in-app navigation. */
+  const previousPath = signal<string | null>(null);
   const version = signal<string | null>(null);
   const needsAttention = computed(() => unassignedCount.value > 0 || failedCount.value > 0);
 
@@ -35,6 +38,7 @@ export function createAppState(api: Api, storage: Storage) {
     failedCount,
     needsAttention,
     version,
+    previousPath,
     loaded,
     revision,
     /** True while a load failed: the shell shows one banner with Retry. */
@@ -58,6 +62,10 @@ export function createAppState(api: Api, storage: Storage) {
     /** Call after data changes (an upload, a delete, an assignment) so the list screens reload. */
     invalidate() {
       revision.value++;
+    },
+    /** Replaces one Vehicle with the row the server answered, so screens show the saved state. */
+    updateVehicle(row: VehicleRow) {
+      vehicles.value = vehicles.value.map((v) => (v.id === row.id ? row : v));
     },
     selectVehicle(id: number) {
       storedId.value = id;

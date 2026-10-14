@@ -1,9 +1,16 @@
 import type { InferResponseType } from "hono/client";
 import type { Api } from "./api.tsx";
-import type { DriveLogRow, FeedRow, ReportRow, StatusData } from "./api-types.ts";
+import type {
+  DriveLogRow,
+  FeedRow,
+  ProfileRow,
+  ReportRow,
+  RulePackRow,
+  StatusData,
+  VehicleRow,
+} from "./api-types.ts";
 import type { UploadResult } from "./upload-batch.ts";
 
-export type VehicleRow = InferResponseType<Api["api"]["vehicles"]["$get"]>[number];
 export type UnassignedRow = InferResponseType<Api["api"]["drive-logs"]["$get"], 200>[number];
 export type FailedRow = InferResponseType<Api["api"]["failed-uploads"]["$get"]>[number];
 /** The stub routes that `StubData.fail` can break. `olderUploads` is the Recent feed with `before`. */
@@ -17,6 +24,8 @@ export type FailRoute =
   | "driveLogs"
   | "failedUploads"
   | "deleteUpload"
+  | "deleteVehicle"
+  | "patchVehicle"
   | "assign";
 
 export type StubData = {
@@ -33,6 +42,8 @@ export type StubData = {
   driveLogs?: Record<number, DriveLogRow[]>;
   status?: Record<number, StatusData>;
   version?: string;
+  profiles?: ProfileRow[];
+  rulePacks?: RulePackRow[];
   /** Each `POST /api/uploads` is pushed here as { query, body }. */
   uploadCalls?: unknown[];
   /** The upload result per filename; a file not listed is added as a Drive Log. */
@@ -43,6 +54,12 @@ export type StubData = {
   uploadError?: { status: number; error: string };
   /** Each `POST /api/drive-logs/assign` body is pushed here. */
   assignCalls?: unknown[];
+  /** Each `DELETE /api/vehicles/:id` pushes { param, query } here and drops the Vehicle from `vehicles`. */
+  vehicleDeletes?: unknown[];
+  /** Each `PATCH /api/vehicles/:id` pushes { param, json } here and updates the Vehicle in `vehicles`. */
+  vehiclePatches?: unknown[];
+  /** A PATCH waits for this promise before it answers. */
+  vehiclePatchGate?: Promise<unknown>;
   /** Each `GET /api/vehicles` pushes a marker here. */
   vehicleLoads?: unknown[];
   /**
@@ -87,6 +104,29 @@ export function stubApi(data: StubData = {}): Api {
         },
         {
           ":id": {
+            $patch: route(
+              data,
+              "patchVehicle",
+              async (args: {
+                param: { id: string };
+                json: { profileId?: string; packIds?: string[] };
+              }) => {
+                await data.vehiclePatchGate;
+                data.vehiclePatches?.push(args);
+                const row = data.vehicles?.find((v) => v.id === Number(args.param.id));
+                if (row) Object.assign(row, args.json);
+                return json(row);
+              },
+            ),
+            $delete: route(
+              data,
+              "deleteVehicle",
+              (args: { param: { id: string }; query: { deleteLogs?: string } }) => {
+                data.vehicleDeletes?.push(args);
+                data.vehicles = data.vehicles?.filter((v) => v.id !== Number(args.param.id));
+                return json({ reportsDeleted: 0, driveLogsDeleted: 0, driveLogsUnassigned: 0 });
+              },
+            ),
             status: {
               $get: route(data, "status", (args: { param: { id: string } }) =>
                 json(data.status?.[Number(args.param.id)] ?? { report: null, previous: null }),
@@ -177,6 +217,8 @@ export function stubApi(data: StubData = {}): Api {
           json(data.reports?.[Number(args.query.vehicle)] ?? []),
         ),
       },
+      profiles: { $get: () => json(data.profiles ?? []) },
+      "rule-packs": { $get: () => json(data.rulePacks ?? []) },
       "failed-uploads": { $get: route(data, "failedUploads", () => json(data.failed ?? [])) },
     },
   } as unknown as Api;

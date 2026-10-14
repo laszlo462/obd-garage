@@ -188,6 +188,13 @@ describe("NewVehicleSheet", () => {
     );
   });
 
+  it("closes the sheet when Change opens the Vehicle settings", () => {
+    const onClose = vi.fn();
+    render(<NewVehicleSheet vehicle={created} onAssign={() => {}} onClose={onClose} />);
+    fireEvent.click(screen.getByRole("link", { name: "Change" }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it("ticks every same-day Unassigned log and assigns exactly the ticked ids", () => {
     const onAssign = vi.fn();
     render(<NewVehicleSheet vehicle={created} onAssign={onAssign} onClose={() => {}} />);
