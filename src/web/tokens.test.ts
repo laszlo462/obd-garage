@@ -179,3 +179,10 @@ describe("colour tokens", () => {
     });
   });
 });
+
+describe("native controls", () => {
+  it("declares color-scheme light dark on :root, so radios, selects and scrollbars follow the theme", () => {
+    const base = css.slice(0, darkStart);
+    expect(base).toMatch(/:root\s*\{[^}]*color-scheme:\s*light dark\s*;/);
+  });
+});

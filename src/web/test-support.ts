@@ -1,9 +1,11 @@
 import type { InferResponseType } from "hono/client";
+import type { ParsedReport } from "../core/report.ts";
 import type { Api } from "./api.tsx";
 import type {
   DriveLogRow,
   FeedRow,
   ProfileRow,
+  ReportDetail,
   ReportRow,
   RulePackRow,
   StatusData,
@@ -21,6 +23,7 @@ export type FailRoute =
   | "uploads"
   | "olderUploads"
   | "reports"
+  | "reportDetail"
   | "driveLogs"
   | "failedUploads"
   | "deleteUpload"
@@ -39,6 +42,12 @@ export type StubData = {
   /** Rows per page of the Recent feed. */
   pageSize?: number;
   reports?: Record<number, ReportRow[]>;
+  /** `GET /api/reports/:id` answers from this map by id; an unknown id answers 404. */
+  reportDetails?: Record<number, ReportDetail>;
+  /** `GET /api/reports/:id` answers 409 with this error for the id, like a Failed Upload. */
+  reportConflicts?: Record<number, string>;
+  /** Each `GET /api/reports/:id` pushes the id here. */
+  reportDetailLoads?: number[];
   driveLogs?: Record<number, DriveLogRow[]>;
   status?: Record<number, StatusData>;
   version?: string;
@@ -212,11 +221,30 @@ export function stubApi(data: StubData = {}): Api {
           },
         },
       ),
-      reports: {
-        $get: route(data, "reports", (args: { query: { vehicle?: string } }) =>
-          json(data.reports?.[Number(args.query.vehicle)] ?? []),
-        ),
-      },
+      reports: Object.assign(
+        {
+          $get: route(data, "reports", (args: { query: { vehicle?: string } }) =>
+            json(data.reports?.[Number(args.query.vehicle)] ?? []),
+          ),
+        },
+        {
+          ":id": {
+            $get: route(data, "reportDetail", (args: { param: { id: string } }) => {
+              const id = Number(args.param.id);
+              data.reportDetailLoads?.push(id);
+              const conflict = data.reportConflicts?.[id];
+              if (conflict !== undefined)
+                return Promise.resolve(Response.json({ error: conflict }, { status: 409 }));
+              const detail = data.reportDetails?.[id];
+              if (!detail)
+                return Promise.resolve(
+                  Response.json({ error: "Unknown Report." }, { status: 404 }),
+                );
+              return json(detail);
+            }),
+          },
+        },
+      ),
       profiles: { $get: () => json(data.profiles ?? []) },
       "rule-packs": { $get: () => json(data.rulePacks ?? []) },
       "failed-uploads": { $get: route(data, "failedUploads", () => json(data.failed ?? [])) },
@@ -300,3 +328,77 @@ export const driveLogRow = (over: Partial<DriveLogRow> = {}): DriveLogRow => ({
   skippedRows: 0,
   ...over,
 });
+
+/** A small parsed Report: one stored code, one pending code, two monitors, two Mode $06 tests. */
+export const parsedReport = (over: Partial<ParsedReport> = {}): ParsedReport => ({
+  header: { vin: "TEST-VIN-00001234", date: "2026-10-02T21:32:14" },
+  overview: {
+    mil: "on",
+    ready: false,
+    reasons: [],
+    additional: [
+      { description: "Distance traveled since DTCs cleared", value: "6303.81", units: "miles" },
+    ],
+  },
+  dtcs: [
+    {
+      ecu: "ECM",
+      code: "P0401",
+      type: "",
+      description: "EGR flow insufficient",
+      statuses: ["Confirmed", "Pending"],
+      uds: [],
+    },
+  ],
+  monitors: [
+    {
+      ecu: "ECM",
+      tests: [
+        { name: "Catalyst", continuous: false, status: "Complete", state: "complete" },
+        { name: "Boost Pressure", continuous: false, status: "Incomplete", state: "incomplete" },
+      ],
+    },
+  ],
+  mode06: [
+    {
+      mid: "$01",
+      midName: "Exhaust Gas Sensor Monitor",
+      tid: "$90",
+      tidName: "Manufacturer Defined",
+      valueText: "9",
+      minText: "0",
+      maxText: "10",
+      value: 9,
+      min: 0,
+      max: 10,
+      units: "sec",
+      result: "Pass",
+    },
+    {
+      mid: "$02",
+      midName: "NOx Monitor",
+      tid: "$91",
+      tidName: "Manufacturer Defined",
+      valueText: "50",
+      minText: "0",
+      maxText: "100",
+      value: 50,
+      min: 0,
+      max: 100,
+      units: "ppm",
+      result: "Pass",
+    },
+  ],
+  ...over,
+});
+
+export const reportDetail = (over: Partial<ReportDetail> = {}): ReportDetail =>
+  ({
+    id: 2,
+    filename: "x",
+    vehicleId: 1,
+    recordedAt: "2026-10-02T21:32:14",
+    uploadedAt: "2026-10-12T10:00:00.000Z",
+    report: parsedReport(),
+    ...over,
+  }) as ReportDetail;

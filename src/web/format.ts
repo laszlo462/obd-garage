@@ -12,6 +12,17 @@ export function compactDateTime(naive: string | null): string {
   return `${m[3]} ${MONTHS[Number(m[2]) - 1]} ${m[4]}:${m[5]}`;
 }
 
+const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+/** "FRI 02 OCT · 21:32" from a naive local ISO string; "–" without one. Read as text, so no time zone applies. */
+export function reportTitle(naive: string | null): string {
+  const m = naive && NAIVE.exec(naive);
+  if (!m) return "–";
+  const weekday =
+    WEEKDAYS[new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay()];
+  return `${weekday} ${m[3]} ${(MONTHS[Number(m[2]) - 1] ?? "").toUpperCase()} · ${m[4]}:${m[5]}`;
+}
+
 /** "41 min", "42 s", "1 h 5 min". */
 export function duration(sec: number | null): string {
   if (sec === null) return "–";

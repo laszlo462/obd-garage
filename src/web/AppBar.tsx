@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, Menu } from "lucide-preact";
+import { ChevronDown, ChevronLeft, Ellipsis, Menu } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useLocation } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
@@ -49,6 +49,16 @@ export function AppBar() {
           </>
         )}
         {isTabPath(path) ? <span class="spacer" /> : <h1 class="bar-title">{screenName(path)}</h1>}
+        {state.barMenu.value && (
+          <button
+            type="button"
+            class="bar-control more-button"
+            aria-label="More"
+            onClick={state.barMenu.value}
+          >
+            <Ellipsis aria-hidden="true" />
+          </button>
+        )}
         <button
           type="button"
           class="bar-control menu-button"

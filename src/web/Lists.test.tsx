@@ -139,12 +139,9 @@ describe("invalidate", () => {
 });
 
 describe("viewer routes", () => {
-  it.each([
-    ["/reports/12", "Report viewer"],
-    ["/drive-logs/12", "Drive Log viewer"],
-  ])("%s is a placeholder until the viewer lands", async (path, text) => {
-    history.replaceState(null, "", path);
+  it("/drive-logs/12 is a placeholder until the Drive Log viewer lands", async () => {
+    history.replaceState(null, "", "/drive-logs/12");
     renderApp({ vehicles });
-    expect(await screen.findByText(text)).toBeTruthy();
+    expect(await screen.findByText("Drive Log viewer")).toBeTruthy();
   });
 });

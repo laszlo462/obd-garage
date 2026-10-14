@@ -3,6 +3,7 @@ import { TABS } from "./TabBar.tsx";
 const PUSHED: [RegExp, string][] = [
   [/^\/vehicles$/, "Vehicles"],
   [/^\/vehicles\/\d+\/settings$/, "Vehicle settings"],
+  [/^\/reports\/\d+$/, "Report"],
   [/^\/unassigned$/, "Unassigned"],
   [/^\/failed-uploads$/, "Failed Uploads"],
 ];

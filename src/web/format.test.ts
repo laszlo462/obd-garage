@@ -7,6 +7,7 @@ import {
   localDateTime,
   monthKey,
   monthLabel,
+  reportTitle,
   shortDate,
 } from "./format.ts";
 
@@ -83,5 +84,16 @@ describe("localDateTime", () => {
 
   it("shows a dash for text that is not a date", () => {
     expect(localDateTime("nope")).toBe("–");
+  });
+});
+
+describe("reportTitle", () => {
+  it("is the weekday, day, month and time as written, whatever the viewer's time zone", () => {
+    expect(reportTitle("2026-10-02T21:32:14")).toBe("FRI 02 OCT \u00b7 21:32");
+    expect(reportTitle("2026-08-21T21:56:40")).toBe("FRI 21 AUG \u00b7 21:56");
+  });
+
+  it("shows a dash without a date", () => {
+    expect(reportTitle(null)).toBe("\u2013");
   });
 });

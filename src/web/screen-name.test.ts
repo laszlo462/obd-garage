@@ -14,5 +14,6 @@ describe("screenName", () => {
     expect(screenName("/vehicles/8/settings")).toBe("Vehicle settings");
     expect(screenName("/unassigned")).toBe("Unassigned");
     expect(screenName("/failed-uploads?x=1")).toBe("Failed Uploads");
+    expect(screenName("/reports/12")).toBe("Report");
   });
 });

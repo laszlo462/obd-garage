@@ -151,3 +151,61 @@ describe("app stylesheet", () => {
       expect(rule(`.tone-${tone}`), tone).toContain(`color: var(${colour})`);
   });
 });
+
+describe("Report viewer layout", () => {
+  it("lets the viewer container grow to 1180px from 900px up, inside the gutter", () => {
+    expect(rule("main.viewer", media("min-width: 900px"))).toMatch(/max-width:\s*1180px/);
+  });
+
+  it("lays the overview tiles in 2 columns on a phone and 4 from 900px up", () => {
+    expect(rule(".tiles")).toMatch(/grid-template-columns:\s*repeat\(2,/);
+    expect(rule(".tiles", media("min-width: 900px"))).toMatch(
+      /grid-template-columns:\s*repeat\(4,/,
+    );
+  });
+
+  it("draws a section as a bordered panel with the count badge on the right of the summary", () => {
+    expect(rule(".section")).toMatch(/border:\s*1px solid var\(--line\)/);
+    expect(rule(".section summary")).toMatch(/justify-content:\s*space-between/);
+  });
+});
+
+describe("desktop overrides", () => {
+  /** `source` with every @media block cut out, so only base rules are left. */
+  function withoutMedia(source: string): string {
+    let out = "";
+    let i = 0;
+    while (i < source.length) {
+      const at = source.indexOf("@media", i);
+      if (at < 0) return out + source.slice(i);
+      out += source.slice(i, at);
+      let depth = 0;
+      let j = source.indexOf("{", at);
+      do {
+        depth += source[j] === "{" ? 1 : source[j] === "}" ? -1 : 0;
+        j++;
+      } while (depth > 0 && j < source.length);
+      i = j;
+    }
+    return out;
+  }
+
+  it("has no base rule for a selector after the 900px block that overrides it", () => {
+    const start = css.indexOf("@media (min-width: 900px)");
+    const body = media("min-width: 900px");
+    const end = css.indexOf("{", start) + 1 + body.length + 1;
+    const later = withoutMedia(css.slice(end));
+    const props = (decls: string) => [...decls.matchAll(/([\w-]+)\s*:/g)].map((m) => m[1] ?? "");
+    const shadowed = [...body.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap((m) =>
+      (m[1] ?? "")
+        .split(",")
+        .map((sel) => sel.trim())
+        .filter((sel) => {
+          const laterProps = props(rule(sel, later) ?? "");
+          return props(m[2] ?? "").some((name) => laterProps.includes(name));
+        }),
+    );
+    expect(body).toContain("max-width");
+    expect(shadowed).toEqual([]);
+  });
+});
