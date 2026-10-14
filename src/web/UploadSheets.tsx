@@ -138,12 +138,22 @@ type Created = NonNullable<UploadResult["vehicleCreated"]>;
 
 export function NewVehicleSheet(props: {
   vehicle: Created;
+  /** The ticks to start from: a sheet that was set aside and comes back keeps them. */
+  initialTicked?: number[];
   onAssign: (uploadIds: number[]) => void;
   onClose: () => void;
+  /**
+   * Runs with the current ticks when Change is tapped on a sheet that offers logs. With it, Change
+   * leaves the sheet to the caller to set aside; without it, Change closes the sheet.
+   */
+  onChange?: (ticked: number[]) => void;
 }) {
   const { vehicle } = props;
   const logs = vehicle.sameDayUnassigned;
-  const [ticked, setTicked] = useState(() => new Set(logs.map((l) => l.uploadId)));
+  const [ticked, setTicked] = useState(
+    () => new Set(props.initialTicked ?? logs.map((l) => l.uploadId)),
+  );
+  const tickedIds = () => logs.map((l) => l.uploadId).filter((id) => ticked.has(id));
   const toggle = (id: number) =>
     setTicked((prev) => {
       const next = new Set(prev);
@@ -170,7 +180,9 @@ export function NewVehicleSheet(props: {
         <a
           class="menu-row link-row"
           href={`/vehicles/${vehicle.id}/settings`}
-          onClick={props.onClose}
+          onClick={() =>
+            props.onChange && logs.length > 0 ? props.onChange(tickedIds()) : props.onClose()
+          }
         >
           Change
         </a>
@@ -198,7 +210,7 @@ export function NewVehicleSheet(props: {
           type="button"
           class="btn-primary"
           disabled={ticked.size === 0}
-          onClick={() => props.onAssign(logs.map((l) => l.uploadId).filter((id) => ticked.has(id)))}
+          onClick={() => props.onAssign(tickedIds())}
         >
           Assign to this vehicle
         </button>

@@ -1,8 +1,10 @@
 import type { ComponentChildren } from "preact";
 import { createContext } from "preact";
-import { useContext, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
 import { useApi } from "./api.tsx";
+import { type Parked, parkedSheet } from "./parked-sheet.ts";
 import {
   BatchResultSheet,
   NewVehicleSheet,
@@ -49,6 +51,7 @@ export function useUploadFlow(): UploadFlow {
 export function UploadFlowProvider(props: { children: ComponentChildren }) {
   const api = useApi();
   const state = useAppState();
+  const { path } = useLocation();
   const [results, setResults] = useState<FileResult[] | null>(null);
   const [progress, setProgress] = useState<{ index: number; total: number; name: string } | null>(
     null,
@@ -57,6 +60,8 @@ export function UploadFlowProvider(props: { children: ComponentChildren }) {
   const [progressHidden, setProgressHidden] = useState(false);
   /** Vehicles the batch created, one New vehicle sheet each, after the result. */
   const [created, setCreated] = useState<Created[]>([]);
+  /** The head of `created`, set aside while the owner is in that Vehicle's settings (Change). */
+  const [parked, setParked] = useState<Parked | null>(null);
   const [question, setQuestion] = useState<Question | null>(null);
   const [running, setRunning] = useState(false);
   /** A ref as well as state: a second pick in the same tick must see the batch. */
@@ -110,6 +115,32 @@ export function UploadFlowProvider(props: { children: ComponentChildren }) {
     setCreated(out.newVehicles);
   }
 
+  const head = created[0];
+  const parkedHead = head && parked?.vehicleId === head.id ? parked : null;
+  const vehicleIds = state.vehicles.value.map((v) => v.id);
+  const parkedMode = parkedHead ? parkedSheet(parkedHead, path, vehicleIds) : null;
+  useEffect(() => {
+    if (
+      parkedHead &&
+      !parkedHead.seenSettings &&
+      path === `/vehicles/${parkedHead.vehicleId}/settings`
+    )
+      setParked({ ...parkedHead, seenSettings: true });
+  }, [path, parkedHead]);
+  useEffect(() => {
+    if (parkedMode !== "drop") return;
+    setParked(null);
+    setCreated((rest) => rest.slice(1));
+  }, [parkedMode]);
+  /** What the Vehicle is now: a reopened sheet shows the settings, not the upload-time values. */
+  const row = parkedHead && state.vehicles.value.find((v) => v.id === parkedHead.vehicleId);
+  const sheetVehicle =
+    head && row ? { ...head, label: row.label, profile: row.profileId, packs: row.packIds } : head;
+  const dequeue = () => {
+    setParked(null);
+    setCreated((rest) => rest.slice(1));
+  };
+
   const sheets = (
     <>
       {question && (
@@ -126,13 +157,17 @@ export function UploadFlowProvider(props: { children: ComponentChildren }) {
         <UploadProgressSheet {...progress} onClose={() => setProgressHidden(true)} />
       )}
       {results && <BatchResultSheet results={results} onClose={() => setResults(null)} />}
-      {!results && created[0] && (
+      {!results && sheetVehicle && (parkedMode === null || parkedMode === "show") && (
         <NewVehicleSheet
-          key={created[0].id}
-          vehicle={created[0]}
+          key={sheetVehicle.id}
+          vehicle={sheetVehicle}
+          initialTicked={parkedHead?.ticked}
+          onChange={(ticked) =>
+            setParked({ vehicleId: sheetVehicle.id, ticked, seenSettings: false })
+          }
           onAssign={async (logIds) => {
-            const vehicleId = created[0]?.id;
-            setCreated((rest) => rest.slice(1));
+            const vehicleId = sheetVehicle.id;
+            dequeue();
             const assigned = await api.api["drive-logs"].assign
               .$post({ json: { logIds, vehicleId } })
               .then((res) => res.ok)
@@ -141,7 +176,7 @@ export function UploadFlowProvider(props: { children: ComponentChildren }) {
             state.invalidate();
             await state.refresh();
           }}
-          onClose={() => setCreated((rest) => rest.slice(1))}
+          onClose={dequeue}
         />
       )}
     </>
