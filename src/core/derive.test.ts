@@ -72,11 +72,13 @@ describe("derive", () => {
   it("runs enabled Rule Pack rules with the pack id and category", () => {
     const rule: Rule = {
       id: "demo.always",
+      name: "Demo",
       needs: ["rpm"],
       run: () => [{ kind: "span", t0: 0.1, t1: 0.3, title: "Demo", text: "demo" }],
     };
     const lookalike: Rule = {
       id: "demo.look",
+      name: "Look",
       needs: [],
       needsReferenceReport: true,
       run: () => [],
@@ -101,6 +103,7 @@ describe("derive", () => {
   it("runs a rule needing a Reference Report when one is supplied", () => {
     const look: Rule = {
       id: "demo.look",
+      name: "Look",
       needs: [],
       needsReferenceReport: true,
       run: (_l, c) =>
@@ -135,6 +138,7 @@ describe("derive", () => {
     let seen: unknown;
     const spy: Rule = {
       id: "test.spy",
+      name: "Spy",
       needs: [],
       run: (_log, ctx) => {
         seen = ctx.params;

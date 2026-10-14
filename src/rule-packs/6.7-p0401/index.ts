@@ -24,6 +24,7 @@ const TEXT =
  */
 export const entryWindow: Rule = {
   id: `${P0401_PACK_ID}.entry-window`,
+  name: "P0401 entry window",
   needs: ["rpm", "ect", "egrActual"],
   run(log) {
     const rpm = channel(log.channels, "rpm", "rpm");

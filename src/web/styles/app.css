@@ -60,9 +60,33 @@ summary {
   min-width: 0;
 }
 
+.viewer-grid {
+  /* Drive Log viewer: one column on a phone, the chart beside a sticky Events column from 900px */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 20px;
+  align-items: start;
+}
+
+.viewer-main,
+.viewer-side {
+  min-width: 0;
+}
+
 @media (min-width: 900px) {
   :root {
     --gutter: 20px;
+  }
+
+  .viewer-grid {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .viewer-side {
+    position: sticky;
+    top: 12px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
   }
 
   main {
@@ -1458,4 +1482,154 @@ main {
 
 .chart-card .u-select {
   background: var(--accent-t);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 6px 8px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--fs-11);
+  list-style: none;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.event-marker {
+  /* Events list. The marker patterns match the chart overlays: fill, accent dot, 45 degree hatch. */
+  display: block;
+  flex: none;
+  justify-self: center;
+  box-sizing: border-box;
+}
+
+.event-marker-fill {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--accent);
+  background: var(--ev-generic);
+}
+
+.event-marker-dashed-line {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.event-marker-hatch {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--ev-pack);
+  background: repeating-linear-gradient(45deg, var(--ev-pack) 0 1.5px, transparent 1.5px 4px);
+}
+
+.event-marker-notrun {
+  border: 1px dashed var(--muted);
+}
+
+.events-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.events-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-13);
+  font-weight: 600;
+}
+
+.events-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: start;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.event-row .event-marker {
+  margin-top: 4px;
+}
+
+.event-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.event-pack {
+  color: var(--ev-pack);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.event-title {
+  font-weight: 600;
+}
+
+.event-detail {
+  color: var(--muted);
+  font-size: var(--fs-13);
+  overflow-wrap: anywhere;
+}
+
+.event-times {
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  text-align: right;
+}
+
+.event-duration {
+  color: var(--muted);
+}
+
+.event-notrun {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: center;
+  padding: 6px 10px;
+  color: var(--muted);
+  font-size: var(--fs-13);
+  font-style: italic;
+}
+
+.event-notrun .event-marker {
+  width: 10px;
+  height: 10px;
 }

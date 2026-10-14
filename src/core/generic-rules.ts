@@ -10,6 +10,7 @@ const fmt = (n: number) => String(Math.round(n * 10) / 10);
 /** Engine start: rpm goes from 0 to above 400 inside the log. One point Event; silent otherwise. */
 export const engineStart: Rule = {
   id: "core.engine-start",
+  name: "Engine start",
   needs: ["rpm"],
   run(log) {
     const rpm = channel(log.channels, "rpm", "rpm");
@@ -51,6 +52,7 @@ const PEAK_CHANNELS: readonly { key: ChannelKey; unit: string; title: string; la
  */
 export const peaks: Rule = {
   id: "core.peaks",
+  name: "Peaks",
   needs: [],
   needsAny: PEAK_CHANNELS.map((c) => c.key),
   run(log) {

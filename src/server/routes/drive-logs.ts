@@ -1,4 +1,8 @@
 import { Hono } from "hono";
+import { STANDARD_CATALOGUE } from "../../core/channels.ts";
+import { GENERIC_RULES } from "../../core/generic-rules.ts";
+import { lookAlike } from "../../core/look-alike.ts";
+import type { RuleOutcome } from "../../core/rules.ts";
 import { resolveChartPreset } from "../chart-preset.ts";
 import type { Db } from "../db.ts";
 import type { Ingest } from "../ingest.ts";
@@ -29,6 +33,14 @@ export type EventView = {
   text: string;
   packId: string | null;
   category: string;
+};
+
+/** A rule outcome as the viewer prints it: the stored outcome plus the rule's name, and the pack's when it has one. */
+export type RuleOutcomeView = RuleOutcome & {
+  name: string;
+  packName?: string;
+  /** Display labels parallel to `missing`, on a not-applicable outcome. */
+  missingLabels?: string[];
 };
 
 type ChannelView = { label: string; unit?: string; values: (number | null)[] };
@@ -120,6 +132,12 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
       const hidden = (profile?.hiddenColumns ?? []).filter((key) => key in channels);
       // An Unassigned log charts the Generic Profile's preset.
       const preset = (profile ?? registry.profile(GENERIC_PROFILE_ID))?.defaultChartPreset ?? [];
+      // A Channel's label: the Vehicle's Profile first (an Unassigned log has none), then the standard
+      // catalogue, then the key.
+      const labelOf = (key: string) =>
+        profile?.catalogue?.channels.find((c) => c.key === key)?.label ??
+        STANDARD_CATALOGUE.channels.find((c) => c.key === key)?.label ??
+        key;
       const payload: ChannelsPayload = { t: blob.t, channels, hidden };
       return c.json({
         id: log.id,
@@ -134,7 +152,18 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
           const d = e.data as Omit<EventView, "ruleId" | "startSec" | "endSec">;
           return { ruleId: e.ruleId, startSec: e.startSec, endSec: e.endSec, ...d };
         }),
-        ruleOutcomes: derived.ruleOutcomes as unknown[],
+        ruleOutcomes: (derived.ruleOutcomes as RuleOutcome[]).map((o): RuleOutcomeView => {
+          const pack = o.packId === null ? undefined : registry.pack(o.packId);
+          const rule = (pack?.rules ?? [...GENERIC_RULES, lookAlike]).find(
+            (r) => r.id === o.ruleId,
+          );
+          return {
+            ...o,
+            name: rule?.name ?? o.ruleId,
+            ...(pack ? { packName: pack.name } : {}),
+            ...(o.status === "not-applicable" ? { missingLabels: o.missing.map(labelOf) } : {}),
+          };
+        }),
         decodeNotices: derived.decodeNotices as string[],
         warnings: derived.warnings as string[],
         referenceReport: { id: meta.referenceReportId, state },

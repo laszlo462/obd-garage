@@ -228,6 +228,59 @@ describe("Drive Log viewer layout", () => {
   });
 });
 
+describe("Drive Log viewer columns", () => {
+  const desktop = media("min-width: 900px");
+
+  it("stacks the Events panel under the chart on a phone", () => {
+    const phone = rule(".viewer-grid", css.slice(0, css.indexOf("@media (min-width: 900px)")));
+    expect(phone).toMatch(/display:\s*grid/);
+    expect(phone).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\);/);
+  });
+
+  it("puts the chart and a 360px side column side by side from 900px up, the side column sticky", () => {
+    expect(rule(".viewer-grid", desktop)).toMatch(
+      /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+360px/,
+    );
+    expect(rule(".viewer-side", desktop)).toMatch(/position:\s*sticky/);
+    expect(rule(".viewer-side", desktop)).toMatch(/top:\s*\d+px/);
+  });
+
+  it("declares the base column rules before the 900px block, so they cannot shadow its overrides", () => {
+    const block = css.indexOf("@media (min-width: 900px)");
+    for (const sel of [".viewer-grid", ".viewer-side"]) {
+      const at = css.search(new RegExp(`^${sel.replace(".", "\\.")}[ ,{]`, "m"));
+      expect(at, sel).toBeGreaterThanOrEqual(0);
+      expect(at, sel).toBeLessThan(block);
+    }
+  });
+});
+
+describe("Events list markers", () => {
+  it("shapes the three kinds differently: accent dot-and-dash, tinted square, hatched square", () => {
+    expect(rule(".event-marker-dashed-line")).toMatch(/var\(--accent\)/);
+    expect(rule(".event-marker-fill")).toMatch(/background:\s*var\(--ev-generic\)/);
+    expect(rule(".event-marker-hatch")).toMatch(/repeating-linear-gradient\(\s*45deg/);
+    expect(rule(".event-marker-hatch")).toMatch(/var\(--ev-pack\)/);
+  });
+
+  it("gives every marker a fixed size, so it cannot stretch across the 22px column", () => {
+    for (const sel of [".event-marker-fill", ".event-marker-hatch", ".event-marker-dashed-line"]) {
+      expect(rule(sel), sel).toMatch(/(^|[;\s])width:\s*\d+px/);
+      expect(rule(sel), sel).toMatch(/(^|[;\s])height:\s*\d+px/);
+    }
+    expect(rule(".event-marker")).toMatch(/justify-self:\s*center/);
+  });
+
+  it("gives the marker column 22px, mutes the detail and the not-run lines, and right-aligns the times in mono", () => {
+    expect(rule(".event-row")).toMatch(/grid-template-columns:\s*22px\s/);
+    expect(rule(".event-detail")).toMatch(/color:\s*var\(--muted\)/);
+    expect(rule(".event-notrun")).toMatch(/font-style:\s*italic/);
+    expect(rule(".event-notrun")).toMatch(/color:\s*var\(--muted\)/);
+    expect(rule(".event-times")).toMatch(/text-align:\s*right/);
+    expect(rule(".event-times")).toMatch(/font-family:\s*var\(--font-mono\)/);
+  });
+});
+
 describe("desktop overrides", () => {
   /** `source` with every @media block cut out, so only base rules are left. */
   function withoutMedia(source: string): string {
