@@ -209,3 +209,39 @@ describe("desktop overrides", () => {
     expect(shadowed).toEqual([]);
   });
 });
+
+describe("IUMPR table", () => {
+  it("fixes the layout so the columns line up under their headers, with numbers right-aligned", () => {
+    expect(rule(".iumpr-table")).toMatch(/table-layout:\s*fixed/);
+    expect(rule(".iumpr-table")).toMatch(/width:\s*100%/);
+    for (const sel of [
+      ".iumpr-table th:nth-child(2)",
+      ".iumpr-table th:nth-child(3)",
+      ".iumpr-table td.mono-value",
+    ])
+      expect(rule(sel), sel).toMatch(/text-align:\s*right/);
+  });
+
+  it("gives the Monitor column a share of the width and wraps long names", () => {
+    expect(rule(".iumpr-table th:first-child")).toMatch(/width:\s*\d+%/);
+    expect(rule(".iumpr-name")).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+});
+
+describe("IUMPR table on a phone", () => {
+  it("sizes cells by border-box, so the column percentages are the real widths", () => {
+    expect(rule(".iumpr-table th")).toMatch(/box-sizing:\s*border-box/);
+    expect(rule(".iumpr-table td")).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("lets the ratio bar shrink to its cell instead of holding a minimum width", () => {
+    expect(css).not.toMatch(/\.ratio-bar \{[^}]*min-width/);
+    expect(rule(".iumpr-ratio .ratio-bar")).toMatch(/max-width:\s*100%/);
+  });
+});
+
+describe("unbreakable parts", () => {
+  it("keeps a .nowrap part on one line", () => {
+    expect(rule(".nowrap")).toMatch(/white-space:\s*nowrap/);
+  });
+});

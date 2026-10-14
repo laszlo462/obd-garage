@@ -45,7 +45,11 @@ export function ReportSections(props: {
         <PidList rows={report.liveData ?? []} />
       </Section>
       <Section title="IUMPR" count={report.iumpr?.length ?? 0}>
-        <Iumpr counters={report.iumpr ?? []} other={other?.iumpr ?? null} />
+        <Iumpr
+          counters={report.iumpr ?? []}
+          other={other?.iumpr ?? null}
+          comparedDate={comparedDate}
+        />
       </Section>
       <Section title="Vehicle info" count={vehicleInfoRows(report).length}>
         <VehicleInfo report={report} />

@@ -490,13 +490,26 @@ describe("Report viewer: IUMPR and vehicle info", () => {
     return d;
   };
 
+  it("labels the columns Monitor, Completed, Conditions met and Ratio, and puts each value under its label", async () => {
+    renderApp(withBoth());
+    const table = within(await screen.findByRole("table", { name: "ECM in-use performance" }));
+    const headers = table.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers.slice(0, 4)).toEqual(["Monitor", "Completed", "Conditions met", "Ratio"]);
+    const row = table.getByText("NMHC Catalyst").closest("tr") as HTMLElement;
+    const cells = within(row).getAllByRole("cell");
+    expect(cells[headers.indexOf("Monitor")]?.textContent).toBe("NMHC Catalyst");
+    expect(cells[headers.indexOf("Completed")]?.textContent).toBe("415");
+    expect(cells[headers.indexOf("Conditions met")]?.textContent).toBe("500");
+    expect(cells[headers.indexOf("Ratio")]?.textContent).toContain("0.830");
+  });
+
   it("shows each monitor's completions, conditions met and ratio, flagging a low ratio", async () => {
     renderApp(withBoth());
-    const catalyst = (await screen.findByText("NMHC Catalyst")).closest("li") as HTMLElement;
+    const catalyst = (await screen.findByText("NMHC Catalyst")).closest("tr") as HTMLElement;
     expect(within(catalyst).getByText("415")).toBeTruthy();
     expect(within(catalyst).getByText("500")).toBeTruthy();
     expect(within(catalyst).getByText("0.830")).toBeTruthy();
-    const egr = screen.getByText("EGR").closest("li") as HTMLElement;
+    const egr = screen.getByText("EGR").closest("tr") as HTMLElement;
     expect(within(egr).getByText("0.050").className).toContain("tone-bad");
     expect(screen.getByText("Ignition cycles 7,492")).toBeTruthy();
     expect(panel("IUMPR").querySelector(".count")?.textContent).toBe("5");
@@ -516,7 +529,12 @@ describe("Report viewer: IUMPR and vehicle info", () => {
       }),
     });
     renderApp(d);
-    await waitFor(() => expect(screen.getByText("+15 / +20")).toBeTruthy());
+    const since = await screen.findByText(
+      (_, el) => el?.textContent === "+15 / +20 since 21 Aug" && el.children.length === 2,
+    );
+    // Two unbreakable parts, so a narrow column wraps between them and nowhere else.
+    expect([...since.children].map((c) => c.textContent)).toEqual(["+15 / +20", "since 21 Aug"]);
+    expect([...since.children].every((c) => c.classList.contains("nowrap"))).toBe(true);
     expect(screen.getByText("Ignition cycles 7,492 (+492)")).toBeTruthy();
   });
 

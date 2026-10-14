@@ -977,8 +977,7 @@ main {
 .dtc-list,
 .monitor-list,
 .m06-list,
-.kv-list,
-.iumpr-list {
+.kv-list {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1186,7 +1185,6 @@ main {
 /* Live data pair cards and IUMPR */
 .ratio-bar {
   flex: 1;
-  min-width: 80px;
   height: 4px;
   background: var(--surface2);
   border-radius: 2px;
@@ -1261,15 +1259,65 @@ main {
   color: var(--muted);
 }
 
-.iumpr-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  padding: 8px 0;
+.iumpr-table {
+  /* fixed columns: every value sits under its header, on a phone and on desktop */
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.iumpr-table th,
+.iumpr-table td {
+  box-sizing: border-box;
+  padding: 6px 4px;
+  vertical-align: top;
   border-bottom: 1px solid var(--line);
 }
 
+.iumpr-table th {
+  font-size: var(--fs-11);
+  font-weight: 600;
+  text-align: left;
+  color: var(--muted);
+}
+
+.iumpr-table th:first-child {
+  width: 34%;
+}
+
+.iumpr-table th:nth-child(2) {
+  width: 17%;
+  text-align: right;
+}
+
+.iumpr-table th:nth-child(3) {
+  width: 20%;
+  text-align: right;
+}
+
+.iumpr-table td.mono-value {
+  text-align: right;
+}
+
+.iumpr-table tr:last-child td {
+  border-bottom: 0;
+}
+
 .iumpr-name {
-  flex: 1 1 100%;
+  overflow-wrap: anywhere;
+}
+
+.iumpr-ratio {
+  display: table-cell;
+}
+
+.iumpr-ratio .ratio-bar,
+.iumpr-ratio .was {
+  display: block;
+  max-width: 100%;
+  margin-top: 4px;
+}
+
+.nowrap {
+  white-space: nowrap;
 }
