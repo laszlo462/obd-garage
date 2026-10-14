@@ -19,6 +19,3 @@ CLAUDE.local.md
 
 # Build output
 dist/
-
-# TDD gate state and log (scripts/tdd-gate.ts)
-.claude/tdd-gate/
