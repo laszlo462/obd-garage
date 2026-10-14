@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { memoryStorage, renderApp } from "./test-render.tsx";
-import { vehicleRow } from "./test-support.ts";
+import { type StubData, vehicleRow } from "./test-support.ts";
 
 afterEach(cleanup);
 
@@ -167,5 +167,36 @@ describe("Vehicles", () => {
     const second = await panelOf("2018 Honda Civic");
     fireEvent.click(within(second).getByRole("button", { name: "Delete…" }));
     expect(within(screen.getByRole("dialog")).queryByRole("checkbox")).toBeNull();
+  });
+});
+
+describe("Vehicles: catalogue load failure", () => {
+  beforeEach(() => history.replaceState(null, "", "/vehicles"));
+
+  it.each([
+    ["profiles", "status"],
+    ["profiles", "throw"],
+    ["rulePacks", "status"],
+    ["rulePacks", "throw"],
+  ] as const)(
+    "shows the shell banner when %s fail to load (%s), and Retry fills the panels",
+    async (route, mode) => {
+      const fail: StubData["fail"] = { [route]: mode };
+      renderApp({ vehicles, profiles, rulePacks, fail });
+      await screen.findByRole("alert");
+      expect(screen.queryByText("Ford 6.7")).toBeNull();
+      delete fail[route];
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+      await screen.findByText("Ford 6.7");
+      await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    },
+  );
+
+  it("clears the banner after navigating away", async () => {
+    renderApp({ vehicles, profiles, rulePacks, fail: { rulePacks: "throw" } });
+    await screen.findByRole("alert");
+    history.pushState(null, "", "/reports");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 });
