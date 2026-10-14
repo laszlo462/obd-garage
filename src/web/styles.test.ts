@@ -151,3 +151,97 @@ describe("app stylesheet", () => {
       expect(rule(`.tone-${tone}`), tone).toContain(`color: var(${colour})`);
   });
 });
+
+describe("Report viewer layout", () => {
+  it("lets the viewer container grow to 1180px from 900px up, inside the gutter", () => {
+    expect(rule("main.viewer", media("min-width: 900px"))).toMatch(/max-width:\s*1180px/);
+  });
+
+  it("lays the overview tiles in 2 columns on a phone and 4 from 900px up", () => {
+    expect(rule(".tiles")).toMatch(/grid-template-columns:\s*repeat\(2,/);
+    expect(rule(".tiles", media("min-width: 900px"))).toMatch(
+      /grid-template-columns:\s*repeat\(4,/,
+    );
+  });
+
+  it("draws a section as a bordered panel with the count badge on the right of the summary", () => {
+    expect(rule(".section")).toMatch(/border:\s*1px solid var\(--line\)/);
+    expect(rule(".section summary")).toMatch(/justify-content:\s*space-between/);
+  });
+});
+
+describe("desktop overrides", () => {
+  /** `source` with every @media block cut out, so only base rules are left. */
+  function withoutMedia(source: string): string {
+    let out = "";
+    let i = 0;
+    while (i < source.length) {
+      const at = source.indexOf("@media", i);
+      if (at < 0) return out + source.slice(i);
+      out += source.slice(i, at);
+      let depth = 0;
+      let j = source.indexOf("{", at);
+      do {
+        depth += source[j] === "{" ? 1 : source[j] === "}" ? -1 : 0;
+        j++;
+      } while (depth > 0 && j < source.length);
+      i = j;
+    }
+    return out;
+  }
+
+  it("has no base rule for a selector after the 900px block that overrides it", () => {
+    const start = css.indexOf("@media (min-width: 900px)");
+    const body = media("min-width: 900px");
+    const end = css.indexOf("{", start) + 1 + body.length + 1;
+    const later = withoutMedia(css.slice(end));
+    const props = (decls: string) => [...decls.matchAll(/([\w-]+)\s*:/g)].map((m) => m[1] ?? "");
+    const shadowed = [...body.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap((m) =>
+      (m[1] ?? "")
+        .split(",")
+        .map((sel) => sel.trim())
+        .filter((sel) => {
+          const laterProps = props(rule(sel, later) ?? "");
+          return props(m[2] ?? "").some((name) => laterProps.includes(name));
+        }),
+    );
+    expect(body).toContain("max-width");
+    expect(shadowed).toEqual([]);
+  });
+});
+
+describe("IUMPR table", () => {
+  it("fixes the layout so the columns line up under their headers, with numbers right-aligned", () => {
+    expect(rule(".iumpr-table")).toMatch(/table-layout:\s*fixed/);
+    expect(rule(".iumpr-table")).toMatch(/width:\s*100%/);
+    for (const sel of [
+      ".iumpr-table th:nth-child(2)",
+      ".iumpr-table th:nth-child(3)",
+      ".iumpr-table td.mono-value",
+    ])
+      expect(rule(sel), sel).toMatch(/text-align:\s*right/);
+  });
+
+  it("gives the Monitor column a share of the width and wraps long names", () => {
+    expect(rule(".iumpr-table th:first-child")).toMatch(/width:\s*\d+%/);
+    expect(rule(".iumpr-name")).toMatch(/overflow-wrap:\s*anywhere/);
+  });
+});
+
+describe("IUMPR table on a phone", () => {
+  it("sizes cells by border-box, so the column percentages are the real widths", () => {
+    expect(rule(".iumpr-table th")).toMatch(/box-sizing:\s*border-box/);
+    expect(rule(".iumpr-table td")).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("lets the ratio bar shrink to its cell instead of holding a minimum width", () => {
+    expect(css).not.toMatch(/\.ratio-bar \{[^}]*min-width/);
+    expect(rule(".iumpr-ratio .ratio-bar")).toMatch(/max-width:\s*100%/);
+  });
+});
+
+describe("unbreakable parts", () => {
+  it("keeps a .nowrap part on one line", () => {
+    expect(rule(".nowrap")).toMatch(/white-space:\s*nowrap/);
+  });
+});

@@ -259,7 +259,10 @@ opens the Note sheet. The sheet shows the text, the time and when the Note was a
     - the value with its unit, and "n % headroom" coloured by margin: `--bad` under 5 %, `--warn` under 20 %, `--ok` otherwise
     - "was x" when comparing
     - a 6 px range bar from min to max with a value marker, and min and max labels
-  - **Freeze frame, live data, IUMPR, Vehicle info:** two-column key/value rows with mono values.
+  - **Freeze frame, live data, Vehicle info:** two-column key/value rows with mono values.
+  - **IUMPR:** per ECU, a meta line (ignition cycles, general denominator), then one row per monitor in aligned
+    columns under a header row: **Monitor · Completed · Conditions met · Ratio**. Values are mono, and the ratio has
+    a bar ("off scale" above the bar's maximum). When comparing, the row ends with "+n / +n since 21 Aug".
   - **Notes:** whole-Report Notes with **Add Note**.
 
 ## Screen inventory

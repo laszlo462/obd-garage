@@ -22,6 +22,8 @@ export function createAppState(api: Api, storage: Storage) {
   const revision = signal(0);
   /** The path of the screen before this one, set only by in-app navigation. */
   const previousPath = signal<string | null>(null);
+  /** The open handler of the screen's `…` menu, set while a screen offers one (see `useBarMenu`). */
+  const barMenu = signal<(() => void) | null>(null);
   const version = signal<string | null>(null);
   const needsAttention = computed(() => unassignedCount.value > 0 || failedCount.value > 0);
 
@@ -39,6 +41,7 @@ export function createAppState(api: Api, storage: Storage) {
     needsAttention,
     version,
     previousPath,
+    barMenu,
     loaded,
     revision,
     /** True while a load failed: the shell shows one banner with Retry. */

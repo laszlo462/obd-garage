@@ -5,20 +5,23 @@ import { FailedUploads } from "./FailedUploads.tsx";
 import { NoVehicles } from "./NoVehicles.tsx";
 import { Recent } from "./Recent.tsx";
 import { Reports } from "./Reports.tsx";
+import { ReportViewer } from "./ReportViewer.tsx";
 import { isTabPath } from "./TabBar.tsx";
 import { VehicleSettings } from "./VehicleSettings.tsx";
 import { Vehicles } from "./Vehicles.tsx";
 
-/** Placeholders until the viewer slices land. */
-const ReportViewer = () => <p class="list-note">Report viewer</p>;
+/** Placeholder until the Drive Log viewer slice lands. */
 const DriveLogViewer = () => <p class="list-note">Drive Log viewer</p>;
+
+/** The viewers get the wide container on desktop; the lists stay narrow. */
+const VIEWER_PATH = /^\/(reports|drive-logs)\/\d+\/?$/;
 
 export function Routes() {
   const state = useAppState();
   const { path } = useLocation();
   const noVehicles = state.loaded.value && state.vehicles.value.length === 0;
   return (
-    <main>
+    <main class={VIEWER_PATH.test(path) ? "viewer" : undefined}>
       {noVehicles && isTabPath(path) && <NoVehicles />}
       <Router>
         <Route path="/" component={Recent} />
