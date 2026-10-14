@@ -31,7 +31,9 @@ export type FailRoute =
   | "deleteUpload"
   | "deleteVehicle"
   | "patchVehicle"
-  | "assign";
+  | "assign"
+  | "profiles"
+  | "rulePacks";
 
 export type StubData = {
   vehicles?: VehicleRow[];
@@ -259,8 +261,8 @@ export function stubApi(data: StubData = {}): Api {
           },
         },
       ),
-      profiles: { $get: () => json(data.profiles ?? []) },
-      "rule-packs": { $get: () => json(data.rulePacks ?? []) },
+      profiles: { $get: route(data, "profiles", () => json(data.profiles ?? [])) },
+      "rule-packs": { $get: route(data, "rulePacks", () => json(data.rulePacks ?? [])) },
       "failed-uploads": { $get: route(data, "failedUploads", () => json(data.failed ?? [])) },
     },
   } as unknown as Api;

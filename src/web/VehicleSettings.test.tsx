@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { renderApp } from "./test-render.tsx";
-import { vehicleRow } from "./test-support.ts";
+import { type StubData, vehicleRow } from "./test-support.ts";
 
 afterEach(cleanup);
 
@@ -128,5 +128,36 @@ describe("Vehicle settings", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete vehicle" }));
     await waitFor(() => expect(location.pathname).toBe("/vehicles"));
     expect(vehicleDeletes).toEqual([{ param: { id: "4" }, query: {} }]);
+  });
+});
+
+describe("Vehicle settings: catalogue load failure", () => {
+  beforeEach(() => history.replaceState(null, "", "/vehicles/4/settings"));
+
+  it.each([
+    ["profiles", "status"],
+    ["profiles", "throw"],
+    ["rulePacks", "status"],
+    ["rulePacks", "throw"],
+  ] as const)(
+    "shows the shell banner when %s fail to load (%s), and Retry fills the screen",
+    async (route, mode) => {
+      const fail: StubData["fail"] = { [route]: mode };
+      renderApp({ ...stub, fail });
+      await screen.findByRole("alert");
+      expect(screen.queryByRole("radio", { name: "Ford 6.7" })).toBeNull();
+      delete fail[route];
+      fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+      await screen.findByRole("radio", { name: "Ford 6.7" });
+      await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    },
+  );
+
+  it("clears the banner after navigating away", async () => {
+    renderApp({ ...stub, fail: { profiles: "status" } });
+    await screen.findByRole("alert");
+    history.pushState(null, "", "/reports");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 });
