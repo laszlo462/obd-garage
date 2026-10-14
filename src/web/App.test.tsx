@@ -88,7 +88,50 @@ describe("App shell on a phone", () => {
     renderApp();
     expect(screen.queryByRole("tablist")).toBeNull();
     expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
-    expect(screen.getByRole("link", { name: "Back" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Recent" })).toBeTruthy();
+  });
+});
+
+describe("App bar title", () => {
+  it("names a pushed screen in the centre of the app bar", () => {
+    history.replaceState(null, "", "/vehicles");
+    renderApp();
+    expect(
+      within(screen.getByRole("banner")).getByRole("heading", { name: "Vehicles" }),
+    ).toBeTruthy();
+  });
+});
+
+describe("Back", () => {
+  it("is labelled with the screen the owner came from", async () => {
+    history.replaceState(null, "", "/reports");
+    renderApp({ vehicles: [vehicleRow()] });
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("link", { name: /Vehicles/ }));
+    expect(location.pathname).toBe("/vehicles");
+    expect(await screen.findByRole("link", { name: "Reports" })).toBeTruthy();
+  });
+});
+
+describe("Back", () => {
+  it("goes back in history when the owner came from another screen", async () => {
+    const back = vi.spyOn(history, "back").mockImplementation(() => {});
+    history.replaceState(null, "", "/reports");
+    renderApp({ vehicles: [vehicleRow()] });
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    fireEvent.click(screen.getByRole("link", { name: /Vehicles/ }));
+    fireEvent.click(await screen.findByRole("link", { name: "Reports" }));
+    expect(back).toHaveBeenCalledOnce();
+  });
+
+  it("links to Recent when the app opened on this screen", () => {
+    const back = vi.spyOn(history, "back").mockImplementation(() => {});
+    history.replaceState(null, "", "/vehicles");
+    renderApp();
+    const link = screen.getByRole("link", { name: "Recent" });
+    expect(link.getAttribute("href")).toBe("/");
+    fireEvent.click(link);
+    expect(back).not.toHaveBeenCalled();
   });
 });
 
@@ -156,9 +199,15 @@ describe("App shell at 900 px and up", () => {
 });
 
 describe("routes", () => {
-  it("has a placeholder for Vehicle settings, the target of the New vehicle sheet's Change link", async () => {
+  it("shows Vehicle settings, the target of the New vehicle sheet's Change link, with its title", async () => {
     history.replaceState(null, "", "/vehicles/8/settings");
-    renderApp({ vehicles: [vehicleRow({ id: 8 })] });
-    expect(await screen.findByText("Vehicle settings")).toBeTruthy();
+    renderApp({
+      vehicles: [vehicleRow({ id: 8 })],
+      profiles: [{ id: "generic", name: "Generic" }],
+    });
+    expect(await screen.findByRole("radio", { name: "Generic" })).toBeTruthy();
+    expect(
+      within(screen.getByRole("banner")).getByRole("heading", { name: "Vehicle settings" }),
+    ).toBeTruthy();
   });
 });

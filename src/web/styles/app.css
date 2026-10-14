@@ -753,3 +753,28 @@ main {
   border-radius: var(--radius-control);
   font-size: var(--fs-13);
 }
+
+.app-bar .bar-title {
+  flex: 1;
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-15);
+  font-weight: 600;
+}
+
+/* Vehicles and Vehicle settings */
+.vehicle-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-15);
+}
+
+.vehicle-panel .mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+}
+
+.vehicle-panel .failed-actions {
+  flex-wrap: wrap;
+}

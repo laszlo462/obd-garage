@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { validator } from "hono/validator";
 import type { ParsedReport } from "../../core/report.ts";
 import type { Db, Upload, Vehicle } from "../db.ts";
 import type { Ingest } from "../ingest.ts";
@@ -59,66 +60,78 @@ function status(db: Db, vehicleId: number): VehicleStatus {
 /** Vehicles, their settings and delete. */
 export function vehiclesRoute(deps: { db: Db; ingest: Ingest; registry: ProfileRegistry }) {
   const { db, ingest, registry } = deps;
-  return new Hono()
-    .get("/", (c) => c.json(db.listVehicles().map((v) => summary(db, v))))
-    .get("/:id/status", (c) => {
-      const vehicle = db.getVehicle(parseId(c.req.param("id")));
-      if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
-      return c.json(status(db, vehicle.id));
-    })
-    .patch("/:id", async (c) => {
-      const vehicle = db.getVehicle(parseId(c.req.param("id")));
-      if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
-      const body: unknown = await c.req.json().catch(() => null);
-      if (typeof body !== "object" || body === null)
-        return c.json({ error: "Expected a JSON object." }, 400);
-      const { profileId, packIds } = body as { profileId?: unknown; packIds?: unknown };
-      if (
-        profileId !== undefined &&
-        (typeof profileId !== "string" || !registry.profile(profileId))
+  return (
+    new Hono()
+      .get("/", (c) => c.json(db.listVehicles().map((v) => summary(db, v))))
+      .get("/:id/status", (c) => {
+        const vehicle = db.getVehicle(parseId(c.req.param("id")));
+        if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
+        return c.json(status(db, vehicle.id));
+      })
+      // Type-only: the typed client sees the body; the handler still validates it.
+      .patch(
+        "/:id",
+        validator("json", (b) => b as { profileId?: string; packIds?: string[] }),
+        async (c) => {
+          const vehicle = db.getVehicle(parseId(c.req.param("id")));
+          if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
+          const body: unknown = await c.req.json().catch(() => null);
+          if (typeof body !== "object" || body === null)
+            return c.json({ error: "Expected a JSON object." }, 400);
+          const { profileId, packIds } = body as { profileId?: unknown; packIds?: unknown };
+          if (
+            profileId !== undefined &&
+            (typeof profileId !== "string" || !registry.profile(profileId))
+          )
+            return c.json({ error: "Unknown Profile." }, 400);
+          if (
+            packIds !== undefined &&
+            (!isStringArray(packIds) || packIds.some((id) => !registry.pack(id)))
+          )
+            return c.json({ error: "Unknown Rule Pack." }, 400);
+          // Only what was sent changes: a Profile change never rewrites the pack toggles.
+          db.transaction(() => {
+            db.updateVehicle(vehicle.id, {
+              ...(profileId !== undefined ? { profileId: profileId as string } : {}),
+              ...(packIds !== undefined ? { packIds: [...new Set(packIds as string[])] } : {}),
+            });
+            ingest.rederiveVehicleLogs(vehicle.id);
+          });
+          return c.json(summary(db, db.getVehicle(vehicle.id) as Vehicle));
+        },
       )
-        return c.json({ error: "Unknown Profile." }, 400);
-      if (
-        packIds !== undefined &&
-        (!isStringArray(packIds) || packIds.some((id) => !registry.pack(id)))
+      // Type-only: the typed client sees `deleteLogs`; the handler still reads the query itself.
+      .delete(
+        "/:id",
+        validator("query", (q) => q as { deleteLogs?: string }),
+        (c) => {
+          const vehicle = db.getVehicle(parseId(c.req.param("id")));
+          if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
+          const deleteLogs = ["1", "true"].includes(c.req.query("deleteLogs") ?? "");
+          const uploads = db.listUploads({ vehicleId: vehicle.id });
+          const reports = uploads.filter((u) => u.kind === "report");
+          const logs = uploads.filter((u) => u.kind === "drive-log");
+          const gone = deleteLogs ? uploads : reports;
+          db.transaction(() => {
+            // Unassigned logs keep no Reference Report choice, whatever the owner had set.
+            if (!deleteLogs)
+              for (const log of logs) {
+                db.assignVehicle(log.id, null);
+                db.clearReferenceChoice(log.id);
+              }
+            for (const u of gone) db.deleteUpload(u.id);
+            db.deleteVehicle(vehicle.id);
+            if (!deleteLogs) ingest.rederiveUploads(logs.map((l) => l.id));
+          });
+          for (const u of gone) removeOriginal(ingest.dataDir, u.storedPath);
+          return c.json({
+            reportsDeleted: reports.length,
+            driveLogsDeleted: deleteLogs ? logs.length : 0,
+            driveLogsUnassigned: deleteLogs ? 0 : logs.length,
+          });
+        },
       )
-        return c.json({ error: "Unknown Rule Pack." }, 400);
-      // Only what was sent changes: a Profile change never rewrites the pack toggles.
-      db.transaction(() => {
-        db.updateVehicle(vehicle.id, {
-          ...(profileId !== undefined ? { profileId: profileId as string } : {}),
-          ...(packIds !== undefined ? { packIds: [...new Set(packIds as string[])] } : {}),
-        });
-        ingest.rederiveVehicleLogs(vehicle.id);
-      });
-      return c.json(summary(db, db.getVehicle(vehicle.id) as Vehicle));
-    })
-    .delete("/:id", (c) => {
-      const vehicle = db.getVehicle(parseId(c.req.param("id")));
-      if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
-      const deleteLogs = ["1", "true"].includes(c.req.query("deleteLogs") ?? "");
-      const uploads = db.listUploads({ vehicleId: vehicle.id });
-      const reports = uploads.filter((u) => u.kind === "report");
-      const logs = uploads.filter((u) => u.kind === "drive-log");
-      const gone = deleteLogs ? uploads : reports;
-      db.transaction(() => {
-        // Unassigned logs keep no Reference Report choice, whatever the owner had set.
-        if (!deleteLogs)
-          for (const log of logs) {
-            db.assignVehicle(log.id, null);
-            db.clearReferenceChoice(log.id);
-          }
-        for (const u of gone) db.deleteUpload(u.id);
-        db.deleteVehicle(vehicle.id);
-        if (!deleteLogs) ingest.rederiveUploads(logs.map((l) => l.id));
-      });
-      for (const u of gone) removeOriginal(ingest.dataDir, u.storedPath);
-      return c.json({
-        reportsDeleted: reports.length,
-        driveLogsDeleted: deleteLogs ? logs.length : 0,
-        driveLogsUnassigned: deleteLogs ? 0 : logs.length,
-      });
-    });
+  );
 }
 
 /** `GET /api/profiles`, for the settings picker. */

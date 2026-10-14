@@ -89,7 +89,7 @@ describe("GET /api/vehicles, /api/profiles, /api/rule-packs", () => {
       { id: "generic", name: expect.any(String) },
     ]);
     expect(await (await send("/rule-packs", "GET")).json()).toEqual([
-      { id: "p0401", name: "6.7 P0401" },
+      { id: "p0401", name: "6.7 P0401", description: expect.stringMatching(/\S/) },
     ]);
   });
 });

@@ -23,13 +23,16 @@ export function Sheet(props: {
   }, []);
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the scrim click is a pointer shortcut; keyboard users close with Escape or the header action.
-    <div class="scrim" role="presentation" onClick={props.onClose}>
+    <div
+      class="scrim"
+      role="presentation"
+      onClick={(e) => e.target === e.currentTarget && props.onClose()}
+    >
       <div
         ref={dialog}
         tabIndex={-1}
         role="dialog"
         aria-label={props.title}
-        onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === "Escape") props.onClose();
           if (e.key === "Tab") {

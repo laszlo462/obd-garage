@@ -1,4 +1,5 @@
 import { useAppState } from "./AppState.tsx";
+import { count } from "./format.ts";
 import { NoVehicles } from "./NoVehicles.tsx";
 import { Sheet } from "./Sheet.tsx";
 
@@ -19,7 +20,8 @@ export function VehicleSwitcherSheet(props: { onClose: () => void }) {
             <span class="main">
               <span>{v.label}</span>
               <span class="sub">
-                VIN …{v.vin.slice(-4)} · {v.reportCount} reports · {v.driveLogCount} drive logs
+                VIN …{v.vin.slice(-4)} · {count(v.reportCount, "report")} ·{" "}
+                {count(v.driveLogCount, "drive log")}
               </span>
             </span>
           </label>

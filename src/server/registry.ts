@@ -19,7 +19,7 @@ export type ProfileRegistry = {
   /** Every Profile, for the settings picker. */
   profiles(): { id: string; name: string }[];
   /** Every Rule Pack, for the settings picker. */
-  packs(): { id: string; name: string }[];
+  packs(): { id: string; name: string; description?: string }[];
 };
 
 export const GENERIC_PROFILE_ID = "generic";
@@ -46,7 +46,8 @@ export function createProfileRegistry(
     profile: (id) => profiles.get(id),
     pack: (id) => packs.get(id),
     profiles: () => profiles.list().map((p) => ({ id: p.id, name: p.name })),
-    packs: () => [...packs.values()].map((p) => ({ id: p.id, name: p.name })),
+    packs: () =>
+      [...packs.values()].map((p) => ({ id: p.id, name: p.name, description: p.description })),
   };
 }
 

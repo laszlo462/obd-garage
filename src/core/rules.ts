@@ -55,7 +55,13 @@ export type Rule = {
   run(log: RuleLog, ctx: RuleContext): EventDraft[] | NotApplicable;
 };
 
-export type RulePack = { id: string; name: string; rules: readonly Rule[] };
+export type RulePack = {
+  id: string;
+  name: string;
+  /** One plain-English line for the settings switch row. */
+  description?: string;
+  rules: readonly Rule[];
+};
 
 /** One per (Drive Log, rule), stored with the derived data. */
 export type RuleOutcome = { ruleId: string; packId: string | null } & (

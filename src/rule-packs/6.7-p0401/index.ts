@@ -64,5 +64,7 @@ export const entryWindow: Rule = {
 export const P0401_PACK: RulePack = {
   id: P0401_PACK_ID,
   name: "6.7 P0401",
+  description:
+    "Marks the stretches of a drive that meet the entry conditions for the P0401 EGR flow test.",
   rules: [entryWindow],
 };

@@ -38,6 +38,14 @@ describe("VehicleSwitcherSheet", () => {
     expect(screen.getByRole("radio", { name: /2018 Honda Civic/ })).toBeTruthy();
   });
 
+  it("words a count of one in the singular", async () => {
+    renderWithApp(<VehicleSwitcherSheet onClose={() => {}} />, { vehicles });
+    const civic = await screen.findByRole("radio", { name: /2018 Honda Civic/ });
+    const text = civic.closest("label")?.textContent ?? "";
+    expect(text).toContain("1 report ");
+    expect(text).not.toContain("1 reports");
+  });
+
   it("switches the Current Vehicle and remembers it on this device", async () => {
     const storage = memoryStorage();
     renderWithApp(<VehicleSwitcherSheet onClose={() => {}} />, { vehicles }, storage);

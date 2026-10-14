@@ -167,7 +167,11 @@ export function NewVehicleSheet(props: {
           <dt>Rule Packs</dt>
           <dd>{vehicle.packs.length > 0 ? vehicle.packs.join(", ") : "None"}</dd>
         </dl>
-        <a class="menu-row link-row" href={`/vehicles/${vehicle.id}/settings`}>
+        <a
+          class="menu-row link-row"
+          href={`/vehicles/${vehicle.id}/settings`}
+          onClick={props.onClose}
+        >
           Change
         </a>
         {logs.length > 0 && (
