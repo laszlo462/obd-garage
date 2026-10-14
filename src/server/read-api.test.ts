@@ -341,6 +341,44 @@ describe("GET /api/drive-logs/:id", () => {
     expect(body.channels.hidden).toEqual([]);
   });
 
+  describe("chartPreset", () => {
+    type Panels = { title: string; series: { key: string }[] }[];
+    const presetOf = async (id: number) =>
+      ((await getJson(`/drive-logs/${id}`)) as { chartPreset: Panels }).chartPreset;
+    const keysOf = (panels: Panels) => panels.flatMap((p) => p.series.map((s) => s.key));
+
+    it("is the 6.7 Profile's panels, cut down to the Channels the log has", async () => {
+      const { logId } = await setup();
+      const body = (await getJson(`/drive-logs/${logId}`)) as {
+        chartPreset: Panels;
+        channels: { channels: Record<string, unknown> };
+      };
+      expect(body.chartPreset.length).toBeGreaterThan(0);
+      const wanted = SIX_SEVEN.defaultChartPreset.flatMap((p) => p.series.map((s) => s.key));
+      for (const key of keysOf(body.chartPreset)) {
+        expect(wanted).toContain(key);
+        expect(Object.keys(body.channels.channels)).toContain(key);
+      }
+      expect(body.chartPreset.every((p) => p.series.length > 0)).toBe(true);
+    });
+
+    it("is Speed, RPM, Load and ECT once the Vehicle uses the Generic Profile", async () => {
+      const { logId, vehicleId } = await setup();
+      await send(`/vehicles/${vehicleId}`, "PATCH", { profileId: "generic" });
+      expect(keysOf(await presetOf(logId))).toEqual(["speed", "rpm", "load", "ect"]);
+    });
+
+    it("uses the Generic Profile for an Unassigned log", async () => {
+      const big = await upload(BIG, "big.csv");
+      expect(keysOf(await presetOf(big.uploadId as number))).toEqual([
+        "speed",
+        "rpm",
+        "load",
+        "ect",
+      ]);
+    });
+  });
+
   it("reports the Reference Report state: default, set, cleared", async () => {
     const { logId, augId, octId } = await setup();
     const ref = async () =>

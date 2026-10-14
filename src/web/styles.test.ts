@@ -170,6 +170,64 @@ describe("Report viewer layout", () => {
   });
 });
 
+describe("Drive Log viewer layout", () => {
+  it("lets the page scroll vertically over the chart and nothing else, so touches reach our plugin", () => {
+    expect(rule(".u-over")).toMatch(/touch-action:\s*pan-y/);
+    expect(rule(".chart-overview")).toMatch(/touch-action:\s*none/);
+  });
+
+  it("fixes the readout's time column at 84px and its rows at 22px", () => {
+    expect(rule(".readout-time")).toMatch(/width:\s*84px/);
+    expect(rule(".readout-slot")).toMatch(/height:\s*22px/);
+    expect(rule(".readout-slot")).toMatch(/white-space:\s*nowrap/);
+  });
+
+  it("writes readout values in tabular mono so digits keep their width", () => {
+    const value = rule(".readout-value") ?? "";
+    expect(value).toMatch(/font-family:\s*var\(--font-mono\)/);
+    expect(value).toMatch(/font-variant-numeric:\s*tabular-nums/);
+  });
+
+  it("sizes the phone readout columns to their content and never clips a slot, so units stay whole", () => {
+    expect(rule(".readout-slots")).toMatch(/grid-template-columns:\s*repeat\(3,\s*max-content\)/);
+    expect(rule(".readout-slot")).not.toMatch(/overflow:\s*hidden/);
+    expect(rule(".readout-value")).toMatch(/font-size:\s*var\(--fs-12\)/);
+    expect(rule(".readout-unit")).toMatch(/font-size:\s*9px/);
+  });
+
+  // The fit itself (375 and 390 px phones) needs a browser; these are the rules it relies on.
+  it("keeps the phone readout tight: small padding and gaps, a 6px dot, and the 84px time column", () => {
+    expect(rule(".readout")).toMatch(/padding:\s*6px\s+6px/);
+    expect(rule(".readout")).toMatch(/gap:\s*6px/);
+    expect(rule(".readout-slots")).toMatch(/column-gap:\s*4px/);
+    expect(rule(".readout-slot")).toMatch(/gap:\s*2px/);
+    expect(rule(".readout-dot")).toMatch(/width:\s*6px/);
+    expect(rule(".readout-time")).toMatch(/width:\s*84px/);
+  });
+
+  it("lays the readout slots in 3 columns on a phone and 118px columns from 900px up", () => {
+    expect(rule(".readout-slots")).toMatch(/grid-template-columns:\s*repeat\(3,/);
+    expect(rule(".readout-slots", media("min-width: 900px"))).toMatch(
+      /grid-template-columns:\s*repeat\(auto-fill,\s*118px\)/,
+    );
+  });
+
+  it("draws the overview strip 34px high with the zoom window outlined in --accent", () => {
+    expect(rule(".chart-overview")).toMatch(/height:\s*34px/);
+    expect(rule(".chart-window")).toMatch(/border:\s*1\.5px solid var\(--accent\)/);
+  });
+
+  it("draws the cursor as a 1.2px --ink line", () => {
+    const line = rule(".chart-card .u-cursor-x") ?? "";
+    expect(line).toMatch(/1\.2px/);
+    expect(line).toMatch(/var\(--ink\)/);
+  });
+
+  it("puts the chart in one bordered panel", () => {
+    expect(rule(".chart-card")).toMatch(/border:\s*1px solid var\(--line\)/);
+  });
+});
+
 describe("desktop overrides", () => {
   /** `source` with every @media block cut out, so only base rules are left. */
   function withoutMedia(source: string): string {

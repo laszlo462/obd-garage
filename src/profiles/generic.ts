@@ -8,7 +8,12 @@ export const GENERIC: VehicleProfile = {
   name: "Generic",
   matchesVin: () => false,
   hiddenColumns: [],
-  defaultChartPreset: [],
+  defaultChartPreset: [
+    { title: "Vehicle speed", unit: "mph", series: [{ key: "speed", label: "Speed" }] },
+    { title: "Engine speed", unit: "rpm", series: [{ key: "rpm", label: "RPM" }] },
+    { title: "Engine load", unit: "%", series: [{ key: "load", label: "Load" }] },
+    { title: "Coolant temperature", unit: "°F", series: [{ key: "ect", label: "ECT" }] },
+  ],
   lookAlikeTolerances: {},
   suggestedPackIds: [],
 };
