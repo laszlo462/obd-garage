@@ -33,6 +33,18 @@ describe("Generic", () => {
   });
 });
 
+describe("Generic chart preset", () => {
+  it("charts Speed, RPM, Load and ECT, one panel each", () => {
+    expect(GENERIC.defaultChartPreset.map((p) => p.series.map((s) => s.key))).toEqual([
+      ["speed"],
+      ["rpm"],
+      ["load"],
+      ["ect"],
+    ]);
+    expect(GENERIC.defaultChartPreset.map((p) => p.unit)).toEqual(["mph", "rpm", "%", "°F"]);
+  });
+});
+
 describe("VIN matching", () => {
   it("matches the VIN of every fixture Diagnostic Report to 6.7", () => {
     const files = readdirSync(reports).filter((f) => f.endsWith(".html"));

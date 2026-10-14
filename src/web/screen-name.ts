@@ -4,6 +4,7 @@ const PUSHED: [RegExp, string][] = [
   [/^\/vehicles$/, "Vehicles"],
   [/^\/vehicles\/\d+\/settings$/, "Vehicle settings"],
   [/^\/reports\/\d+$/, "Report"],
+  [/^\/drive-logs\/\d+$/, "Drive Log"],
   [/^\/unassigned$/, "Unassigned"],
   [/^\/failed-uploads$/, "Failed Uploads"],
 ];

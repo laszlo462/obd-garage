@@ -1,6 +1,7 @@
 import { GENERIC_PROFILE, type Profile } from "../core/derive.ts";
 import type { RulePack } from "../core/rules.ts";
 import { VEHICLE_PROFILES, type VehicleProfiles } from "../profiles/index.ts";
+import type { ChartPanel } from "../profiles/types.ts";
 import { P0401_PACK } from "../rule-packs/6.7-p0401/index.ts";
 
 /** What a Vehicle Profile's VIN matcher says about a VIN. */
@@ -14,7 +15,12 @@ export type ProfileRegistry = {
   /** The Profile whose VIN matcher claims `vin`; the Generic Profile when none does. */
   matchVin(vin: string): VinMatch;
   /** `undefined` for an id the registry does not know (the caller falls back to Generic). */
-  profile(id: string): (Profile & { hiddenColumns?: readonly string[] }) | undefined;
+  profile(id: string):
+    | (Profile & {
+        hiddenColumns?: readonly string[];
+        defaultChartPreset?: readonly ChartPanel[];
+      })
+    | undefined;
   pack(id: string): RulePack | undefined;
   /** Every Profile, for the settings picker. */
   profiles(): { id: string; name: string }[];

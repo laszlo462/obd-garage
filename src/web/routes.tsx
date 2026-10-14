@@ -1,6 +1,7 @@
 import { Route, Router, useLocation } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
 import { DriveLogs } from "./DriveLogs.tsx";
+import { DriveLogViewer } from "./DriveLogViewer.tsx";
 import { FailedUploads } from "./FailedUploads.tsx";
 import { NoVehicles } from "./NoVehicles.tsx";
 import { Recent } from "./Recent.tsx";
@@ -9,9 +10,6 @@ import { ReportViewer } from "./ReportViewer.tsx";
 import { isTabPath } from "./TabBar.tsx";
 import { VehicleSettings } from "./VehicleSettings.tsx";
 import { Vehicles } from "./Vehicles.tsx";
-
-/** Placeholder until the Drive Log viewer slice lands. */
-const DriveLogViewer = () => <p class="list-note">Drive Log viewer</p>;
 
 /** The viewers get the wide container on desktop; the lists stay narrow. */
 const VIEWER_PATH = /^\/(reports|drive-logs)\/\d+\/?$/;

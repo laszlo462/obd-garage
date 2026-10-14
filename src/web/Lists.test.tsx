@@ -137,11 +137,3 @@ describe("invalidate", () => {
     expect(await screen.findByText("03 Oct 08:00")).toBeTruthy();
   });
 });
-
-describe("viewer routes", () => {
-  it("/drive-logs/12 is a placeholder until the Drive Log viewer lands", async () => {
-    history.replaceState(null, "", "/drive-logs/12");
-    renderApp({ vehicles });
-    expect(await screen.findByText("Drive Log viewer")).toBeTruthy();
-  });
-});

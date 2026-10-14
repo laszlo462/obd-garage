@@ -2,6 +2,7 @@ import type { InferResponseType } from "hono/client";
 import type { ParsedReport } from "../core/report.ts";
 import type { Api } from "./api.tsx";
 import type {
+  DriveLogDetail,
   DriveLogRow,
   FeedRow,
   ProfileRow,
@@ -24,6 +25,7 @@ export type FailRoute =
   | "olderUploads"
   | "reports"
   | "reportDetail"
+  | "driveLogDetail"
   | "driveLogs"
   | "failedUploads"
   | "deleteUpload"
@@ -49,6 +51,8 @@ export type StubData = {
   /** Each `GET /api/reports/:id` pushes the id here. */
   reportDetailLoads?: number[];
   driveLogs?: Record<number, DriveLogRow[]>;
+  /** `GET /api/drive-logs/:id` answers from this map by id; an unknown id answers 404. */
+  driveLogDetails?: Record<number, DriveLogDetail>;
   status?: Record<number, StatusData>;
   version?: string;
   profiles?: ProfileRow[];
@@ -145,6 +149,16 @@ export function stubApi(data: StubData = {}): Api {
         },
       ),
       "drive-logs": {
+        ":id": {
+          $get: route(data, "driveLogDetail", (args: { param: { id: string } }) => {
+            const detail = data.driveLogDetails?.[Number(args.param.id)];
+            if (!detail)
+              return Promise.resolve(
+                Response.json({ error: "Unknown Drive Log." }, { status: 404 }),
+              );
+            return json(detail);
+          }),
+        },
         assign: {
           $post: route(data, "assign", (args: { json: unknown }) => {
             data.assignCalls?.push(args.json);
@@ -402,3 +416,38 @@ export const reportDetail = (over: Partial<ReportDetail> = {}): ReportDetail =>
     report: parsedReport(),
     ...over,
   }) as ReportDetail;
+
+/**
+ * A small synthetic Drive Log of 11 rows, 10 s apart (0 to 100 s): Speed climbs 0 to 100 mph by 10, RPM climbs
+ * from 800 by 100, Load is 20 then 25.5. Two panels, Speed and RPM; Load is charted by no panel.
+ */
+export const driveLogDetail = (over: Partial<DriveLogDetail> = {}): DriveLogDetail => {
+  const t = Array.from({ length: 11 }, (_, i) => i * 10);
+  return {
+    id: 1,
+    filename: "x",
+    vehicleId: 1,
+    recordedAt: "2026-10-02T17:58:45",
+    uploadedAt: "2026-10-12T10:00:00.000Z",
+    metadata: { startTime: "2026-10-02T17:58:45.9486", duration: 100, rows: {} },
+    channels: {
+      t,
+      channels: {
+        speed: { label: "Vehicle speed", unit: "mph", values: t.map((_, i) => i * 10) },
+        rpm: { label: "Engine speed", unit: "rpm", values: t.map((_, i) => 800 + i * 100) },
+        load: { label: "Engine load", unit: "%", values: t.map((_, i) => (i === 0 ? 20 : 25.5)) },
+      },
+      hidden: [],
+    },
+    chartPreset: [
+      { title: "Vehicle speed", unit: "mph", series: [{ key: "speed", label: "Speed" }] },
+      { title: "Engine speed", unit: "rpm", series: [{ key: "rpm", label: "RPM" }] },
+    ],
+    events: [],
+    ruleOutcomes: [],
+    decodeNotices: [],
+    warnings: [],
+    referenceReport: { id: null, state: "default" },
+    ...over,
+  } as DriveLogDetail;
+};

@@ -1,7 +1,8 @@
 import { Hono } from "hono";
+import { resolveChartPreset } from "../chart-preset.ts";
 import type { Db } from "../db.ts";
 import type { Ingest } from "../ingest.ts";
-import type { ProfileRegistry } from "../registry.ts";
+import { GENERIC_PROFILE_ID, type ProfileRegistry } from "../registry.ts";
 import { newestFirst } from "./uploads.ts";
 
 const parseId = (text: string) => (/^\d+$/.test(text) ? Number(text) : Number.NaN);
@@ -117,6 +118,8 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
       const vehicle = log.vehicleId === null ? undefined : db.getVehicle(log.vehicleId);
       const profile = vehicle && registry.profile(vehicle.profileId);
       const hidden = (profile?.hiddenColumns ?? []).filter((key) => key in channels);
+      // An Unassigned log charts the Generic Profile's preset.
+      const preset = (profile ?? registry.profile(GENERIC_PROFILE_ID))?.defaultChartPreset ?? [];
       const payload: ChannelsPayload = { t: blob.t, channels, hidden };
       return c.json({
         id: log.id,
@@ -126,6 +129,7 @@ export function driveLogsRoute(deps: { db: Db; ingest: Ingest; registry: Profile
         uploadedAt: log.uploadedAt,
         metadata: { startTime: meta.startTime, duration: meta.duration, rows: meta.rows },
         channels: payload,
+        chartPreset: resolveChartPreset(preset, channels, hidden),
         events: derived.events.map((e): EventView => {
           const d = e.data as Omit<EventView, "ruleId" | "startSec" | "endSec">;
           return { ruleId: e.ruleId, startSec: e.startSec, endSec: e.endSec, ...d };

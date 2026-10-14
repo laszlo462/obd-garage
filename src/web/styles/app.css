@@ -50,6 +50,16 @@ summary {
   margin-bottom: 12px;
 }
 
+.readout-slots {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  justify-content: space-between;
+  grid-auto-rows: 22px;
+  column-gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
 @media (min-width: 900px) {
   :root {
     --gutter: 20px;
@@ -66,6 +76,10 @@ summary {
 
   .tiles {
     grid-template-columns: repeat(4, 1fr);
+  }
+
+  .readout-slots {
+    grid-template-columns: repeat(auto-fill, 118px);
   }
 
   .scrim {
@@ -1320,4 +1334,128 @@ main {
 
 .nowrap {
   white-space: nowrap;
+}
+
+.readout {
+  /* Drive Log viewer: readout, then the chart in one bordered panel */
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.readout-time {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 84px;
+  font-family: var(--font-mono);
+}
+
+.readout-clock {
+  font-size: var(--fs-15);
+  font-weight: 600;
+}
+
+.readout-elapsed {
+  color: var(--muted);
+  font-size: var(--fs-12);
+}
+
+.readout-flag {
+  min-height: 14px;
+  font-size: var(--fs-11);
+}
+
+.readout-slot {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  white-space: nowrap;
+}
+
+.readout-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.readout-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-12);
+  white-space: pre;
+}
+
+.readout-unit {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.chart-card {
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.chart-overview {
+  position: relative;
+  height: 34px;
+  border-bottom: 1px solid var(--line);
+  touch-action: none;
+}
+
+.chart-window {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  border: 1.5px solid var(--accent);
+  background: var(--accent-t);
+  pointer-events: none;
+}
+
+.chart-panel {
+  position: relative;
+}
+
+.chart-label {
+  position: absolute;
+  top: 4px;
+  left: 52px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: var(--fs-11);
+  pointer-events: none;
+}
+
+.chart-tick {
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.u-over {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.chart-card .u-cursor-x {
+  border-right: 1.2px solid var(--ink);
+}
+
+.chart-card .u-select {
+  background: var(--accent-t);
 }
