@@ -4,22 +4,6 @@ description: Implements one build issue test-first, runs the CI checks locally, 
 model: sonnet
 skills:
   - tdd
-hooks:
-  PreToolUse:
-    - matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash|PowerShell"
-      hooks:
-        - type: command
-          command: node --no-warnings "$CLAUDE_PROJECT_DIR/scripts/tdd-gate.ts"
-  PostToolUse:
-    - matcher: "Bash|PowerShell"
-      hooks:
-        - type: command
-          command: node --no-warnings "$CLAUDE_PROJECT_DIR/scripts/tdd-gate.ts"
-  PostToolUseFailure:
-    - matcher: "Bash|PowerShell"
-      hooks:
-        - type: command
-          command: node --no-warnings "$CLAUDE_PROJECT_DIR/scripts/tdd-gate.ts"
 ---
 
 You implement exactly one build issue. The parent gives you the issue number; fetch it
@@ -40,21 +24,13 @@ writing code. Use the domain's vocabulary.
 4. Before handing back, run the full set of checks CI runs (see `package.json` scripts),
    and fix anything they flag.
 
-## The TDD gate
+## How the parent checks your work
 
-Hooks on this agent enforce red before green (`scripts/tdd-gate.ts`):
-
-- Production code (`src/` and `scripts/` TypeScript, except tests and `test-*` helpers) can
-  change only while the last test, type check or lint run was **red**. Otherwise the edit is
-  refused with "No failing test".
-- So each cycle is: write one test → run it and see it fail → change production code →
-  run it and see it pass. After the green run, production code is locked again until the
-  next failing test.
-- A type check or lint failure also counts as red, so you can fix those.
-- Shell writes into production files are refused too. Don't work around the gate; if it
-  blocks something legitimate, stop and say so in your report.
-- Every check run and guarded edit is logged to `.claude/tdd-gate/log.jsonl`. The parent
-  reviews that log, so your report doesn't need to reconstruct the cycles.
+On your hand-back the parent runs `npm run check:slice`. It puts back the base version of every
+production file you changed and requires each new test case to fail there and pass with your
+change, and it lists changed lines that your tests never run. A new test that already passes
+without your change is a finding, so make each test fail for the right reason before you write
+the code.
 
 ## Rules
 
@@ -66,5 +42,4 @@ Hooks on this agent enforce red before green (`scripts/tdd-gate.ts`):
 
 - What you built, file by file, and which acceptance criteria it meets
 - The checks you ran and their result (failures included, with output)
-- Any time the gate blocked you, and what you did next
 - Anything left undone or out of scope, and why
