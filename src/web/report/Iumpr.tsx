@@ -42,7 +42,7 @@ export function Iumpr(props: {
                   <td class="mono-value">{count(m.conditions)}</td>
                   <td class="iumpr-ratio">
                     <span class={`mono-value ${m.low ? "tone-bad" : ""}`}>
-                      {m.ratio === null ? "–" : m.ratio.toFixed(3)}
+                      {m.ratio === null ? "–" : m.ratio.toFixed(2)}
                     </span>
                     <span class="ratio-bar">
                       <i

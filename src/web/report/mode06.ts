@@ -1,4 +1,5 @@
 import type { Mode06Test, Numeric } from "../../core/report.ts";
+import { fmtNum } from "./numbers.ts";
 
 /** Limits at these magnitudes are the scaling's end stops: "no limit on this side". */
 const SENTINELS = [
@@ -8,6 +9,12 @@ const SENTINELS = [
 
 export const isOpen = (x: Numeric): boolean =>
   x === null || !Number.isFinite(x) || SENTINELS.some((s) => Math.abs(Math.abs(x) - s) <= s * 2e-5);
+
+/** The compared Report's limits for a test, as text: "limits were 0 – 10", an open side as "none". */
+export function limitsWasText(was: { min: Numeric; max: Numeric }): string {
+  const side = (x: Numeric) => (x === null || isOpen(x) ? "none" : fmtNum(String(x)));
+  return `limits were ${side(was.min)} – ${side(was.max)}`;
+}
 
 export type Headroom = { abs: number; frac: number | null; side: "min" | "max" };
 
