@@ -39,6 +39,20 @@ function yRange(_u: uPlot, min: number, max: number): [number, number] {
 }
 
 /**
+ * Round y ticks, at least two and at most about five inside `min..max`. uPlot's own pick can leave a
+ * short panel with a single tick; a step no bigger than half the span always fits two multiples.
+ */
+function yTicks(_u: uPlot, _axis: number, min: number, max: number): number[] {
+  const half = (max - min) / 2;
+  const mag = 10 ** Math.floor(Math.log10(half));
+  const step = [10, 5, 2.5, 2, 1].map((m) => m * mag).find((s) => s <= half * (1 + 1e-9)) ?? mag;
+  const ticks: number[] = [];
+  for (let k = Math.ceil(min / step - 1e-9); k * step <= max * (1 + 1e-12) + 1e-12; k++)
+    ticks.push(Number((k * step).toPrecision(12)));
+  return ticks;
+}
+
+/**
  * The uPlot options for one stacked panel. uPlot's own mouse handling is off (our handlers on the overlay
  * replace it); the cursor is a solid 1.2 px `--ink` line with a 9 px dot in the series colour ringed in
  * `--surface`.
@@ -102,6 +116,7 @@ export function panelOptions(spec: PanelSpec): uPlot.Options {
         stroke: muted,
         font,
         size: Y_AXIS_WIDTH,
+        splits: yTicks,
         grid: { stroke: line, width: 1 },
         ticks: { show: false },
       },

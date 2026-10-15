@@ -52,12 +52,15 @@ summary {
 
 .readout-slots {
   display: grid;
-  grid-template-columns: repeat(3, max-content);
-  justify-content: space-between;
+  /* Equal columns that can shrink: any set of Channels fits the narrowest phone */
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: 22px;
   column-gap: 4px;
   flex: 1;
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .viewer-grid {
@@ -1297,6 +1300,126 @@ main {
   color: var(--muted);
 }
 
+.chips {
+  /* Channel picker: a sideways scroller with no scrollbar */
+  display: flex;
+  min-width: 0;
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  gap: 6px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--fs-13);
+  white-space: nowrap;
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--chip);
+  background: color-mix(in srgb, var(--chip) 12%, transparent);
+}
+
+.chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chip);
+}
+
+.chip:not([aria-pressed="true"]) .chip-dot {
+  display: none;
+}
+
+.chip-all {
+  color: var(--accent);
+}
+
+.notices {
+  margin-bottom: 8px;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius-control);
+  background: var(--warn-t);
+  color: var(--warn);
+  font-size: var(--fs-13);
+}
+
+.sheet-heading {
+  margin: 12px var(--gutter) 4px;
+}
+
+.data-table {
+  margin-bottom: 12px;
+}
+
+.data-table-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.data-table-head button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.data-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.data-table table {
+  border-collapse: collapse;
+  font: var(--fs-12) var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th,
+.data-table td {
+  padding: 4px 8px;
+  text-align: right;
+  white-space: pre;
+}
+
+.data-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.data-table tr[aria-current="true"] {
+  background: var(--accent-t);
+}
+
 .iumpr-table {
   /* fixed columns: every value sits under its header, on a phone and on desktop */
   width: 100%;
@@ -1395,6 +1518,7 @@ main {
 }
 
 .readout-slot {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1410,6 +1534,7 @@ main {
 }
 
 .readout-value {
+  flex: none;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-12);
@@ -1417,6 +1542,9 @@ main {
 }
 
 .readout-unit {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--muted);
   font-size: 9px;
 }

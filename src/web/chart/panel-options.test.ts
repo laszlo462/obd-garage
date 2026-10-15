@@ -81,3 +81,33 @@ describe("panelOptions: few rows", () => {
     expect(hi).toBeGreaterThanOrEqual(80);
   });
 });
+
+describe("panelOptions: y ticks", () => {
+  const splits = (min: number, max: number) => {
+    const axis = panelOptions(spec()).axes?.[1];
+    const fn = axis?.splits as (u: uPlot, i: number, min: number, max: number) => number[];
+    return fn(none, 1, min, max);
+  };
+
+  it("asks for its own ticks, at least two inside the scale, however the data falls", () => {
+    for (const [min, max] of [
+      [740, 2060],
+      [0.5, 0.7],
+      [-3, 3],
+      [1990, 2010],
+      [66.06, 80.74],
+    ] as const) {
+      const ticks = splits(min, max);
+      expect(ticks.length, `${min}..${max}`).toBeGreaterThanOrEqual(2);
+      expect(ticks.length, `${min}..${max}`).toBeLessThanOrEqual(6);
+      for (const t of ticks) {
+        expect(t).toBeGreaterThanOrEqual(min);
+        expect(t).toBeLessThanOrEqual(max);
+      }
+    }
+  });
+
+  it("puts them on round numbers", () => {
+    expect(splits(740, 2060)).toEqual([1000, 1500, 2000]);
+  });
+});
