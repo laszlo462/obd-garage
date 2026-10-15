@@ -5,9 +5,9 @@ The v0.1 UI design. UI build issues cite this file instead of inventing their ow
 
 - **Decided in:** the wayfinder ticket [UI design: DESIGN.md and screen inventory](https://github.com/laszlo462/obd-garage/issues/29).
   Its comments record the two prototype rounds and why each choice was made.
-- **Primary source:** the throwaway prototype on the
-  [`prototype/ui-design`](https://github.com/laszlo462/obd-garage/tree/prototype/ui-design/prototypes/ui-design)
-  branch, variant **F**. Run `node prototypes/ui-design/serve.ts` on that branch to open it on a phone. When this
+- **Primary source:** the throwaway prototype at the
+  [`archive/prototype/ui-design`](https://github.com/laszlo462/obd-garage/tree/archive/prototype/ui-design/prototypes/ui-design)
+  tag, variant **F**. Run `node prototypes/ui-design/serve.ts` on that tag to open it on a phone. When this
   file and the prototype disagree, this file wins. Port the ideas, not the code.
 - **Gestures** come from [Can Notes be pinned to a moment on a phone chart?](https://github.com/laszlo462/obd-garage/issues/9)
   and [ADR 0002](docs/adr/0002-uplot-with-own-touch-plugin.md).
