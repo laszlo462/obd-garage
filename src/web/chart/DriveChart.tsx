@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "preact/hooks";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
+import { drawOverlays } from "../events/draw-overlays.ts";
 import { createGestureTracker, type Intent, type TouchPoint } from "./gesture-tracker.ts";
 import { nearestRow } from "./nearest-row.ts";
 import { AXIS_HEIGHT, panelOptions } from "./panel-options.ts";
@@ -29,6 +30,13 @@ export function DriveChart(props: {
   startSec: number;
   desktop: boolean;
   range: Range;
+  /** Events to paint behind the series. */
+  events: readonly {
+    kind: string;
+    category: string;
+    startSec: number | null;
+    endSec: number | null;
+  }[];
   cursorRow: number;
   onCursorRow(row: number): void;
   /** A new range to show, or `null` for the whole drive. */
@@ -63,24 +71,29 @@ export function DriveChart(props: {
       label.append(tick, `${panel.title} (${panel.unit})`);
       holder.append(label);
       host.append(holder);
-      const u = new uPlot(
-        panelOptions({
-          width,
-          height: (desktop ? PANEL_HEIGHT.desktop : PANEL_HEIGHT.phone) + (last ? AXIS_HEIGHT : 0),
-          showTimeAxis: last,
-          startSec,
-          series: panel.series.map((s) => ({ label: s.label, color: colors[s.index] ?? ink })),
-          range: props.range,
-          ink,
-          surface,
-          muted,
-          line,
-          font,
-        }),
+      const options = panelOptions({
+        width,
+        height: (desktop ? PANEL_HEIGHT.desktop : PANEL_HEIGHT.phone) + (last ? AXIS_HEIGHT : 0),
+        showTimeAxis: last,
+        startSec,
+        series: panel.series.map((s) => ({ label: s.label, color: colors[s.index] ?? ink })),
+        range: props.range,
+        ink,
+        surface,
+        muted,
+        line,
+        font,
+      });
+      // Under the series, in every panel; the Events are read at draw time.
+      options.hooks = {
+        ...options.hooks,
+        drawClear: [(u) => drawOverlays(u, live.current.events)],
+      };
+      return new uPlot(
+        options,
         [t as number[], ...panel.series.map((s) => s.values as (number | null)[])],
         holder,
       );
-      return u;
     });
     charts.current = built;
     for (const u of built) {

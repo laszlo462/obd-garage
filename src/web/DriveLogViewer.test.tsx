@@ -398,6 +398,207 @@ describe("Drive Log viewer: the zoom stays inside the drive", () => {
   });
 });
 
+describe("Drive Log viewer: IN WINDOW flag", () => {
+  it("turns on at the first row of a pack span and off past its last row", async () => {
+    renderApp(data());
+    const [over] = await overlays();
+    const flag = () => document.querySelector(".readout-flag")?.textContent?.trim();
+    expect(flag()).toBe("");
+    // 400 px show 0 to 100 s, so 10 s is 40 px. The pack span runs 60 to 80 s.
+    fireEvent.mouseMove(over as HTMLElement, { clientX: 200 });
+    await waitFor(() => expect(screen.getByText("+0:50")).toBeTruthy());
+    expect(flag()).toBe("");
+    fireEvent.mouseMove(over as HTMLElement, { clientX: 240 });
+    await waitFor(() => expect(flag()).toBe("● IN WINDOW"));
+    fireEvent.mouseMove(over as HTMLElement, { clientX: 320 });
+    await waitFor(() => expect(screen.getByText("+1:20")).toBeTruthy());
+    expect(flag()).toBe("● IN WINDOW");
+    fireEvent.mouseMove(over as HTMLElement, { clientX: 360 });
+    await waitFor(() => expect(flag()).toBe(""));
+  });
+});
+
+const eventsPanel = async () => within(await screen.findByRole("region", { name: "Events" }));
+
+describe("Drive Log viewer: Events list", () => {
+  it("lists one row per Event by time: title, detail, start and, for a span, duration", async () => {
+    renderApp(data());
+    const panel = await eventsPanel();
+    expect(panel.getByRole("heading", { name: /Events/ }).textContent).toBe("Events3");
+    const rows = panel.getAllByRole("button");
+    expect(rows.map((r) => r.querySelector(".event-title")?.textContent)).toEqual([
+      "Idle",
+      "Engine start",
+      "P0401 entry window",
+    ]);
+    expect(within(rows[0] as HTMLElement).getByText("Engine at idle, 10 s")).toBeTruthy();
+    expect(within(rows[0] as HTMLElement).getByText("+0:20")).toBeTruthy();
+    expect(within(rows[0] as HTMLElement).getByText("10 s")).toBeTruthy();
+    // A point has a start only.
+    expect(within(rows[1] as HTMLElement).getByText("+0:45")).toBeTruthy();
+    expect(rows[1]?.querySelector(".event-duration")).toBeNull();
+  });
+});
+
+describe("Drive Log viewer: Events list rows", () => {
+  const withPackName = {
+    ruleId: "p0401.entry-window",
+    packId: "p0401",
+    packName: "6.7 P0401",
+    name: "P0401 entry window",
+    status: "ran" as const,
+    events: 1,
+  };
+
+  it("puts the pack's name above a pack Event and none above a generic one", async () => {
+    const base = driveLogDetail();
+    renderApp(
+      data({
+        driveLogDetails: {
+          1: driveLogDetail({ ruleOutcomes: [...base.ruleOutcomes, withPackName] }),
+        },
+      }),
+    );
+    const rows = (await eventsPanel()).getAllByRole("button");
+    expect(rows[2]?.querySelector(".event-pack")?.textContent).toBe("6.7 P0401");
+    expect(rows[0]?.querySelector(".event-pack")).toBeNull();
+  });
+
+  it("inserts an Event's title and text as text, never markup", async () => {
+    const base = driveLogDetail();
+    const first = base.events[0] as (typeof base.events)[number];
+    renderApp(
+      data({
+        driveLogDetails: {
+          1: driveLogDetail({
+            events: [{ ...first, title: "<b>bold</b>", text: "<img src=x onerror=boom()>" }],
+          }),
+        },
+      }),
+    );
+    const row = (await eventsPanel()).getAllByRole("button")[0] as HTMLElement;
+    expect(row.querySelector(".event-title")?.textContent).toBe("<b>bold</b>");
+    expect(row.querySelector("b, img")).toBeNull();
+  });
+});
+
+describe("Drive Log viewer: rules that did not run", () => {
+  it("ends the list with a muted line for each, after the Events", async () => {
+    renderApp(data());
+    const items = (await eventsPanel()).getAllByRole("listitem");
+    expect(items.map((li) => li.textContent?.replace(/\s+/g, " ").trim())).toEqual([
+      expect.stringContaining("Idle"),
+      expect.stringContaining("Engine start"),
+      expect.stringContaining("P0401 entry window"),
+      "Regen: not applicable, no DPF regen status in this log",
+    ]);
+  });
+
+  it("names the missing Channels by the labels the server sends", async () => {
+    const base = driveLogDetail();
+    renderApp(
+      data({
+        driveLogDetails: {
+          1: driveLogDetail({
+            ruleOutcomes: [
+              {
+                ruleId: "core.peaks",
+                packId: null,
+                name: "Peaks",
+                status: "not-applicable",
+                missing: ["speed", "egrActual"],
+                missingLabels: ["Vehicle speed", "EGR position, actual"],
+              },
+            ] as typeof base.ruleOutcomes,
+          }),
+        },
+      }),
+    );
+    const items = (await eventsPanel()).getAllByRole("listitem");
+    expect(items.at(-1)?.textContent).toBe(
+      "Peaks: not applicable, no Vehicle speed, EGR position, actual in this log",
+    );
+  });
+
+  it("keeps the lines when the log has no Events, and adds the Unassigned line on an Unassigned log", async () => {
+    renderApp(
+      data({
+        driveLogDetails: { 1: driveLogDetail({ vehicleId: null, events: [] }) },
+      }),
+    );
+    const items = (await eventsPanel()).getAllByRole("listitem");
+    expect(items.map((li) => li.textContent)).toEqual([
+      "Regen: not applicable, no DPF regen status in this log",
+      "Rule Packs: not run, Unassigned logs get no Rule Packs",
+    ]);
+  });
+});
+
+describe("Drive Log viewer: tapping an Events row", () => {
+  it("moves the cursor to the nearest row to the Event's start, updates the readout and scrolls the chart into view", async () => {
+    const scrolled: Element[] = [];
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    renderApp(data());
+    const rows = (await eventsPanel()).getAllByRole("button");
+    // The Engine start point is at 45 s: between rows 40 s and 50 s, and the earlier row wins a tie.
+    fireEvent.click(rows[1] as HTMLElement);
+    const readout = await screen.findByRole("region", { name: "Readout" });
+    await waitFor(() => expect(within(readout).getByText("+0:40")).toBeTruthy());
+    expect(plain((await slot("Speed")).getByText("40", { selector: ".readout-value" }))).toBe("40");
+    expect(scrolled).toHaveLength(1);
+    expect(scrolled[0]?.classList.contains("chart-card")).toBe(true);
+  });
+});
+
+describe("Drive Log viewer: legend", () => {
+  const legend = async () =>
+    (await screen.findByRole("list", { name: "Legend" })).querySelectorAll("li");
+
+  it("has a swatch for each overlay kind in the log", async () => {
+    renderApp(data());
+    const items = await legend();
+    expect([...items].map((li) => li.textContent)).toEqual(["Event", "Point event", "Rule Pack"]);
+    expect([...items].map((li) => li.querySelector("i")?.className)).toEqual([
+      "legend-swatch event-marker-fill",
+      "legend-swatch event-marker-dashed-line",
+      "legend-swatch event-marker-hatch",
+    ]);
+  });
+
+  it("has none for a kind the log lacks", async () => {
+    const base = driveLogDetail();
+    renderApp(
+      data({
+        driveLogDetails: { 1: driveLogDetail({ events: [base.events[0] as never] }) },
+      }),
+    );
+    expect([...(await legend())].map((li) => li.textContent)).toEqual(["Event"]);
+  });
+
+  it("is absent when the log has no Events", async () => {
+    renderApp(data({ driveLogDetails: { 1: driveLogDetail({ events: [] }) } }));
+    await screen.findByRole("region", { name: "Readout" });
+    expect(screen.queryByRole("list", { name: "Legend" })).toBeNull();
+  });
+});
+
+describe("Drive Log viewer: side column", () => {
+  it("puts the readout and chart in the main column and the Events panel in the side column, after it", async () => {
+    renderApp(data());
+    const events = await screen.findByRole("region", { name: "Events" });
+    const side = events.closest(".viewer-side") as HTMLElement;
+    const main = document.querySelector(".chart-card")?.closest(".viewer-main") as HTMLElement;
+    expect(side).toBeTruthy();
+    expect(main).toBeTruthy();
+    expect(main.contains(screen.getByRole("region", { name: "Readout" }))).toBe(true);
+    expect(side.contains(main)).toBe(false);
+    expect(main.nextElementSibling).toBe(side);
+    expect(main.parentElement).toBe(side.parentElement);
+  });
+});
+
 describe("Drive Log viewer: header", () => {
   it("titles the log with its date and time, with the Vehicle, duration and row count under it", async () => {
     renderApp(data());

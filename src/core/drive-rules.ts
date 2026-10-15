@@ -58,6 +58,7 @@ function runs(length: number, test: (i: number) => boolean): [number, number][] 
 /** Idle: engine running (rpm above the floor) and the vehicle stopped (speed below the ceiling). */
 export const idle: Rule = {
   id: "core.idle",
+  name: "Idle",
   needs: ["rpm", "speed"],
   run(log, ctx) {
     const rpm = channel(log.channels, "rpm", "rpm");
@@ -93,6 +94,7 @@ export const idle: Rule = {
 /** Cruise: speed at or above the floor and within a tolerance of the span's own mean. */
 export const cruise: Rule = {
   id: "core.cruise",
+  name: "Cruise",
   needs: ["speed"],
   run(log, ctx) {
     const speed = channel(log.channels, "speed", "km/h");
@@ -151,6 +153,7 @@ export const cruise: Rule = {
 /** Regen: DPF regeneration status is 1. The status is an enumeration, so its unit does not matter. */
 export const regen: Rule = {
   id: "core.regen",
+  name: "Regen",
   needs: ["dpfRegen"],
   run(log) {
     const status = log.channels.get("dpfRegen")?.values ?? [];

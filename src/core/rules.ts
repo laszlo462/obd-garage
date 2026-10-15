@@ -45,6 +45,8 @@ export type NotApplicable = { notApplicable: string };
 export type Rule = {
   /** `core.engine-start`, `p0401.entry-window`. */
   id: string;
+  /** The display name: "Regen", "P0401 entry window". */
+  name: string;
   /** Missing any of these makes the rule "not applicable", naming the missing Channels. */
   needs: readonly ChannelKey[];
   /** Missing all of these makes the rule "not applicable". For rules that work on whichever of a set is logged. */

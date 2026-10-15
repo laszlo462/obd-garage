@@ -326,6 +326,64 @@ describe("GET /api/drive-logs/:id", () => {
     expect(channels.hidden).toEqual(profileHidden.filter((k) => k in channels.channels));
   });
 
+  it("names each rule outcome, and its pack when it has one", async () => {
+    const { logId } = await setup();
+    const body = (await getJson(`/drive-logs/${logId}`)) as {
+      ruleOutcomes: { ruleId: string; packId: string | null; name: string; packName?: string }[];
+    };
+    const byId = (id: string) => body.ruleOutcomes.find((o) => o.ruleId === id);
+    expect(byId("core.regen")).toMatchObject({ name: "Regen" });
+    expect(byId("core.regen")).not.toHaveProperty("packName");
+    expect(byId("p0401.entry-window")).toMatchObject({
+      name: "P0401 entry window",
+      packName: "6.7 P0401",
+    });
+  });
+
+  it("names a pack rule that is not applicable, and its pack", async () => {
+    const { vehicleId } = await setup();
+    // Only RPM is logged, so the entry window lacks ECT and the EGR valve.
+    const log = await upload(
+      "﻿# StartTime = 10/02/2026 06:00:00.0000 PM\nTime (sec), Engine RPM (RPM)\n0.000,800\n10.000,820\n",
+      "rpm-only.csv",
+      vehicleId,
+    );
+    const body = (await getJson(`/drive-logs/${log.uploadId}`)) as {
+      ruleOutcomes: {
+        ruleId: string;
+        status: string;
+        name: string;
+        packName?: string;
+        missing?: string[];
+        missingLabels?: string[];
+      }[];
+    };
+    expect(body.ruleOutcomes.find((o) => o.ruleId === "p0401.entry-window")).toMatchObject({
+      status: "not-applicable",
+      name: "P0401 entry window",
+      packName: "6.7 P0401",
+    });
+  });
+
+  it("labels each missing Channel from the Vehicle's Profile, then the standard catalogue", async () => {
+    const { vehicleId } = await setup();
+    const log = await upload(
+      "﻿# StartTime = 10/02/2026 06:00:00.0000 PM\nTime (sec), Engine RPM (RPM)\n0.000,800\n10.000,820\n",
+      "rpm-only.csv",
+      vehicleId,
+    );
+    const body = (await getJson(`/drive-logs/${log.uploadId}`)) as {
+      ruleOutcomes: { ruleId: string; missing?: string[]; missingLabels?: string[] }[];
+    };
+    const outcomes = body.ruleOutcomes;
+    expect(outcomes.find((o) => o.ruleId === "p0401.entry-window")).toMatchObject({
+      missing: ["ect", "egrActual"],
+      missingLabels: ["Engine coolant temperature", "EGR position, actual"],
+    });
+    // A Channel key outcome that has no missing Channels has no labels either.
+    for (const o of outcomes) expect(o.missing === undefined).toBe(o.missingLabels === undefined);
+  });
+
   it("hides nothing once the Vehicle uses the Generic Profile", async () => {
     const { logId, vehicleId } = await setup();
     await send(`/vehicles/${vehicleId}`, "PATCH", { profileId: "generic" });

@@ -4,6 +4,7 @@ import { useAppState } from "./AppState.tsx";
 import type { DriveLogDetail } from "./api-types.ts";
 import { startSecondOfDay } from "./chart/clock.ts";
 import { DriveChart } from "./chart/DriveChart.tsx";
+import { nearestRow } from "./chart/nearest-row.ts";
 import { Overview } from "./chart/Overview.tsx";
 import { Readout } from "./chart/Readout.tsx";
 import { clampRange, type Range } from "./chart/range.ts";
@@ -11,6 +12,10 @@ import { chartPanels } from "./chart/series.ts";
 import { seriesColors } from "./chart/series-colors.ts";
 import { useSchemeChanges } from "./chart/use-scheme.ts";
 import { DriveLogMenuSheet } from "./DriveLogMenuSheet.tsx";
+import { EventsPanel } from "./events/EventsPanel.tsx";
+import { inPackSpan } from "./events/in-pack-span.ts";
+import { Legend } from "./events/Legend.tsx";
+import { outcomeLines } from "./events/outcome-lines.ts";
 import { count, duration, reportTitle } from "./format.ts";
 import { useBarMenu } from "./use-bar-menu.ts";
 import { useDriveLogLoad } from "./use-drive-log-load.ts";
@@ -48,6 +53,7 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
   const desktop = useIsDesktop();
   const t = detail.channels.t;
   const [row, setRow] = useState(0);
+  const chartCard = useRef<HTMLDivElement>(null);
   // A log of one row has no span; give it a second so the scales and the zoom window have a width.
   const whole = useMemo<Range>(() => {
     const min = t[0] ?? 0;
@@ -58,6 +64,20 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
   const minSpan = Math.min(whole.max - whole.min, Math.max(1, (whole.max - whole.min) / 500));
   const zoomTo = (next: Range | null) => setRange(next ? clampRange(next, whole, minSpan) : whole);
   const startSec = startSecondOfDay(detail.metadata.startTime);
+  // Look-alikes wait for their switch (#61).
+  const shownEvents = useMemo(
+    () => detail.events.filter((e) => e.category !== "look-alike"),
+    [detail.events],
+  );
+  const packNames = useMemo(
+    () =>
+      new Map(
+        detail.ruleOutcomes.flatMap((o) =>
+          o.packId && o.packName ? [[o.packId, o.packName]] : [],
+        ),
+      ),
+    [detail.ruleOutcomes],
+  );
   return (
     <>
       <div class="report-header">
@@ -70,34 +90,54 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
           ].join(" · ")}
         </p>
       </div>
-      <Readout
-        series={series}
-        colors={colors}
-        row={row}
-        elapsed={t[row] ?? 0}
-        startSec={startSec}
-      />
-      <div class="chart-card">
-        <Overview
-          t={t}
-          values={series[0]?.values ?? []}
-          scheme={scheme}
-          range={range}
-          whole={whole}
-          onRange={zoomTo}
-        />
-        <DriveChart
-          t={t}
-          panels={panels}
-          colors={colors}
-          scheme={scheme}
-          startSec={startSec}
-          desktop={desktop}
-          range={range}
-          cursorRow={row}
-          onCursorRow={setRow}
-          onRange={zoomTo}
-        />
+      <div class="viewer-grid">
+        <div class="viewer-main">
+          <Readout
+            series={series}
+            colors={colors}
+            row={row}
+            elapsed={t[row] ?? 0}
+            startSec={startSec}
+            inWindow={inPackSpan(detail.events, t[row] ?? Number.NaN)}
+          />
+          <div class="chart-card" ref={chartCard}>
+            <Overview
+              t={t}
+              values={series[0]?.values ?? []}
+              scheme={scheme}
+              range={range}
+              whole={whole}
+              onRange={zoomTo}
+            />
+            <DriveChart
+              t={t}
+              panels={panels}
+              colors={colors}
+              scheme={scheme}
+              startSec={startSec}
+              desktop={desktop}
+              range={range}
+              events={shownEvents}
+              cursorRow={row}
+              onCursorRow={setRow}
+              onRange={zoomTo}
+            />
+            <Legend events={shownEvents} />
+          </div>
+        </div>
+        <div class="viewer-side">
+          <EventsPanel
+            events={shownEvents}
+            packNames={packNames}
+            notRun={outcomeLines(detail.ruleOutcomes, {
+              unassigned: detail.vehicleId === null,
+            })}
+            onSeek={(e) => {
+              setRow(Math.max(0, nearestRow(t, e.startSec ?? 0)));
+              chartCard.current?.scrollIntoView({ block: "nearest" });
+            }}
+          />
+        </div>
       </div>
       {menu && (
         <DriveLogMenuSheet

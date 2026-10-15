@@ -121,6 +121,7 @@ function targetsFrom(frame: FreezeFrame, log: RuleLog, ctx: RuleContext): { targ
  */
 export const lookAlike: Rule = {
   id: LOOK_ALIKE_ID,
+  name: "Look-alikes",
   needs: [],
   needsReferenceReport: true,
   run(log, ctx): EventDraft[] | NotApplicable {

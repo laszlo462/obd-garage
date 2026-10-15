@@ -420,7 +420,7 @@ export const reportDetail = (over: Partial<ReportDetail> = {}): ReportDetail =>
   }) as ReportDetail;
 
 /**
- * A small synthetic Drive Log of 11 rows, 10 s apart (0 to 100 s): Speed climbs 0 to 100 mph by 10, RPM climbs
+ * A small synthetic Drive Log of 11 rows (with a generic span at 20 to 30 s, a generic point at 45 s and a pack span at 60 to 80 s), 10 s apart (0 to 100 s): Speed climbs 0 to 100 mph by 10, RPM climbs
  * from 800 by 100, Load is 20 then 25.5. Two panels, Speed and RPM; Load is charted by no panel.
  */
 export const driveLogDetail = (over: Partial<DriveLogDetail> = {}): DriveLogDetail => {
@@ -445,8 +445,49 @@ export const driveLogDetail = (over: Partial<DriveLogDetail> = {}): DriveLogDeta
       { title: "Vehicle speed", unit: "mph", series: [{ key: "speed", label: "Speed" }] },
       { title: "Engine speed", unit: "rpm", series: [{ key: "rpm", label: "RPM" }] },
     ],
-    events: [],
-    ruleOutcomes: [],
+    events: [
+      {
+        ruleId: "core.idle",
+        startSec: 20,
+        endSec: 30,
+        kind: "span",
+        title: "Idle",
+        text: "Engine at idle, 10 s",
+        packId: null,
+        category: "generic",
+      },
+      {
+        ruleId: "core.engine-start",
+        startSec: 45,
+        endSec: 45,
+        kind: "point",
+        title: "Engine start",
+        text: "RPM rose past 400",
+        packId: null,
+        category: "generic",
+      },
+      {
+        ruleId: "p0401.entry-window",
+        startSec: 60,
+        endSec: 80,
+        kind: "span",
+        title: "P0401 entry window",
+        text: "Conditions for the EGR flow test are met",
+        packId: "p0401",
+        category: "pack",
+      },
+    ],
+    ruleOutcomes: [
+      { ruleId: "core.idle", packId: null, name: "Idle", status: "ran", events: 1 },
+      {
+        ruleId: "core.regen",
+        packId: null,
+        name: "Regen",
+        status: "not-applicable",
+        missing: [],
+        reason: "no DPF regen status in this log",
+      },
+    ],
     decodeNotices: [],
     warnings: [],
     referenceReport: { id: null, state: "default" },

@@ -13,14 +13,18 @@ export function Readout(props: {
   elapsed: number;
   /** Seconds past midnight of the log's first moment. */
   startSec: number;
+  /** The cursor is inside a Rule Pack span. */
+  inWindow: boolean;
 }) {
-  const { series, colors, row, elapsed, startSec } = props;
+  const { series, colors, row, elapsed, startSec, inWindow } = props;
   return (
     <section class="readout" aria-label="Readout">
       <div class="readout-time">
         <span class="readout-clock">{clockAt(startSec, elapsed)}</span>
         <span class="readout-elapsed">{elapsedAt(elapsed)}</span>
-        <span class="readout-flag" />
+        <span class="readout-flag" style={inWindow ? { color: "var(--ev-pack)" } : undefined}>
+          {inWindow ? "● IN WINDOW" : ""}
+        </span>
       </div>
       <ul class="readout-slots">
         {series.map((s) => (
