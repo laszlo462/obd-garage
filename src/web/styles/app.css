@@ -1456,9 +1456,17 @@ a.btn-primary[aria-disabled="true"] {
 
 .misfire-table th,
 .misfire-table td {
-  padding: 4px 6px;
+  /* Tight at phone width: a label column and 8 cylinder columns must fit 375px. */
+  padding: 4px 3px;
   text-align: right;
   border-bottom: 1px solid var(--line);
+}
+
+@media (min-width: 900px) {
+  .misfire-table th,
+  .misfire-table td {
+    padding: 4px 6px;
+  }
 }
 
 .misfire-table th:first-child {
