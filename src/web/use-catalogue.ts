@@ -6,6 +6,14 @@ import { okJson } from "./use-vehicle-load.ts";
 
 export type Catalogue = { profiles: ProfileRow[]; rulePacks: RulePackRow[] };
 
+/** A Profile's name, or its id until the catalogue loads or when the catalogue doesn't know it. */
+export const profileName = (catalogue: Catalogue | null, id: string) =>
+  catalogue?.profiles.find((p) => p.id === id)?.name ?? id;
+
+/** A Rule Pack's name, or its id until the catalogue loads or when the catalogue doesn't know it. */
+export const rulePackName = (catalogue: Catalogue | null, id: string) =>
+  catalogue?.rulePacks.find((p) => p.id === id)?.name ?? id;
+
 /**
  * The Profiles and Rule Packs the server knows, or null until they load. A failed load is reported
  * to app state (the shell shows the banner), and it reloads when the app-state `revision` changes,

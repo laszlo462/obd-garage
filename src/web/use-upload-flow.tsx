@@ -18,6 +18,7 @@ import {
   type VehicleChoice,
 } from "./upload-batch.ts";
 import { uploadVia } from "./upload-client.ts";
+import { useCatalogue } from "./use-catalogue.ts";
 
 type Created = NonNullable<UploadResult["vehicleCreated"]>;
 
@@ -158,7 +159,7 @@ export function UploadFlowProvider(props: { children: ComponentChildren }) {
       )}
       {results && <BatchResultSheet results={results} onClose={() => setResults(null)} />}
       {!results && sheetVehicle && (parkedMode === null || parkedMode === "show") && (
-        <NewVehicleSheet
+        <CataloguedNewVehicleSheet
           key={sheetVehicle.id}
           vehicle={sheetVehicle}
           initialTicked={parkedHead?.ticked}
@@ -187,4 +188,11 @@ export function UploadFlowProvider(props: { children: ComponentChildren }) {
       {sheets}
     </FlowContext.Provider>
   );
+}
+
+/** The New vehicle sheet, naming the Profile and Rule Packs; the catalogue loads only while it shows. */
+function CataloguedNewVehicleSheet(
+  props: Omit<Parameters<typeof NewVehicleSheet>[0], "catalogue">,
+) {
+  return <NewVehicleSheet {...props} catalogue={useCatalogue()} />;
 }

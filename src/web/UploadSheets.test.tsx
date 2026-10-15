@@ -177,7 +177,9 @@ const created: NonNullable<UploadResult["vehicleCreated"]> = {
 
 describe("NewVehicleSheet", () => {
   it("shows the label, VIN, Profile and Rule Packs, with Change linking to settings", () => {
-    render(<NewVehicleSheet vehicle={created} onAssign={() => {}} onClose={() => {}} />);
+    render(
+      <NewVehicleSheet vehicle={created} catalogue={null} onAssign={() => {}} onClose={() => {}} />,
+    );
     expect(screen.getByRole("dialog", { name: "New vehicle added" })).toBeTruthy();
     expect(screen.getByText("2012 Ford F-250")).toBeTruthy();
     expect(screen.getByText("TEST-VIN-00001234")).toBeTruthy();
@@ -188,9 +190,41 @@ describe("NewVehicleSheet", () => {
     );
   });
 
+  it("names the Profile and Rule Packs from the catalogue, and shows the id of one it doesn't know", () => {
+    const catalogue = {
+      profiles: [{ id: "ford-6.7", name: "Ford 6.7" }],
+      rulePacks: [{ id: "egr", name: "EGR health", description: "" }],
+    };
+    render(
+      <NewVehicleSheet
+        vehicle={created}
+        catalogue={catalogue}
+        onAssign={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText("Ford 6.7")).toBeTruthy();
+    expect(screen.queryByText("ford-6.7")).toBeNull();
+    expect(screen.getByText("EGR health, dpf")).toBeTruthy();
+  });
+
+  it("reads None when the Vehicle has no Rule Packs", () => {
+    render(
+      <NewVehicleSheet
+        vehicle={{ ...created, packs: [] }}
+        catalogue={null}
+        onAssign={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText("None")).toBeTruthy();
+  });
+
   it("closes the sheet when Change opens the Vehicle settings", () => {
     const onClose = vi.fn();
-    render(<NewVehicleSheet vehicle={created} onAssign={() => {}} onClose={onClose} />);
+    render(
+      <NewVehicleSheet vehicle={created} catalogue={null} onAssign={() => {}} onClose={onClose} />,
+    );
     fireEvent.click(screen.getByRole("link", { name: "Change" }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -201,6 +235,7 @@ describe("NewVehicleSheet", () => {
     render(
       <NewVehicleSheet
         vehicle={created}
+        catalogue={null}
         onAssign={() => {}}
         onClose={onClose}
         onChange={onChange}
@@ -218,6 +253,7 @@ describe("NewVehicleSheet", () => {
     render(
       <NewVehicleSheet
         vehicle={{ ...created, sameDayUnassigned: [] }}
+        catalogue={null}
         onAssign={() => {}}
         onClose={onClose}
         onChange={onChange}
@@ -232,6 +268,7 @@ describe("NewVehicleSheet", () => {
     render(
       <NewVehicleSheet
         vehicle={created}
+        catalogue={null}
         initialTicked={[22]}
         onAssign={() => {}}
         onClose={() => {}}
@@ -244,7 +281,9 @@ describe("NewVehicleSheet", () => {
 
   it("ticks every same-day Unassigned log and assigns exactly the ticked ids", () => {
     const onAssign = vi.fn();
-    render(<NewVehicleSheet vehicle={created} onAssign={onAssign} onClose={() => {}} />);
+    render(
+      <NewVehicleSheet vehicle={created} catalogue={null} onAssign={onAssign} onClose={() => {}} />,
+    );
     const a = screen.getByRole("checkbox", { name: /a\.csv/ }) as HTMLInputElement;
     const b = screen.getByRole("checkbox", { name: /b\.csv/ }) as HTMLInputElement;
     expect([a.checked, b.checked]).toEqual([true, true]);
@@ -256,7 +295,9 @@ describe("NewVehicleSheet", () => {
   it("disables Assign with nothing ticked, and Not now closes without assigning", () => {
     const onAssign = vi.fn();
     const onClose = vi.fn();
-    render(<NewVehicleSheet vehicle={created} onAssign={onAssign} onClose={onClose} />);
+    render(
+      <NewVehicleSheet vehicle={created} catalogue={null} onAssign={onAssign} onClose={onClose} />,
+    );
     fireEvent.click(screen.getByRole("checkbox", { name: /a\.csv/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /b\.csv/ }));
     expect(
@@ -272,6 +313,7 @@ describe("NewVehicleSheet", () => {
     render(
       <NewVehicleSheet
         vehicle={{ ...created, sameDayUnassigned: [] }}
+        catalogue={null}
         onAssign={() => {}}
         onClose={() => {}}
       />,

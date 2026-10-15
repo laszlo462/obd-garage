@@ -9,6 +9,7 @@ import {
   type UploadResult,
   type VehicleChoice,
 } from "./upload-batch.ts";
+import { type Catalogue, profileName, rulePackName } from "./use-catalogue.ts";
 
 export function UploadProgressSheet(props: {
   index: number;
@@ -138,6 +139,8 @@ type Created = NonNullable<UploadResult["vehicleCreated"]>;
 
 export function NewVehicleSheet(props: {
   vehicle: Created;
+  /** Names the Profile and Rule Packs; until it loads (null), their ids show. */
+  catalogue: Catalogue | null;
   /** The ticks to start from: a sheet that was set aside and comes back keeps them. */
   initialTicked?: number[];
   onAssign: (uploadIds: number[]) => void;
@@ -173,9 +176,13 @@ export function NewVehicleSheet(props: {
           <dt>VIN</dt>
           <dd class="mono">{vehicle.vin}</dd>
           <dt>Profile</dt>
-          <dd>{vehicle.profile}</dd>
+          <dd>{profileName(props.catalogue, vehicle.profile)}</dd>
           <dt>Rule Packs</dt>
-          <dd>{vehicle.packs.length > 0 ? vehicle.packs.join(", ") : "None"}</dd>
+          <dd>
+            {vehicle.packs.length > 0
+              ? vehicle.packs.map((id) => rulePackName(props.catalogue, id)).join(", ")
+              : "None"}
+          </dd>
         </dl>
         <a
           class="menu-row link-row"
