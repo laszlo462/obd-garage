@@ -6,6 +6,10 @@ export type Comparison = {
   newCodes: string[];
   /** `dtcKey`s of the codes both Reports list. */
   alsoIn: string[];
+  /** The other Report's codes this Report lacks, in its order, one per `dtcKey`. */
+  goneCodes: Dtc[];
+  /** `dtcKey` to the statuses added and removed, for codes both Reports list whose statuses differ. */
+  statusChanges: Record<string, { added: string[]; removed: string[] }>;
   /** Monitor key to the status text the other Report printed, where the state differs. */
   monitorWas: Record<string, string>;
   /** Mode $06 key to the value text the other Report printed. */
@@ -47,14 +51,30 @@ export function compareReports(current: ParsedReport, other: ParsedReport | null
   const c: Comparison = {
     newCodes: [],
     alsoIn: [],
+    goneCodes: [],
+    statusChanges: {},
     monitorWas: {},
     mode06Was: {},
     overview: { mil: null, codes: null, monitors: null, sinceClear: null },
   };
   if (!other) return c;
   const before = new Set((other.dtcs ?? []).map(dtcKey));
+  const now = new Set((current.dtcs ?? []).map(dtcKey));
   for (const d of current.dtcs ?? [])
     (before.has(dtcKey(d)) ? c.alsoIn : c.newCodes).push(dtcKey(d));
+  for (const d of other.dtcs ?? []) {
+    if (now.has(dtcKey(d))) continue;
+    now.add(dtcKey(d));
+    c.goneCodes.push(d);
+  }
+  const codesBefore = new Map((other.dtcs ?? []).map((d) => [dtcKey(d), d] as const));
+  for (const d of current.dtcs ?? []) {
+    const was = codesBefore.get(dtcKey(d));
+    if (!was || dtcKey(d) in c.statusChanges) continue;
+    const added = d.statuses.filter((s) => !was.statuses.includes(s));
+    const removed = was.statuses.filter((s) => !d.statuses.includes(s));
+    if (added.length || removed.length) c.statusChanges[dtcKey(d)] = { added, removed };
+  }
   const monitorsBefore = new Map(monitorKeys(other));
   for (const [k, t] of monitorKeys(current)) {
     const was = monitorsBefore.get(k);

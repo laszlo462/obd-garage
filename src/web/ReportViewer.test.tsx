@@ -207,6 +207,72 @@ describe("Report viewer: trouble codes", () => {
     await waitFor(() => expect(screen.queryByText("New")).toBeNull());
     expect(screen.queryByText(/Also in/)).toBeNull();
   });
+
+  /** Aug (the compared Report) also had P1111, which Oct lacks; P0401 gained Pending since. */
+  const withGone = (description = "Intake air leak") => {
+    const data = withCodes();
+    data.reportDetails[1] = reportDetail({
+      id: 1,
+      recordedAt: "2026-08-21T21:56:40",
+      report: parsedReport({
+        dtcs: [
+          ...dtcFor(["Confirmed"]),
+          { ecu: "ECM", code: "P1111", type: "", description, statuses: ["Pending"], uds: [] },
+        ],
+      }),
+    });
+    return data;
+  };
+
+  it("lists a code the compared Report had and this one lacks as a muted row after the list", async () => {
+    renderApp(withGone());
+    const gone = (await screen.findByText("P1111")).closest("li") as HTMLElement;
+    expect(within(gone).getByText("Gone since 21 Aug")).toBeTruthy();
+    expect(within(gone).getByText("Intake air leak")).toBeTruthy();
+    expect(gone.className).toContain("dtc-gone");
+    const rows = [...panel("Trouble codes").querySelectorAll("li")];
+    expect(rows.at(-1)).toBe(gone);
+    expect(panel("Trouble codes").querySelector(".count")?.textContent).toBe("2");
+  });
+
+  it("shows no gone row with No comparison", async () => {
+    renderApp(withGone());
+    await screen.findByText("P1111");
+    fireEvent.change(screen.getByLabelText("Compared with"), { target: { value: "none" } });
+    await waitFor(() => expect(screen.queryByText("P1111")).toBeNull());
+    expect(screen.queryByText(/Gone since/)).toBeNull();
+  });
+
+  it("keeps the No trouble codes note above the gone rows when this Report has no codes", async () => {
+    const data = withGone();
+    data.reportDetails[2] = reportDetail({
+      id: 2,
+      recordedAt: "2026-10-02T21:32:14",
+      report: parsedReport({ dtcs: [] }),
+    });
+    renderApp(data);
+    expect(await screen.findByText("P1111")).toBeTruthy();
+    expect(screen.getByText("No trouble codes in this Report.")).toBeTruthy();
+    expect(screen.getByText("P0401").closest("li")?.textContent).toContain("Gone since 21 Aug");
+  });
+
+  it("shows a gone code's description as text, never as markup", async () => {
+    const markup = "<img src=x onerror=alert(1)>";
+    renderApp(withGone(markup));
+    await screen.findByText("P1111");
+    expect(within(panel("Trouble codes")).getByText(markup)).toBeTruthy();
+    expect(document.querySelector("img")).toBeNull();
+  });
+
+  it("gives a code whose statuses changed one badge listing the changes, and none to an unchanged code", async () => {
+    renderApp(withCodes());
+    const changed = (await screen.findByText("P0401")).closest("li") as HTMLElement;
+    await waitFor(() => expect(within(changed).getByText("+Pending")).toBeTruthy());
+    const fresh = screen.getByText("P0299").closest("li") as HTMLElement;
+    expect(within(fresh).queryByText(/^[+−]/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Compared with"), { target: { value: "none" } });
+    await waitFor(() => expect(screen.queryByText("+Pending")).toBeNull());
+  });
 });
 
 describe("Report viewer: readiness monitors", () => {
@@ -247,8 +313,96 @@ describe("Report viewer: readiness monitors", () => {
     const same = screen.getByText("Catalyst").closest("li") as HTMLElement;
     expect(within(same).getByText("Complete")).toBeTruthy();
     expect(within(same).queryByText(/^was/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "1 not supported" }));
     const na = screen.getByText("Evap System").closest("li") as HTMLElement;
     expect(within(na).getByText("Not supported")).toBeTruthy();
+  });
+
+  const withNotSupported = () => {
+    const data = trio();
+    data.reportDetails[2] = reportDetail({
+      id: 2,
+      recordedAt: "2026-10-02T21:32:14",
+      report: parsedReport({ monitors: monitors("incomplete") }),
+    });
+    return data;
+  };
+
+  it("counts each ECU's monitors in a line under its heading", async () => {
+    renderApp(withNotSupported());
+    const ecu = (await screen.findByRole("heading", { name: "ECM" })).closest(
+      ".monitor-ecu",
+    ) as HTMLElement;
+    expect(ecu.querySelector(".monitor-counts")?.textContent).toBe(
+      "1 complete · 1 incomplete · 1 not supported",
+    );
+  });
+
+  it("hides Not supported monitors until the n not supported toggle shows them", async () => {
+    renderApp(withNotSupported());
+    const toggle = await screen.findByRole("button", { name: "1 not supported" });
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByText("Evap System")).toBeNull();
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Evap System")).toBeTruthy();
+    fireEvent.click(toggle);
+    expect(screen.queryByText("Evap System")).toBeNull();
+  });
+
+  it("keeps the toggle open state per ECU, and leaves 0 not supported as plain text", async () => {
+    const data = trio();
+    const t = (name: string, state: "complete" | "na") => ({
+      name,
+      continuous: false,
+      status: state === "na" ? "N/A" : "Complete",
+      state,
+    });
+    data.reportDetails[2] = reportDetail({
+      id: 2,
+      recordedAt: "2026-10-02T21:32:14",
+      report: parsedReport({
+        monitors: [
+          { ecu: "ECM", tests: [t("Catalyst", "complete"), t("Evap System", "na")] },
+          { ecu: "TCM", tests: [t("Shift", "complete"), t("Clutch", "na")] },
+          { ecu: "ABS", tests: [t("Pump", "complete")] },
+        ],
+      }),
+    });
+    renderApp(data);
+    const toggles = await screen.findAllByRole("button", { name: "1 not supported" });
+    expect(toggles).toHaveLength(2);
+    fireEvent.click(toggles[0] as HTMLElement);
+    expect(screen.getByText("Evap System")).toBeTruthy();
+    expect(screen.queryByText("Clutch")).toBeNull();
+    expect(screen.getByText("0 not supported")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /not supported/ })).toHaveLength(2);
+  });
+
+  it("still says what a monitor was when Not supported ones above it are hidden", async () => {
+    const data = trio();
+    const t = (name: string, state: "complete" | "incomplete" | "na") => ({
+      name,
+      continuous: false,
+      status: state === "na" ? "N/A" : state === "complete" ? "Complete" : "Incomplete",
+      state,
+    });
+    const build = (last: "complete" | "incomplete") => [
+      { ecu: "ECM", tests: [t("Reserved", "na"), t("Reserved", last)] },
+    ];
+    data.reportDetails[2] = reportDetail({
+      id: 2,
+      recordedAt: "2026-10-02T21:32:14",
+      report: parsedReport({ monitors: build("incomplete") }),
+    });
+    data.reportDetails[1] = reportDetail({
+      id: 1,
+      recordedAt: "2026-08-21T21:56:40",
+      report: parsedReport({ monitors: build("complete") }),
+    });
+    renderApp(data);
+    const row = (await screen.findByText("Reserved")).closest("li") as HTMLElement;
+    await waitFor(() => expect(within(row).getByText("was Complete")).toBeTruthy());
   });
 
   it("groups the monitors under their ECU", async () => {

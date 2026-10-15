@@ -1,4 +1,4 @@
-import type { Dtc, MonitorState } from "../../core/report.ts";
+import type { Dtc, MonitorState, MonitorTest } from "../../core/report.ts";
 
 export type BadgeTone = "bad" | "warn" | "ok" | "neutral";
 
@@ -12,12 +12,25 @@ function statusTone(s: string): BadgeTone {
   return /pending/i.test(s) ? "warn" : "neutral";
 }
 
-/** One badge per status the Report printed. Confirmed reads as "Stored", as on the status strip. */
+/** A status as shown: Confirmed reads as "Stored", as on the status strip. */
+export const statusLabel = (s: string): string => (/^confirmed$/i.test(s) ? "Stored" : s);
+
+/** One badge per status the Report printed. */
 export function dtcBadges(d: Dtc): Badge[] {
-  return d.statuses.map((s) => ({
-    label: /^confirmed$/i.test(s) ? "Stored" : s,
-    tone: statusTone(s),
-  }));
+  return d.statuses.map((s) => ({ label: statusLabel(s), tone: statusTone(s) }));
+}
+
+/** The status-change badge text, added first: "+Stored −Pending". */
+export function statusChangeText(c: { added: string[]; removed: string[] }): string {
+  const added = c.added.map((s) => `+${statusLabel(s)}`);
+  const removed = c.removed.map((s) => `−${statusLabel(s)}`);
+  return [...added, ...removed].join(" ");
+}
+
+/** How many of an ECU's tests are complete, incomplete and not supported. */
+export function monitorCounts(tests: MonitorTest[]) {
+  const n = (state: MonitorState) => tests.filter((t) => t.state === state).length;
+  return { complete: n("complete"), incomplete: n("incomplete"), notSupported: n("na") };
 }
 
 /** The code's own colour: bad, warn when only pending, muted when only historical. */

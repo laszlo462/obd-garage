@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parseReport } from "../../core/report.ts";
-import { compareReports } from "./compare.ts";
+import { compareReports, dtcKey } from "./compare.ts";
 import { dtc, monitorTest, report } from "./test-reports.ts";
 
 const empty = {
   newCodes: [],
   alsoIn: [],
+  goneCodes: [],
+  statusChanges: {},
   monitorWas: {},
   mode06Was: {},
   overview: { mil: null, codes: null, monitors: null, sinceClear: null },
@@ -30,6 +32,37 @@ describe("compareReports", () => {
     const c = compareReports(current, other);
     expect(c.newCodes).toEqual(["ECM|P0299", "TCM|P0401"]);
     expect(c.alsoIn).toEqual(["ECM|P0401"]);
+  });
+});
+
+describe("compareReports: gone codes", () => {
+  it("lists the other Report's codes this one lacks, in its order and once per key", () => {
+    const current = report({ dtcs: [dtc("P0401", ["Confirmed"])] });
+    const gone = dtc("P0299", ["Pending"]);
+    const other = report({
+      dtcs: [gone, dtc("P0401", ["Confirmed"]), dtc("P1111", ["Confirmed"]), gone],
+    });
+    expect(compareReports(current, other).goneCodes.map((d) => d.code)).toEqual(["P0299", "P1111"]);
+  });
+
+  it("tells a code on another ECU apart", () => {
+    const current = report({ dtcs: [dtc("P0401", ["Confirmed"])] });
+    const other = report({ dtcs: [dtc("P0401", ["Confirmed"], { ecu: "TCM" })] });
+    expect(compareReports(current, other).goneCodes.map(dtcKey)).toEqual(["TCM|P0401"]);
+  });
+});
+
+describe("compareReports: status changes", () => {
+  it("gives the statuses added and removed on a code both Reports list, and none when equal", () => {
+    const current = report({
+      dtcs: [dtc("P0401", ["Confirmed", "Pending"]), dtc("P0299", ["Pending"])],
+    });
+    const other = report({
+      dtcs: [dtc("P0401", ["Pending", "Permanent"]), dtc("P0299", ["Pending"])],
+    });
+    expect(compareReports(current, other).statusChanges).toEqual({
+      "ECM|P0401": { added: ["Confirmed"], removed: ["Permanent"] },
+    });
   });
 });
 
