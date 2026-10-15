@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "preact/hooks";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
+import { drawFreezeLines } from "../events/draw-freeze-lines.ts";
 import { drawOverlays } from "../events/draw-overlays.ts";
+import { freezeLines } from "./freeze-lines.ts";
 import { createGestureTracker, type Intent, type TouchPoint } from "./gesture-tracker.ts";
 import { nearestRow } from "./nearest-row.ts";
 import { AXIS_HEIGHT, panelOptions } from "./panel-options.ts";
@@ -37,6 +39,8 @@ export function DriveChart(props: {
     startSec: number | null;
     endSec: number | null;
   }[];
+  /** The Reference Report's freeze-frame values, drawn as dashed lines over the series they match. */
+  freezeFrame: readonly { key: string; value: number }[];
   cursorRow: number;
   onCursorRow(row: number): void;
   /** A new range to show, or `null` for the whole drive. */
@@ -77,6 +81,7 @@ export function DriveChart(props: {
         showTimeAxis: last,
         startSec,
         series: panel.series.map((s) => ({ label: s.label, color: colors[s.index] ?? ink })),
+        freezeValues: freezeLines(panel, props.freezeFrame).map((l) => l.value),
         range: props.range,
         ink,
         surface,
@@ -88,6 +93,17 @@ export function DriveChart(props: {
       options.hooks = {
         ...options.hooks,
         drawClear: [(u) => drawOverlays(u, live.current.events)],
+        // Over the series, so a line is never hidden by a fill.
+        draw: [
+          (u) =>
+            drawFreezeLines(
+              u,
+              freezeLines(panel, live.current.freezeFrame).map((l) => ({
+                value: l.value,
+                color: colors[l.colorIndex] ?? ink,
+              })),
+            ),
+        ],
       };
       return new uPlot(
         options,
@@ -111,7 +127,15 @@ export function DriveChart(props: {
       for (const u of built) u.destroy();
       charts.current = [];
     };
-  }, [props.t, props.panels, props.colors, props.scheme, props.desktop, props.startSec]);
+  }, [
+    props.t,
+    props.panels,
+    props.colors,
+    props.scheme,
+    props.desktop,
+    props.startSec,
+    props.freezeFrame,
+  ]);
 
   // Show the range.
   useEffect(() => {

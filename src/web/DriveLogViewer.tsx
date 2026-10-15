@@ -8,6 +8,7 @@ import { ChannelChips } from "./chart/ChannelChips.tsx";
 import { startSecondOfDay } from "./chart/clock.ts";
 import { DataTable } from "./chart/DataTable.tsx";
 import { DriveChart } from "./chart/DriveChart.tsx";
+import { freezeLines } from "./chart/freeze-lines.ts";
 import { Notices } from "./chart/Notices.tsx";
 import { nearestRow } from "./chart/nearest-row.ts";
 import { Overview } from "./chart/Overview.tsx";
@@ -22,6 +23,8 @@ import { inPackSpan } from "./events/in-pack-span.ts";
 import { Legend } from "./events/Legend.tsx";
 import { outcomeLines } from "./events/outcome-lines.ts";
 import { count, duration, reportTitle } from "./format.ts";
+import { ReferenceReportSheet } from "./ReferenceReportSheet.tsx";
+import { referenceChipText } from "./reference-chip.ts";
 import { useBarMenu } from "./use-bar-menu.ts";
 import { useDetailLoad } from "./use-detail-load.ts";
 import { useIsDesktop } from "./viewport.ts";
@@ -63,6 +66,7 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
   const toggle = (key: string) =>
     setCharted((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   const [allChannels, setAllChannels] = useState(false);
+  const [referenceSheet, setReferenceSheet] = useState(false);
   const panels = useMemo(
     () => pickerPanels(detail.chartPreset, charted, payload.channels),
     [detail.chartPreset, charted, payload.channels],
@@ -89,10 +93,12 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
   const minSpan = Math.min(whole.max - whole.min, Math.max(1, (whole.max - whole.min) / 500));
   const zoomTo = (next: Range | null) => setRange(next ? clampRange(next, whole, minSpan) : whole);
   const startSec = startSecondOfDay(detail.metadata.startTime);
-  // Look-alikes wait for their switch (#61).
+  // The switch is per Drive Log (the body is keyed by id) and never saved. An Unassigned log has none.
+  const [lookAlikes, setLookAlikes] = useState(false);
+  const unassigned = detail.vehicleId === null;
   const shownEvents = useMemo(
-    () => detail.events.filter((e) => e.category !== "look-alike"),
-    [detail.events],
+    () => (lookAlikes ? detail.events : detail.events.filter((e) => e.category !== "look-alike")),
+    [detail.events, lookAlikes],
   );
   const packNames = useMemo(
     () =>
@@ -114,6 +120,9 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
             count(detail.channels.t.length, "row"),
           ].join(" · ")}
         </p>
+        <button type="button" class="reference-chip" onClick={() => setReferenceSheet(true)}>
+          {referenceChipText(detail.referenceReport, { unassigned: detail.vehicleId === null })}
+        </button>
       </div>
       <div class="viewer-grid">
         <div class="viewer-main">
@@ -152,11 +161,17 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
               desktop={desktop}
               range={range}
               events={shownEvents}
+              freezeFrame={detail.referenceReport.freezeFrame}
               cursorRow={row}
               onCursorRow={setRow}
               onRange={zoomTo}
             />
-            <Legend events={shownEvents} />
+            <Legend
+              events={shownEvents}
+              freezeFrame={panels.some(
+                (p) => freezeLines(p, detail.referenceReport.freezeFrame).length > 0,
+              )}
+            />
           </div>
           <DataTable
             t={t}
@@ -170,9 +185,8 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
           <EventsPanel
             events={shownEvents}
             packNames={packNames}
-            notRun={outcomeLines(detail.ruleOutcomes, {
-              unassigned: detail.vehicleId === null,
-            })}
+            notRun={outcomeLines(detail.ruleOutcomes, { unassigned })}
+            lookAlikes={unassigned ? null : { on: lookAlikes, onChange: setLookAlikes }}
             onSeek={(e) => {
               setRow(Math.max(0, nearestRow(t, e.startSec ?? 0)));
               chartCard.current?.scrollIntoView({ block: "nearest" });
@@ -187,6 +201,14 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
           charted={charted}
           onToggle={toggle}
           onClose={() => setAllChannels(false)}
+        />
+      )}
+      {referenceSheet && detail.vehicleId !== null && (
+        <ReferenceReportSheet
+          logId={detail.id}
+          vehicleId={detail.vehicleId}
+          referenceReport={detail.referenceReport}
+          onClose={() => setReferenceSheet(false)}
         />
       )}
       {menu && (

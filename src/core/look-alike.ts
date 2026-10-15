@@ -1,7 +1,13 @@
-import { type ChannelKey, channel, STANDARD_CATALOGUE } from "./channels.ts";
-import type { FreezeFrame } from "./report.ts";
+import {
+  type Catalogue,
+  type ChannelKey,
+  channel,
+  type LogColumn,
+  STANDARD_CATALOGUE,
+} from "./channels.ts";
+import type { FreezeFrame, PidRow } from "./report.ts";
 import type { EventDraft, NotApplicable, Rule, RuleContext, RuleLog } from "./rules.ts";
-import { normaliseUnit } from "./units.ts";
+import { convert, normaliseUnit } from "./units.ts";
 
 /** Id of the rule. A Vehicle Profile overrides its tolerances through `params["core.look-alike"]`. */
 export const LOOK_ALIKE_ID = "core.look-alike";
@@ -87,31 +93,66 @@ function mergeSpans(spans: { t0: number; t1: number }[]): { t0: number; t1: numb
   return out;
 }
 
-function targetsFrom(frame: FreezeFrame, log: RuleLog, ctx: RuleContext): { targets: Target[] } {
-  const catalogue = ctx.catalogue ?? STANDARD_CATALOGUE;
+type MatchedRow = { key: ChannelKey; label: string; row: PidRow };
+
+/**
+ * The freeze-frame rows that name a condition Channel: a number, a unit, a known Channel that is not a
+ * counter, the first row for each Channel.
+ */
+function conditionRows(frame: FreezeFrame, catalogue: Catalogue): MatchedRow[] {
   const seen = new Set<ChannelKey>();
-  const targets: Target[] = [];
+  const out: MatchedRow[] = [];
   for (const row of frame.rows) {
     if (row.number === null || row.units === "") continue;
     const m = catalogue.match(row.description);
     if (!m.known || NOT_CONDITIONS.has(m.key) || seen.has(m.key)) continue;
     seen.add(m.key);
+    out.push({ key: m.key, label: m.label, row });
+  }
+  return out;
+}
+
+function targetsFrom(frame: FreezeFrame, log: RuleLog, ctx: RuleContext): { targets: Target[] } {
+  const targets: Target[] = [];
+  for (const { key, label, row } of conditionRows(frame, ctx.catalogue ?? STANDARD_CATALOGUE)) {
+    const number = row.number as number;
     // A Channel the log lacks, or whose unit cannot convert to the report's, is not shared.
-    const col = channel(log.channels, m.key, row.units);
+    const col = channel(log.channels, key, row.units);
     if (!col.ok) continue;
-    const tol = toleranceFor(ctx, m.key, row.units);
-    const half = Math.max(Math.abs(row.number) * tol.relative, tol.min);
+    const tol = toleranceFor(ctx, key, row.units);
+    const half = Math.max(Math.abs(number) * tol.relative, tol.min);
     targets.push({
-      key: m.key,
-      label: m.label,
-      value: row.number,
+      key,
+      label,
+      value: number,
       unit: row.units,
       values: col.values,
-      lo: row.number - half,
-      hi: row.number + half,
+      lo: number - half,
+      hi: number + half,
     });
   }
   return { targets };
+}
+
+/**
+ * The freeze frame's values for the Channels the log has, each in the log Channel's unit: what the viewer
+ * draws as freeze-frame lines. Uses the same row matching as the Look-alike rule; a row is left out when
+ * the log lacks the Channel, the Channel has no unit, or the units do not convert.
+ */
+export function freezeFrameLines(
+  frame: FreezeFrame,
+  channels: ReadonlyMap<ChannelKey, Pick<LogColumn, "unit">>,
+  catalogue: Catalogue = STANDARD_CATALOGUE,
+): { key: ChannelKey; value: number }[] {
+  const out: { key: ChannelKey; value: number }[] = [];
+  for (const { key, row } of conditionRows(frame, catalogue)) {
+    const column = channels.get(key);
+    if (column?.unit === undefined) continue;
+    const converted = convert([row.number as number], row.units, column.unit);
+    const value = converted.ok ? converted.values[0] : undefined;
+    if (value !== undefined) out.push({ key, value });
+  }
+  return out;
 }
 
 /**

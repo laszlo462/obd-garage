@@ -1,7 +1,8 @@
 /** How a shape is drawn, so the kinds differ by pattern and not only by hue. */
-export type OverlayPattern = "fill" | "dashed-line" | "hatch";
+export type OverlayPattern = "fill" | "dashed-line" | "hatch" | "outline";
 
 export function overlayPattern(shape: { kind: string; category: string }): OverlayPattern {
   if (shape.kind === "point") return "dashed-line";
+  if (shape.category === "look-alike") return "outline";
   return shape.category === "pack" ? "hatch" : "fill";
 }

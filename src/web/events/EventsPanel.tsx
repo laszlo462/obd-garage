@@ -15,6 +15,8 @@ export function EventsPanel(props: {
   packNames: ReadonlyMap<string, string>;
   /** The muted lines for rules that did not run. */
   notRun: readonly string[];
+  /** The Look-alikes switch; `null` hides it (an Unassigned log has no Reference Report). */
+  lookAlikes: { on: boolean; onChange(on: boolean): void } | null;
   onSeek(event: EventRow): void;
 }) {
   const rows = [...props.events]
@@ -22,9 +24,23 @@ export function EventsPanel(props: {
     .sort((a, b) => (a.startSec as number) - (b.startSec as number));
   return (
     <section class="events-panel" aria-label="Events">
-      <h3 class="events-head">
-        Events<span class="count">{rows.length}</span>
-      </h3>
+      <div class="events-header">
+        <h3 class="events-head">
+          Events<span class="count">{rows.length}</span>
+        </h3>
+        {props.lookAlikes && (
+          <label class="switch-row look-switch">
+            <input
+              type="checkbox"
+              role="switch"
+              aria-checked={props.lookAlikes.on}
+              checked={props.lookAlikes.on}
+              onChange={(e) => props.lookAlikes?.onChange(e.currentTarget.checked)}
+            />
+            Look-alikes
+          </label>
+        )}
+      </div>
       <ul class="events-list">
         {rows.map((e) => (
           <li key={`${e.ruleId}@${e.startSec}`}>

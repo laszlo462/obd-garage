@@ -2,8 +2,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { type ChannelKey, createCatalogue, type LogColumn } from "./channels.ts";
 import { derive, GENERIC_PROFILE, type Profile, type VehicleContext } from "./derive.ts";
-import { LOOK_ALIKE_ID, lookAlike } from "./look-alike.ts";
-import { type ParsedReport, type PidRow, parseReport } from "./report.ts";
+import { freezeFrameLines, LOOK_ALIKE_ID, lookAlike } from "./look-alike.ts";
+import { type FreezeFrame, type ParsedReport, type PidRow, parseReport } from "./report.ts";
 import type { RuleLog } from "./rules.ts";
 
 const row = (description: string, number: number | null, units: string): PidRow => ({
@@ -348,4 +348,60 @@ describe("Look-alikes on the fixture Drive Logs", () => {
       }).toMatchSnapshot();
     });
   }
+});
+
+describe("freezeFrameLines", () => {
+  const frameOf = (rows: PidRow[]) => report(rows).freezeFrames?.[0] as FreezeFrame;
+  const view = (cols: Record<string, LogColumn>) => new Map(Object.entries(cols));
+
+  it("gives each matched Channel's value", () => {
+    const channels = view({
+      rpm: { unit: "RPM", values: [900] },
+      speed: { unit: "km/h", values: [40] },
+      load: { unit: "%", values: [30] },
+    });
+    expect(freezeFrameLines(frameOf(FRAME), channels)).toEqual([
+      { key: "rpm", value: 1000 },
+      { key: "speed", value: 50 },
+      { key: "load", value: 40 },
+    ]);
+  });
+
+  it("leaves out a Channel the log lacks", () => {
+    const channels = view({ speed: { unit: "km/h", values: [40] } });
+    expect(freezeFrameLines(frameOf(FRAME), channels)).toEqual([{ key: "speed", value: 50 }]);
+  });
+
+  it("converts the value into the log Channel's unit", () => {
+    const channels = view({ speed: { unit: "mph", values: [40] } });
+    const [line] = freezeFrameLines(frameOf([row("Vehicle speed", 80.4672, "km/h")]), channels);
+    expect(line?.key).toBe("speed");
+    expect(line?.value).toBeCloseTo(50, 6);
+  });
+
+  it("leaves out a row whose unit will not convert", () => {
+    const channels = view({ speed: { unit: "kPa", values: [40] } });
+    expect(freezeFrameLines(frameOf([row("Vehicle speed", 50, "km/h")]), channels)).toEqual([]);
+  });
+
+  it("leaves out a Channel that has no unit in the log", () => {
+    const channels = view({ speed: { values: [40] } });
+    expect(freezeFrameLines(frameOf([row("Vehicle speed", 50, "km/h")]), channels)).toEqual([]);
+  });
+
+  it("leaves out rows with no number or no unit, and the time Channels", () => {
+    const channels = view({
+      rpm: { unit: "RPM", values: [900] },
+      speed: { unit: "km/h", values: [40] },
+      load: { unit: "%", values: [30] },
+      runTime: { unit: "s", values: [5] },
+    });
+    const frame = frameOf([
+      row("Engine RPM", null, "RPM"),
+      row("Vehicle speed", 50, ""),
+      row("Calculated load value", 40, "%"),
+      row("Run time since engine start", 600, "s"),
+    ]);
+    expect(freezeFrameLines(frame, channels)).toEqual([{ key: "load", value: 40 }]);
+  });
 });

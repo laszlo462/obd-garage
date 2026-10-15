@@ -60,6 +60,15 @@ export function drawOverlays(
       ctx.lineTo(x0, top + height);
       ctx.stroke();
       ctx.setLineDash([]);
+    } else if (pattern === "outline") {
+      const color = token("--ev-look");
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = color;
+      ctx.fillRect(x0, top, x1 - x0, height);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5 * ratio;
+      ctx.strokeRect(x0, top, x1 - x0, height);
     } else if (pattern === "fill") {
       ctx.fillStyle = token("--ev-generic");
       ctx.fillRect(x0, top, x1 - x0, height);

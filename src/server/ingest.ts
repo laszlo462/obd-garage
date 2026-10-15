@@ -478,6 +478,7 @@ export function createIngest(deps: IngestDeps & { db: Db }) {
     rederiveStale,
     rederiveVehicleLogs,
     rederiveChangedDefaults,
+    defaultReferenceReportId,
   };
 }
 
