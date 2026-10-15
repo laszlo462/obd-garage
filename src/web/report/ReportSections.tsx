@@ -5,7 +5,8 @@ import type { Comparison } from "./compare.ts";
 import { Iumpr } from "./Iumpr.tsx";
 import { Mode06 } from "./Mode06.tsx";
 import { Monitors } from "./Monitors.tsx";
-import { FreezeFrames, PidList } from "./PidList.tsx";
+import { FreezeFrames, LivePidList } from "./PidList.tsx";
+import { pidWas } from "./pids.ts";
 import { TroubleCodes } from "./TroubleCodes.tsx";
 import { VehicleInfo } from "./VehicleInfo.tsx";
 import { vehicleInfoRows } from "./vehicle-info.ts";
@@ -46,10 +47,14 @@ export function ReportSections(props: {
         />
       </Section>
       <Section title="Freeze frame" count={report.freezeFrames?.length ?? 0}>
-        <FreezeFrames frames={report.freezeFrames ?? []} />
+        <FreezeFrames frames={report.freezeFrames ?? []} other={other?.freezeFrames ?? null} />
       </Section>
       <Section title="Live data" count={report.liveData?.length ?? 0}>
-        <PidList rows={report.liveData ?? []} />
+        <LivePidList
+          rows={report.liveData ?? []}
+          other={other ? (other.liveData ?? []) : null}
+          was={pidWas(report.liveData ?? [], other ? (other.liveData ?? []) : null)}
+        />
       </Section>
       <Section title="IUMPR" count={report.iumpr?.length ?? 0}>
         <Iumpr

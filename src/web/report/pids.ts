@@ -1,4 +1,5 @@
-import type { PidRow } from "../../core/report.ts";
+import type { FreezeFrame, PidRow } from "../../core/report.ts";
+import { keyed } from "./compare.ts";
 import { dec, fmtNum, num } from "./numbers.ts";
 
 /** Mode $01 groups, in display order. A row goes to the first group whose pattern matches. */
@@ -27,13 +28,65 @@ export type PidGroup = { group: string; rows: PidRow[] };
 const groupOf = (r: PidRow): string =>
   GROUPS.find(([, re]) => re.test(r.description))?.[0] ?? "Other";
 
-/** Rows under their group, in group order. Support rows are dropped unless `support` is set. */
-export function groupPids(rows: PidRow[], opts: { support?: boolean } = {}): PidGroup[] {
-  const kept = rows.filter((r) => opts.support || !isSupportRow(r));
+/** Rows under their group, in group order. Support rows are dropped. */
+export function groupPids(rows: PidRow[]): PidGroup[] {
+  const kept = rows.filter((r) => !isSupportRow(r));
   return GROUPS.map(([group]) => ({
     group,
     rows: kept.filter((r) => groupOf(r) === group),
   })).filter((g) => g.rows.length > 0);
+}
+
+const pidKeys = (rows: PidRow[]) => keyed(rows, (r) => `${r.pid}|${r.description}`);
+
+/** Each row of this Report to the compared row's value text, where the value differs. Empty with none. */
+export function pidWas(rows: PidRow[], other: PidRow[] | null): Map<PidRow, string> {
+  const was = new Map<PidRow, string>();
+  if (!other) return was;
+  const before = new Map(pidKeys(other));
+  for (const [k, r] of pidKeys(rows)) {
+    const b = before.get(k);
+    if (b && b.value !== r.value) was.set(r, b.value);
+  }
+  return was;
+}
+
+/** `pidWas` across freeze frames, which match on their title. */
+export function freezeFrameWas(
+  frames: FreezeFrame[],
+  other: FreezeFrame[] | null,
+): Map<PidRow, string> {
+  const was = new Map<PidRow, string>();
+  if (!other) return was;
+  const before = new Map(keyed(other, (f) => f.title));
+  for (const [k, f] of keyed(frames, (f) => f.title)) {
+    const b = before.get(k);
+    if (b) for (const [r, v] of pidWas(f.rows, b.rows)) was.set(r, v);
+  }
+  return was;
+}
+
+/** Rows whose name contains the text, ignoring case. A blank filter keeps every row. */
+export function filterPids(rows: PidRow[], query: string): PidRow[] {
+  const q = query.trim().toLowerCase();
+  return q ? rows.filter((r) => r.description.toLowerCase().includes(q)) : rows;
+}
+
+const isTimer = (r: PidRow) => /EI-AECD/i.test(r.description);
+
+/** Drops EI-AECD timers at 0 here and at 0 or absent in the compared Report; says how many. */
+export function hideIdleTimers(
+  rows: PidRow[],
+  other: PidRow[] | null,
+): { rows: PidRow[]; hidden: number } {
+  const before = new Map(pidKeys(other ?? []));
+  const idle = new Set<PidRow>();
+  for (const [k, r] of pidKeys(rows)) {
+    if (!isTimer(r) || num(r.value) !== 0) continue;
+    const b = before.get(k);
+    if (!b || num(b.value) === 0) idle.add(r);
+  }
+  return { rows: rows.filter((r) => !idle.has(r)), hidden: idle.size };
 }
 
 const PAIRS: [string, RegExp, RegExp][] = [

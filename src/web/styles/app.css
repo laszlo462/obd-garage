@@ -1156,6 +1156,19 @@ a.btn-primary[aria-disabled="true"] {
   border-radius: var(--radius-control);
 }
 
+.pid-filter {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 12px;
+  padding: 0 10px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+}
+
 .tile {
   display: flex;
   flex-direction: column;
