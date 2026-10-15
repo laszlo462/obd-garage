@@ -106,7 +106,6 @@ export function Mode06(props: {
                 <span class="m06-value">{fmtNum(t.valueText)}</span>
                 <span class="m06-unit">{t.units}</span>
                 {was !== undefined && <span class="was">{`was ${fmtNum(was)}`}</span>}
-                {limitsWas !== undefined && <span class="was">{limitsWasText(limitsWas)}</span>}
               </span>
               <span class={`m06-headroom tone-${head.tone}`}>{head.text}</span>
               <Gauge test={t} />
@@ -114,6 +113,9 @@ export function Mode06(props: {
                 <span>{`min ${limitText(t.minText, t.min)}`}</span>
                 <span>{`max ${limitText(t.maxText, t.max)}`}</span>
               </span>
+              {limitsWas !== undefined && (
+                <span class="was m06-limits-was">{limitsWasText(limitsWas)}</span>
+              )}
             </li>
           );
         })}
