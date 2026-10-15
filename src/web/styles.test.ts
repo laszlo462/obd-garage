@@ -321,6 +321,92 @@ describe("Events list markers", () => {
   });
 });
 
+describe("Note bar", () => {
+  const desktop = media("min-width: 900px");
+
+  it("fixes the bar to the bottom with safe-area padding, over the content and under the sheets", () => {
+    const bar = rule(".note-bar") ?? "";
+    expect(bar).toMatch(/position:\s*fixed/);
+    expect(bar).toMatch(/bottom:\s*0/);
+    expect(bar).toMatch(/env\(safe-area-inset-bottom\)/);
+    const z = (sel: string) => Number(/z-index:\s*(\d+)/.exec(rule(sel) ?? "")?.[1] ?? 0);
+    expect(z(".note-bar")).toBeGreaterThan(0);
+    expect(z(".scrim")).toBeGreaterThan(z(".note-bar"));
+  });
+
+  it("floats a centred 420px bar from 900px up", () => {
+    const wide = rule(".note-bar", desktop) ?? "";
+    expect(wide).toMatch(/max-width:\s*420px/);
+    expect(wide).toMatch(/left:\s*50%/);
+    expect(wide).toMatch(/translateX\(-50%\)/);
+  });
+
+  it("declares the base bar rules before the 900px block, so they cannot shadow its overrides", () => {
+    const at = css.search(/^\.note-bar[ ,{]/m);
+    expect(at).toBeGreaterThanOrEqual(0);
+    expect(at).toBeLessThan(css.indexOf("@media (min-width: 900px)"));
+  });
+
+  it("draws the steppers 52 by 44px with a 9.5px caption", () => {
+    expect(rule(".note-step")).toMatch(/width:\s*52px/);
+    expect(rule(".note-step")).toMatch(/height:\s*44px/);
+    expect(rule(".note-step small")).toMatch(/font-size:\s*9\.5px/);
+  });
+
+  it("gives the centre button a fixed share of the bar, so nothing reflows while stepping", () => {
+    const here = rule(".note-here") ?? "";
+    expect(here).toMatch(/flex:\s*1/);
+    expect(here).toMatch(/min-width:\s*0/);
+    expect(here).toMatch(/white-space:\s*nowrap/);
+    expect(here).toMatch(/font-variant-numeric:\s*tabular-nums/);
+  });
+
+  it("turns the centre button --note on a pinned row", () => {
+    expect(rule(".note-here-pinned")).toMatch(/background:\s*var\(--note\)/);
+  });
+
+  it("keeps the viewer's content clear of the bar", () => {
+    expect(rule("main.viewer")).toMatch(/padding-bottom:\s*calc\(/);
+  });
+
+  it("stops touch gestures on the steppers from zooming or selecting text", () => {
+    expect(rule(".note-step")).toMatch(/touch-action:\s*manipulation/);
+    expect(rule(".note-step")).toMatch(/user-select:\s*none/);
+    expect(rule(".note-step")).toMatch(/-webkit-touch-callout:\s*none/);
+  });
+});
+
+describe("pinned Notes on the chart", () => {
+  it("gives a pin head a 36px hit area over a --note head, above the first panel", () => {
+    expect(rule(".pin-heads")).toMatch(/position:\s*relative/);
+    expect(rule(".pin-heads")).toMatch(/height:\s*0/);
+    const head = rule(".pin-head") ?? "";
+    expect(head).toMatch(/position:\s*absolute/);
+    expect(head).toMatch(/width:\s*36px/);
+    expect(head).toMatch(/height:\s*36px/);
+    expect(head).toMatch(/translateX\(-50%\)/);
+    expect(rule(".pin-head i")).toMatch(/background:\s*var\(--note\)/);
+  });
+
+  it("marks a Note in the Events list and the legend with --note", () => {
+    expect(rule(".event-marker-pin")).toMatch(/var\(--note\)/);
+    expect(rule(".legend-swatch-note")).toMatch(/background:\s*var\(--note\)/);
+  });
+});
+
+describe("Note sheets and lists", () => {
+  it("fills the width with the text field, and keeps it in the body font", () => {
+    expect(rule(".note-field")).toMatch(/width:\s*100%/);
+    expect(rule(".note-field")).toMatch(/font:\s*inherit/);
+  });
+
+  it("makes each listed Note a full-width tap target that wraps long text", () => {
+    expect(rule(".note-row")).toMatch(/width:\s*100%/);
+    expect(rule(".note-text")).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule(".note-view-text")).toMatch(/white-space:\s*pre-wrap/);
+  });
+});
+
 describe("desktop overrides", () => {
   /** `source` with every @media block cut out, so only base rules are left. */
   function withoutMedia(source: string): string {

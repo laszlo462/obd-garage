@@ -1,4 +1,5 @@
 import type { ParsedReport } from "../../core/report.ts";
+import { ReportNotes } from "../notes/ReportNotes.tsx";
 import { Section } from "../Section.tsx";
 import type { Comparison } from "./compare.ts";
 import { Iumpr } from "./Iumpr.tsx";
@@ -11,6 +12,8 @@ import { vehicleInfoRows } from "./vehicle-info.ts";
 
 /** The collapsible sections of the viewer, in DESIGN.md order, with its open and closed defaults. */
 export function ReportSections(props: {
+  /** The Report's upload id, for its Notes. */
+  uploadId: number;
   report: ParsedReport;
   comparison: Comparison;
   /** The compared Report's short date, or null with No comparison. */
@@ -55,7 +58,7 @@ export function ReportSections(props: {
         <VehicleInfo report={report} />
       </Section>
       <Section title="Notes" defaultOpen>
-        <p class="list-note">Notes for this Report will appear here.</p>
+        <ReportNotes uploadId={props.uploadId} />
       </Section>
     </>
   );

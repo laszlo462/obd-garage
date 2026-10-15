@@ -13,4 +13,9 @@ export type StatusData = InferResponseType<Api["api"]["vehicles"][":id"]["status
 export type FailedUploadRow = InferResponseType<Api["api"]["failed-uploads"]["$get"], 200>[number];
 export type ProfileRow = InferResponseType<Api["api"]["profiles"]["$get"], 200>[number];
 export type RulePackRow = InferResponseType<Api["api"]["rule-packs"]["$get"], 200>[number];
+/** One Note as `GET /api/uploads/:id/notes` answers, with the row it snaps to when pinned. */
+export type NoteView = InferResponseType<
+  Api["api"]["uploads"][":id"]["notes"]["$get"],
+  200
+>[number];
 export type VehicleRow = InferResponseType<Api["api"]["vehicles"]["$get"], 200>[number];

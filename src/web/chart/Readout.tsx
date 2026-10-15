@@ -15,15 +15,19 @@ export function Readout(props: {
   startSec: number;
   /** The cursor is inside a Rule Pack span. */
   inWindow: boolean;
+  /** A Note is pinned at the cursor row. */
+  noted: boolean;
 }) {
-  const { series, colors, row, elapsed, startSec, inWindow } = props;
+  const { series, colors, row, elapsed, startSec, inWindow, noted } = props;
   return (
     <section class="readout" aria-label="Readout">
       <div class="readout-time">
         <span class="readout-clock">{clockAt(startSec, elapsed)}</span>
         <span class="readout-elapsed">{elapsedAt(elapsed)}</span>
-        <span class="readout-flag" style={inWindow ? { color: "var(--ev-pack)" } : undefined}>
-          {inWindow ? "● IN WINDOW" : ""}
+        <span class="readout-flag">
+          {inWindow && <span style={{ color: "var(--ev-pack)" }}>● IN WINDOW</span>}
+          {inWindow && noted && " · "}
+          {noted && <span style={{ color: "var(--note)" }}>● Note</span>}
         </span>
       </div>
       <ul class="readout-slots">
