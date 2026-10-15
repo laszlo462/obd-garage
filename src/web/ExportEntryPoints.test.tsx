@@ -93,13 +93,15 @@ describe("Export entry point: Drive Log viewer", () => {
     );
   });
 
-  it("opens the Unassigned scope with just this log when the log is Unassigned", async () => {
+  it("labels the row Export… on an Unassigned log and opens the Unassigned scope with just this log", async () => {
     renderApp({
       vehicles,
       driveLogDetails: { 1: driveLogDetail({ id: 1, vehicleId: null }) },
     });
     fireEvent.click(await screen.findByRole("button", { name: "More" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Export this day…" }));
+    const menu = await screen.findByRole("dialog", { name: "Drive Log" });
+    expect(within(menu).queryByRole("button", { name: "Export this day…" })).toBeNull();
+    fireEvent.click(within(menu).getByRole("button", { name: "Export…" }));
 
     const sheet = await screen.findByRole("dialog", { name: "Export 1 Drive Log" });
     const ids = [...sheet.querySelectorAll<HTMLInputElement>('input[name="logIds"]')];

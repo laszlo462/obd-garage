@@ -289,7 +289,7 @@ where it sits.
 | **Recent** (tab) | Tab bar; the default screen | Stat strip for the Current Vehicle, then "Recent uploads" rows (both kinds, newest first). No Unassigned logs. |
 | **Reports** (tab) | Tab bar | Upload rows for the Current Vehicle's Diagnostic Reports. |
 | **Drive Logs** (tab) | Tab bar | Upload rows for the Current Vehicle's Drive Logs, grouped under month labels. |
-| **Drive Log viewer** | Any Drive Log row | See [Drive Log viewer](#drive-log-viewer). `…` sheet: Change Vehicle…, Export this day…, Download original, Delete…. |
+| **Drive Log viewer** | Any Drive Log row | See [Drive Log viewer](#drive-log-viewer). `…` sheet: Change Vehicle…, Export this day… (Export… on an Unassigned log, which exports just that log), Download original, Delete…. |
 | **Diagnostic Report viewer** | Any Report row, the stat strip | See [Diagnostic Report viewer](#diagnostic-report-viewer). `…` sheet: Export this day…, Download original, Delete…. |
 | **Vehicles** | Menu, switcher "Manage vehicles…" | One panel per Vehicle: label with "Current" badge, VIN (mono), Profile, Rule Packs, Report and Drive Log counts, latest Report date. Buttons: Switch to, Settings, Export…, Delete…. Footer: "A Vehicle is added when a Diagnostic Report with a new VIN is uploaded." |
 | **Vehicle settings** | Vehicles → Settings, New vehicle sheet → Change | Profile (radio rows), Rule Packs (switch rows with description), the note "Changing the Profile or a Rule Pack regenerates this Vehicle's Events. Notes are kept.", Delete vehicle…. |
