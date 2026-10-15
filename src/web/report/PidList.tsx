@@ -1,6 +1,7 @@
+import { useState } from "preact/hooks";
 import type { FreezeFrame, PidRow } from "../../core/report.ts";
 import { fmtNum } from "./numbers.ts";
-import { groupPids, pairCards } from "./pids.ts";
+import { filterPids, freezeFrameWas, groupPids, hideIdleTimers, pairCards } from "./pids.ts";
 
 function PairCards(props: { rows: PidRow[] }) {
   const cards = pairCards(props.rows);
@@ -28,26 +29,26 @@ function PairCards(props: { rows: PidRow[] }) {
   );
 }
 
-/** PID rows (Mode $01 or a freeze frame) in groups, each a two-column key and mono value. */
-export function PidList(props: { rows: PidRow[] }) {
-  const { rows } = props;
-  if (rows.length === 0) return <p class="list-note">No rows in this Report.</p>;
+function PidGroups(props: { rows: PidRow[]; was: Map<PidRow, string> }) {
   return (
     <>
-      <PairCards rows={rows} />
-      {groupPids(rows).map((g) => (
+      {groupPids(props.rows).map((g) => (
         <div key={g.group} class="pid-group">
           <h3 class="group-heading">{g.group}</h3>
           <ul class="kv-list">
-            {g.rows.map((r, i) => (
-              <li key={`${r.pid}|${r.description}|${i}`} class="kv-row">
-                <span class="kv-key">{r.description}</span>
-                <span class="kv-value">
-                  <span class="mono-value">{fmtNum(r.value)}</span>
-                  {r.units && <span class="unit">{r.units}</span>}
-                </span>
-              </li>
-            ))}
+            {g.rows.map((r, i) => {
+              const was = props.was.get(r);
+              return (
+                <li key={`${r.pid}|${r.description}|${i}`} class="kv-row">
+                  <span class="kv-key">{r.description}</span>
+                  <span class="kv-value">
+                    <span class="mono-value">{fmtNum(r.value)}</span>
+                    {r.units && <span class="unit">{r.units}</span>}
+                    {was !== undefined && <span class="was">{`was ${fmtNum(was)}`}</span>}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}
@@ -55,15 +56,67 @@ export function PidList(props: { rows: PidRow[] }) {
   );
 }
 
+const NO_WAS = new Map<PidRow, string>();
+
+/** A freeze frame's PID rows in groups, each a two-column key and mono value, with "was …" if changed. */
+export function PidList(props: { rows: PidRow[]; was?: Map<PidRow, string> }) {
+  if (props.rows.length === 0) return <p class="list-note">No rows in this Report.</p>;
+  return (
+    <>
+      <PairCards rows={props.rows} />
+      <PidGroups rows={props.rows} was={props.was ?? NO_WAS} />
+    </>
+  );
+}
+
+/** Live data: PIDs in groups with a name filter, and EI-AECD timers at 0 in both Reports left out. */
+export function LivePidList(props: {
+  rows: PidRow[];
+  /** The compared Report's live data; null with No comparison. */
+  other: PidRow[] | null;
+  was: Map<PidRow, string>;
+}) {
+  const [query, setQuery] = useState("");
+  if (props.rows.length === 0) return <p class="list-note">No rows in this Report.</p>;
+  const { rows: live, hidden } = hideIdleTimers(props.rows, props.other);
+  const rows = filterPids(live, query);
+  return (
+    <>
+      <input
+        type="search"
+        class="pid-filter"
+        aria-label="Filter PIDs…"
+        placeholder="Filter PIDs…"
+        value={query}
+        onInput={(e) => setQuery((e.currentTarget as HTMLInputElement).value)}
+      />
+      {hidden > 0 && <p class="list-note">{`${hidden} EI-AECD timers at 0 not shown.`}</p>}
+      {rows.length === 0 ? (
+        <p class="list-note">No PIDs match.</p>
+      ) : (
+        <>
+          <PairCards rows={rows} />
+          <PidGroups rows={rows} was={props.was} />
+        </>
+      )}
+    </>
+  );
+}
+
 /** Each freeze frame under its title. */
-export function FreezeFrames(props: { frames: FreezeFrame[] }) {
+export function FreezeFrames(props: {
+  frames: FreezeFrame[];
+  /** The compared Report's frames; null with No comparison. */
+  other: FreezeFrame[] | null;
+}) {
+  const was = freezeFrameWas(props.frames, props.other);
   if (props.frames.length === 0) return <p class="list-note">No freeze frame in this Report.</p>;
   return (
     <>
       {props.frames.map((f, i) => (
         <div key={`${f.title}|${i}`} class="freeze-frame">
           <h3 class="group-heading">{f.title}</h3>
-          <PidList rows={f.rows} />
+          <PidList rows={f.rows} was={was} />
         </div>
       ))}
     </>

@@ -666,6 +666,108 @@ describe("Report viewer: live data and freeze frame", () => {
     expect(within(row).getByText("62")).toBeTruthy();
     expect(within(row).getByText("mph")).toBeTruthy();
   });
+
+  /** Aug (the compared Report) read a different RPM and speed; its timer 1 was 0, timer 2 was 7. */
+  const withAug = () => {
+    const d = withLive();
+    d.reportDetails[1] = reportDetail({
+      id: 1,
+      recordedAt: "2026-08-21T21:56:40",
+      report: parsedReport({
+        liveData: [
+          pidRow("Engine RPM", "750", "RPM"),
+          pidRow("Commanded EGR A duty cycle", "20", "%"),
+        ],
+        freezeFrames: [
+          {
+            title: "P0401 - First Occurrence",
+            dtc: "P0401",
+            rows: [pidRow("Vehicle speed", "40", "mph", "")],
+          },
+        ],
+      }),
+    });
+    return d;
+  };
+
+  it("shows was on changed live data and freeze frame values, only where they changed", async () => {
+    renderApp(withAug());
+    const rpm = (await screen.findByText("Engine RPM")).closest("li") as HTMLElement;
+    await waitFor(() => expect(within(rpm).getByText("was 750")).toBeTruthy());
+    const egr = screen.getByText("Commanded EGR A duty cycle").closest("li") as HTMLElement;
+    expect(within(egr).queryByText(/^was/)).toBeNull();
+    const speed = screen.getByText("Vehicle speed").closest("li") as HTMLElement;
+    expect(within(speed).getByText("was 40")).toBeTruthy();
+  });
+
+  it("shows no was with No comparison", async () => {
+    renderApp(withAug());
+    await waitFor(() => expect(screen.getByText("was 750")).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("Compared with"), { target: { value: "none" } });
+    await waitFor(() => expect(screen.queryByText(/^was /)).toBeNull());
+  });
+
+  const filterBox = () => screen.getByRole("searchbox", { name: "Filter PIDs…" });
+  const typeFilter = (v: string) => fireEvent.input(filterBox(), { target: { value: v } });
+
+  it("filters live data rows by name and hides a group left empty", async () => {
+    renderApp(withLive());
+    await screen.findByText("Engine RPM");
+    typeFilter("rpm");
+    expect(screen.getByText("Engine RPM")).toBeTruthy();
+    expect(screen.queryByText("Commanded EGR A duty cycle")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "EGR" })).toBeNull();
+    expect(screen.queryByText("EGR A")).toBeNull();
+    typeFilter("");
+    expect(screen.getByRole("heading", { name: "EGR" })).toBeTruthy();
+    expect(screen.getByText("EGR A")).toBeTruthy();
+  });
+
+  it("says No PIDs match when the filter finds nothing, and has no filter on freeze frames", async () => {
+    renderApp(withLive());
+    await screen.findByText("Engine RPM");
+    typeFilter("zzz");
+    expect(screen.getByText("No PIDs match.")).toBeTruthy();
+    expect(screen.getAllByRole("searchbox")).toHaveLength(1);
+  });
+
+  const timer = (n: number, v: string) =>
+    pidRow(`Total run time with EI-AECD #${n} Timer 1 active`, v, "s");
+  const withTimers = () => {
+    const d = withLive();
+    d.reportDetails[2] = reportDetail({
+      id: 2,
+      recordedAt: "2026-10-02T21:32:14",
+      report: parsedReport({
+        liveData: [
+          pidRow("Engine RPM", "800", "RPM"),
+          timer(1, "0"),
+          timer(2, "0"),
+          timer(3, "12"),
+        ],
+      }),
+    });
+    d.reportDetails[1] = reportDetail({
+      id: 1,
+      recordedAt: "2026-08-21T21:56:40",
+      report: parsedReport({ liveData: [timer(1, "0"), timer(2, "7")] }),
+    });
+    return d;
+  };
+
+  it("hides EI-AECD timers at 0 in both Reports with a count, and shows a timer above 0 in either", async () => {
+    renderApp(withTimers());
+    expect(await screen.findByText("1 EI-AECD timers at 0 not shown.")).toBeTruthy();
+    expect(screen.queryByText("Total run time with EI-AECD #1 Timer 1 active")).toBeNull();
+    expect(screen.getByText("Total run time with EI-AECD #2 Timer 1 active")).toBeTruthy();
+    expect(screen.getByText("Total run time with EI-AECD #3 Timer 1 active")).toBeTruthy();
+  });
+
+  it("has no timer count line when no timer is hidden", async () => {
+    renderApp(withLive());
+    await screen.findByText("Engine RPM");
+    expect(screen.queryByText(/EI-AECD timers at 0/)).toBeNull();
+  });
 });
 
 describe("Report viewer: IUMPR and vehicle info", () => {
