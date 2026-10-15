@@ -107,28 +107,42 @@ function ranges(lines: number[]): string {
 
 export type Verdict = { findings: string[]; exitCode: 0 | 1; report: string };
 
+/**
+ * `testOnly`: no production file changed, so the base runs the same code and "passes without the
+ * change" means nothing. `guards`: substrings of case keys whose passing on the base was checked
+ * by hand; those cases are listed apart and are no finding.
+ */
 export function judge(input: {
   newKeys: string[];
   base: CaseRun;
   change: CaseRun;
   uncovered: { file: string; lines: number[] }[];
+  testOnly?: boolean;
+  guards?: string[];
 }): Verdict {
-  const { newKeys, base, change, uncovered } = input;
+  const { newKeys, base, change, uncovered, testOnly = false, guards = [] } = input;
   const findings: string[] = [];
   const report: string[] = [];
+  const guarded: string[] = [];
   const baseStatus = new Map(base.cases.map((c) => [c.key, c.status]));
 
   if (newKeys.length === 0) report.push("No new test cases.");
   else report.push(`New test cases: ${newKeys.length}`);
   for (const key of newKeys) {
     const status = baseStatus.get(key);
-    if (status === "passed") {
+    if (status === "passed" && testOnly) {
+      report.push(`  - ${key}: passes on the base, as it must (no production change)`);
+    } else if (status === "passed" && guards.some((g) => key.includes(g))) {
+      guarded.push(key);
+    } else if (status === "passed") {
       findings.push(`Passes without the change: ${key}`);
       report.push(`  ✗ ${key}: passes without the change`);
     } else {
       report.push(`  ✓ ${key}: ${status ?? "did not run"} on the base`);
     }
   }
+  if (testOnly) report.push("No production file changed: can't judge a test-only slice.");
+  if (guarded.length > 0) report.push(`Hand-checked guards:\n  ${guarded.join("\n  ")}`);
   const brokenOnBase = [...new Set(newKeys.map(fileOf))].filter((f) =>
     base.brokenFiles.includes(f),
   );
@@ -161,17 +175,49 @@ export function changedLines(diff: string): Set<number> {
   return lines;
 }
 
+/** The error for a child that exited without doing its job: its command, status and stderr tail. */
+export function childFailure(command: string, status: number | null, stderr: string): string {
+  const tail = stderr.trimEnd().split("\n").slice(-10).join("\n");
+  return `${command} exited with status ${status} and wrote no output.\n${tail}`;
+}
+
 let interrupted = false;
 
-function sh(cwd: string, cmd: string, args: string[]): string {
+function run(cwd: string, cmd: string, args: string[]) {
   const r = spawnSync(cmd, args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   if (interrupted) throw new Error("Interrupted");
   if (r.error) throw r.error;
-  return r.stdout;
+  return r;
 }
 
-function vitest(cwd: string, args: string[]): void {
-  sh(cwd, process.execPath, [join(cwd, "node_modules", "vitest", "vitest.mjs"), ...args]);
+function sh(cwd: string, cmd: string, args: string[]): string {
+  return run(cwd, cmd, args).stdout;
+}
+
+/** Runs vitest and returns the parsed JSON it wrote to `outputFile`. */
+function vitest(cwd: string, nodeModules: string, args: string[], outputFile: string): unknown {
+  const script = join(nodeModules, "vitest", "vitest.mjs");
+  const r = run(cwd, process.execPath, [
+    script,
+    ...args,
+    "--reporter=json",
+    `--outputFile=${outputFile}`,
+  ]);
+  if (!existsSync(outputFile))
+    throw new Error(childFailure(`node ${script} ${args.join(" ")}`, r.status, r.stderr));
+  return readJson(outputFile);
+}
+
+/** The first `node_modules` holding vitest, walking up from `from` the way Node resolves modules. */
+export function findNodeModules(
+  from: string,
+  hasVitest = (nm: string) => existsSync(join(nm, "vitest", "vitest.mjs")),
+): string {
+  for (let dir = from; ; dir = dirname(dir)) {
+    const nm = join(dir, "node_modules");
+    if (hasVitest(nm)) return nm;
+    if (dirname(dir) === dir) throw new Error(`No node_modules with vitest found from ${from}`);
+  }
 }
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, "utf8"));
@@ -180,9 +226,10 @@ const readJson = (path: string) => JSON.parse(readFileSync(path, "utf8"));
  * Checks the working tree of `root` against `base` (via their merge base): the new test cases
  * must fail with the base's production files and pass with the working tree's. Everything else
  * in the working tree (tests, helpers, config) is used for both runs. The base run happens in a
- * temporary git worktree, so `root` is only read.
+ * temporary git worktree, so `root` is only read. A new case that passes on the base but matches
+ * one of `guards` (substrings of its key) was checked by hand: listed apart, no finding.
  */
-export function checkSlice(root: string, base = "main"): Verdict {
+export function checkSlice(root: string, base = "main", guards: string[] = []): Verdict {
   const mergeBase = sh(root, "git", ["merge-base", base, "HEAD"]).trim();
   if (!mergeBase) throw new Error(`No merge base between ${base} and HEAD`);
   const untracked = sh(root, "git", ["ls-files", "--others", "--exclude-standard"]);
@@ -195,6 +242,7 @@ export function checkSlice(root: string, base = "main"): Verdict {
   const empty: CaseRun = { cases: [], brokenFiles: [] };
   if (tests.length === 0) return judge({ newKeys: [], base: empty, change: empty, uncovered: [] });
 
+  const nodeModules = realpathSync(findNodeModules(root));
   const tmp = mkdtempSync(join(tmpdir(), "check-slice-"));
   const tree = join(tmp, "base");
   const onInterrupt = () => {
@@ -206,7 +254,7 @@ export function checkSlice(root: string, base = "main"): Verdict {
     // Base: the merge base's files, then every non-production change laid over them.
     sh(root, "git", ["worktree", "add", "--detach", "--quiet", tree, mergeBase]);
     worktreeAdded = true;
-    symlinkSync(realpathSync(join(root, "node_modules")), join(tree, "node_modules"), "junction");
+    symlinkSync(nodeModules, join(tree, "node_modules"), "junction");
 
     // The base's own test cases, to tell new cases from old. A run, not `vitest list`, because
     // the list leaves `it.each` names unformatted ("… (%s)").
@@ -214,8 +262,8 @@ export function checkSlice(root: string, base = "main"): Verdict {
     let baseKeys = new Set<string>();
     if (existing.length > 0) {
       const out = join(tmp, "existing.json");
-      vitest(tree, ["run", ...existing, "--reporter=json", `--outputFile=${out}`]);
-      baseKeys = new Set(caseRun(readJson(out), tree).cases.map((c) => c.key));
+      const json = vitest(tree, nodeModules, ["run", ...existing], out) as VitestJson;
+      baseKeys = new Set(caseRun(json, tree).cases.map((c) => c.key));
     }
     for (const c of changes) {
       if (isProductionPath(c.path)) continue;
@@ -226,8 +274,8 @@ export function checkSlice(root: string, base = "main"): Verdict {
         copyFileSync(join(root, c.path), target);
       }
     }
-    vitest(tree, ["run", ...tests, "--reporter=json", `--outputFile=${join(tmp, "base.json")}`]);
-    const baseRun = caseRun(readJson(join(tmp, "base.json")), tree);
+    const baseJson = vitest(tree, nodeModules, ["run", ...tests], join(tmp, "base.json"));
+    const baseRun = caseRun(baseJson as VitestJson, tree);
 
     // Change: the working tree as it is, with coverage of the changed production files.
     const coverageArgs = production.length
@@ -239,14 +287,13 @@ export function checkSlice(root: string, base = "main"): Verdict {
           ...production.map((p) => `--coverage.include=${p.path}`),
         ]
       : [];
-    vitest(root, [
-      "run",
-      ...tests,
-      "--reporter=json",
-      `--outputFile=${join(tmp, "change.json")}`,
-      ...coverageArgs,
-    ]);
-    const changeRun = caseRun(readJson(join(tmp, "change.json")), root);
+    const changeJson = vitest(
+      root,
+      nodeModules,
+      ["run", ...tests, ...coverageArgs],
+      join(tmp, "change.json"),
+    );
+    const changeRun = caseRun(changeJson as VitestJson, root);
 
     const uncovered: { file: string; lines: number[] }[] = [];
     const coveragePath = join(tmp, "coverage", "coverage-final.json");
@@ -271,7 +318,14 @@ export function checkSlice(root: string, base = "main"): Verdict {
     }
 
     const newKeys = [...new Set(changeRun.cases.map((c) => c.key))].filter((k) => !baseKeys.has(k));
-    return judge({ newKeys, base: baseRun, change: changeRun, uncovered });
+    return judge({
+      newKeys,
+      base: baseRun,
+      change: changeRun,
+      uncovered,
+      testOnly: production.length === 0,
+      guards,
+    });
   } finally {
     process.off("SIGINT", onInterrupt);
     interrupted = false;
@@ -282,9 +336,27 @@ export function checkSlice(root: string, base = "main"): Verdict {
   }
 }
 
-// `npm run check:slice [base]`: the parent runs this on an implementer's hand-back.
+/** `[base] [--guard <substring>]…`: the base is the first positional argument, "main" if absent. */
+export function parseArgs(argv: string[]): { base: string; guards: string[] } {
+  let base: string | undefined;
+  const guards: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i] as string;
+    if (arg === "--guard") {
+      const value = argv[++i];
+      if (value === undefined) throw new Error("--guard needs a value");
+      guards.push(value);
+    } else if (arg.startsWith("--")) throw new Error(`Unknown option ${arg}`);
+    else base ??= arg;
+  }
+  return { base: base ?? "main", guards };
+}
+
+// `npm run check:slice [base] [--guard <substring>]…`: the parent runs this on an implementer's
+// hand-back.
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  const verdict = checkSlice(process.cwd(), process.argv[2] ?? "main");
+  const { base, guards } = parseArgs(process.argv.slice(2));
+  const verdict = checkSlice(process.cwd(), base, guards);
   console.log(verdict.report);
   process.exitCode = verdict.exitCode;
 }

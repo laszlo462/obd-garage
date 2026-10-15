@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
+  existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -16,9 +18,12 @@ import {
   caseRun,
   changedLines,
   checkSlice,
+  childFailure,
+  findNodeModules,
   isProductionPath,
   isTestFile,
   judge,
+  parseArgs,
   parseChanges,
   uncoveredLines,
 } from "./check-slice.ts";
@@ -86,6 +91,46 @@ describe("judge", () => {
   const run = (cases: CaseRun["cases"], brokenFiles: string[] = []): CaseRun => ({
     cases,
     brokenFiles,
+  });
+
+  it("says it can't judge a test-only slice, and reports no passes-without-the-change findings", () => {
+    const verdict = judge({
+      newKeys: ["t > new"],
+      base: run([{ key: "t > new", status: "passed" }]),
+      change: run([{ key: "t > new", status: "passed" }]),
+      uncovered: [],
+      testOnly: true,
+    });
+    expect(verdict.findings).toEqual([]);
+    expect(verdict.exitCode).toBe(0);
+    expect(verdict.report).toContain("can't judge a test-only slice");
+    expect(verdict.report).not.toContain("passes without the change");
+  });
+
+  it("still flags a failing test in a test-only slice", () => {
+    const verdict = judge({
+      newKeys: ["t > new"],
+      base: run([{ key: "t > new", status: "passed" }]),
+      change: run([{ key: "t > new", status: "failed" }]),
+      uncovered: [],
+      testOnly: true,
+    });
+    expect(verdict.findings).toEqual(["Fails with the change: t > new"]);
+  });
+
+  it("lists a passing new case that matches a guard under its own heading, without a finding", () => {
+    const verdict = judge({
+      newKeys: ["t > guarded form", "t > other"],
+      base: run([
+        { key: "t > guarded form", status: "passed" },
+        { key: "t > other", status: "passed" },
+      ]),
+      change: run([]),
+      uncovered: [],
+      guards: ["guarded"],
+    });
+    expect(verdict.findings).toEqual(["Passes without the change: t > other"]);
+    expect(verdict.report).toMatch(/Hand-checked guards:\n\s+t > guarded form/);
   });
 
   it("passes when each new test fails on the base and passes on the change", () => {
@@ -214,9 +259,71 @@ describe("changedLines", () => {
   });
 });
 
+describe("findNodeModules", () => {
+  const nm = (dir: string) => join(dir, "node_modules");
+  const withVitest =
+    (...dirs: string[]) =>
+    (candidate: string) =>
+      dirs.map(nm).includes(candidate);
+  const worktree = join("/main", ".claude", "worktrees", "agent-1");
+
+  it("walks up from the root to the first node_modules that has vitest", () => {
+    expect(findNodeModules(worktree, withVitest("/main"))).toBe(nm("/main"));
+  });
+
+  it("prefers the nearest one", () => {
+    expect(findNodeModules(worktree, withVitest("/main", worktree))).toBe(nm(worktree));
+  });
+
+  it("fails clearly when no ancestor has one", () => {
+    expect(() => findNodeModules(join("/a", "b"), withVitest())).toThrow(
+      /No node_modules with vitest found from .*b/,
+    );
+  });
+});
+
+describe("parseArgs", () => {
+  it("takes the base as the first positional argument, defaulting to main", () => {
+    expect(parseArgs([])).toEqual({ base: "main", guards: [] });
+    expect(parseArgs(["origin/main"])).toEqual({ base: "origin/main", guards: [] });
+  });
+
+  it("collects each --guard, before or after the base", () => {
+    expect(parseArgs(["dev", "--guard", "a b", "--guard", "c"])).toEqual({
+      base: "dev",
+      guards: ["a b", "c"],
+    });
+    expect(parseArgs(["--guard", "x"])).toEqual({ base: "main", guards: ["x"] });
+  });
+
+  it("rejects a --guard without a value and an unknown option", () => {
+    expect(() => parseArgs(["--guard"])).toThrow(/--guard needs a value/);
+    expect(() => parseArgs(["--nope"])).toThrow(/Unknown option --nope/);
+  });
+});
+
+describe("childFailure", () => {
+  it("names the command and its exit status, then the tail of its stderr", () => {
+    const stderr = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n");
+    const message = childFailure("node vitest.mjs run a.test.ts", 1, `${stderr}\n`);
+    expect(message).toContain("node vitest.mjs run a.test.ts");
+    expect(message).toContain("status 1");
+    expect(message).toContain("line 30");
+    expect(message).toContain("line 21");
+    expect(message).not.toContain("line 20");
+  });
+
+  it("copes with a child killed by a signal and with no stderr", () => {
+    const message = childFailure("git x", null, "");
+    expect(message).toContain("git x");
+    expect(message).toContain("status null");
+  });
+});
+
 // A throwaway repo with one module and its test committed as the base. Each case then leaves
 // an uncommitted change in it, the way an implementer hands back.
 describe("checkSlice on a throwaway repo", { timeout: 60_000 }, () => {
+  let outer: string;
   let repo: string;
   const git = (...args: string[]) =>
     spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
@@ -231,7 +338,9 @@ describe("checkSlice on a throwaway repo", { timeout: 60_000 }, () => {
   const TEST_HEAD = 'import { expect, it } from "vitest";\nimport * as m from "./math.ts";\n';
 
   beforeEach(() => {
-    repo = realpathSync(mkdtempSync(join(tmpdir(), "obd-slice-")));
+    outer = realpathSync(mkdtempSync(join(tmpdir(), "obd-slice-")));
+    repo = join(outer, "repo");
+    mkdirSync(repo);
     git("init", "-q", "-b", "main");
     symlinkSync(realpathSync("node_modules"), join(repo, "node_modules"), "junction");
     write(".gitignore", "node_modules\n");
@@ -243,8 +352,12 @@ describe("checkSlice on a throwaway repo", { timeout: 60_000 }, () => {
   });
 
   afterEach(() => {
-    unlinkSync(join(repo, "node_modules")); // the junction only, not the real node_modules
-    rmSync(repo, { recursive: true, force: true });
+    // Junctions only, never the real node_modules they point at.
+    for (const dir of [repo, outer]) {
+      const link = join(dir, "node_modules");
+      if (existsSync(link) && lstatSync(link).isSymbolicLink()) unlinkSync(link);
+    }
+    rmSync(outer, { recursive: true, force: true });
   });
 
   it("passes a real fix: the new test fails on the base and passes on the change", () => {
@@ -282,6 +395,7 @@ describe("checkSlice on a throwaway repo", { timeout: 60_000 }, () => {
   });
 
   it("flags a new test that already passes on the base", () => {
+    write("src/math.ts", "export const add = (a: number, b: number) => b + a;\n");
     write(
       "src/math.test.ts",
       `${TEST_HEAD}it("adds", () => expect(m.add(1, 2)).toBe(3));\nit("adds zero", () => expect(m.add(1, 0)).toBe(1));\n`,
@@ -331,5 +445,63 @@ describe("checkSlice on a throwaway repo", { timeout: 60_000 }, () => {
     const verdict = checkSlice(repo, "main");
     expect(verdict.exitCode).toBe(0);
     expect(verdict.report).toContain("No new test cases.");
+  });
+
+  it("finds vitest in an ancestor's node_modules when the repo's own has none, as in an agent worktree", () => {
+    unlinkSync(join(repo, "node_modules"));
+    mkdirSync(join(repo, "node_modules", ".vite"), { recursive: true });
+    symlinkSync(realpathSync("node_modules"), join(outer, "node_modules"), "junction");
+    write(
+      "src/math.ts",
+      "export const add = (a: number, b: number) => a + b;\nexport const sub = (a: number, b: number) => a - b;\n",
+    );
+    write(
+      "src/math.test.ts",
+      `${TEST_HEAD}it("adds", () => expect(m.add(1, 2)).toBe(3));\nit("subtracts", () => expect(m.sub(3, 1)).toBe(2));\n`,
+    );
+    const verdict = checkSlice(repo, "main");
+    expect(verdict.findings).toEqual([]);
+    expect(verdict.report).toContain("src/math.test.ts > subtracts: failed on the base");
+  });
+
+  it("names the command and exit status when vitest writes no output, instead of an ENOENT", () => {
+    write("vitest.config.ts", 'throw new Error("config boom");\n');
+    write(
+      "src/math.test.ts",
+      `${TEST_HEAD}it("adds", () => expect(m.add(1, 2)).toBe(3));\nit("adds zero", () => expect(m.add(1, 0)).toBe(1));\n`,
+    );
+    const failure = (() => {
+      try {
+        checkSlice(repo, "main");
+      } catch (e) {
+        return String(e);
+      }
+      return "";
+    })();
+    expect(failure).toMatch(/vitest\.mjs run .*exited with status \d+/);
+    expect(failure).not.toContain("ENOENT");
+  });
+
+  it("can't judge a slice with new tests and no production change, and reports no findings", () => {
+    write(
+      "src/math.test.ts",
+      `${TEST_HEAD}it("adds", () => expect(m.add(1, 2)).toBe(3));\nit("adds zero", () => expect(m.add(1, 0)).toBe(1));\n`,
+    );
+    const verdict = checkSlice(repo, "main");
+    expect(verdict.findings).toEqual([]);
+    expect(verdict.exitCode).toBe(0);
+    expect(verdict.report).toContain("can't judge a test-only slice");
+    expect(verdict.report).not.toContain("passes without the change");
+  });
+
+  it("lists a new case that passes on the base under Hand-checked guards when it matches --guard", () => {
+    write("src/math.ts", "export const add = (a: number, b: number) => b + a;\n");
+    write(
+      "src/math.test.ts",
+      `${TEST_HEAD}it("adds", () => expect(m.add(1, 2)).toBe(3));\nit("adds zero", () => expect(m.add(1, 0)).toBe(1));\n`,
+    );
+    const verdict = checkSlice(repo, "main", ["adds zero"]);
+    expect(verdict.findings).toEqual([]);
+    expect(verdict.report).toContain("Hand-checked guards:\n  src/math.test.ts > adds zero");
   });
 });
