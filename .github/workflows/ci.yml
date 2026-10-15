@@ -32,3 +32,17 @@ jobs:
           context: .
           platforms: linux/amd64
           push: false
+          load: true
+          tags: obd-garage:ci
+      # A build alone misses runtime import errors (the server runs from source), so start the image.
+      - name: Smoke-test the image
+        run: |
+          docker run -d --name smoke -p 8080:8080 obd-garage:ci
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 2 -o /dev/null http://localhost:8080/; then ok=1; break; fi
+            if [ "$(docker inspect -f '{{.State.Running}}' smoke)" != "true" ]; then break; fi
+            sleep 1
+          done
+          docker logs smoke
+          [ "$ok" = 1 ] || { echo "Container did not answer HTTP on port 8080"; exit 1; }

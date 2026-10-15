@@ -14,7 +14,11 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
+# The server runs from source, so copy every src/ folder it imports (not just src/server).
 COPY src/server ./src/server
+COPY src/core ./src/core
+COPY src/profiles ./src/profiles
+COPY src/rule-packs ./src/rule-packs
 COPY --from=build /app/dist/web ./dist/web
 EXPOSE 8080
 VOLUME /data
