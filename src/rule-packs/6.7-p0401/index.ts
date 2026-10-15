@@ -3,8 +3,7 @@ import type { EventDraft, Rule, RulePack } from "../../core/rules.ts";
 import { P0401_PACK_ID } from "../../profiles/six-seven.ts";
 
 // DOBDSM1202 p. 39: the P0401 low-flow test is entered at 600-2,500 rpm, ECT 70-100 C, EGR valve 40-60 %.
-// Thresholds are in the units the source cites. Ported from `windowRuns()` in
-// reference/viewers/viewer_template.html and the thresholds in reference/viewers/build_viewer.js.
+// Thresholds are in the units the source cites.
 const RPM = { min: 600, max: 2500 };
 const ECT_C = { min: 70, max: 100 };
 const VALVE_PCT = { min: 40, max: 60 };

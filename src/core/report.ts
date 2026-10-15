@@ -125,7 +125,7 @@ export type ReportResult =
 
 type Row = Record<string, string>;
 
-// ---------- text helpers (ported from the reference viewer) ----------
+// ---------- text helpers ----------
 
 type TextNode = {
   nodeType: number;

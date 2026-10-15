@@ -175,7 +175,7 @@ describe("isTestFile", () => {
     expect(isTestFile("src/web/Vehicles.test.tsx")).toBe(true);
     expect(isTestFile("scripts/check-slice.test.ts")).toBe(true);
     expect(isTestFile("src/web/test-support.ts")).toBe(false);
-    expect(isTestFile("reference/x.test.ts")).toBe(false);
+    expect(isTestFile("docs/x.test.ts")).toBe(false);
   });
 });
 

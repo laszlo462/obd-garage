@@ -17,5 +17,5 @@
     "isolatedModules": true
   },
   "include": ["src", "scripts", "vite.config.ts", "vitest.config.ts"],
-  "exclude": ["scripts/sync-skills.ts", "node_modules", "dist", "reference", "prototypes"]
+  "exclude": ["scripts/sync-skills.ts", "node_modules", "dist", "prototypes"]
 }

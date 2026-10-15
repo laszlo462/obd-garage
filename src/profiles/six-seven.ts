@@ -85,8 +85,8 @@ const catalogue = createCatalogue({
   aliases: { dpfSoot: ["DPF soot for Pickup (wide frame); third VIN position is T."] },
 });
 
-// The pre-October logs decode the actual EGR A PID with full open = 99.35 %, the SAE $69 decode with 59.61 %
-// (ported from reference/viewers/build_viewer.js). No SAE-decoded log exceeds 62 %.
+// The pre-October logs decode the actual EGR A PID with full open = 99.35 %, the SAE $69 decode with 59.61 %.
+// No SAE-decoded log exceeds 62 %.
 const OLD_FULL_OPEN = 99.35;
 const SAE_FULL_OPEN = 59.61;
 const OLD_DECODE_ABOVE = 62;
@@ -140,13 +140,13 @@ export const SIX_SEVEN: VehicleProfile = {
   matchesVin: isSixSevenVin,
   catalogue,
   decodeFixes: [egrDecodeFix],
-  // Known-useless columns from the reference viewer: never shown. This truck has no NOx sensor 2.
+  // Known-useless columns: never shown. This truck has no NOx sensor 2.
   hiddenColumns: [
     "extra.exhaust-gas-recirculation-system-evaluated",
     "extra.turbocharger-wastegate",
     "extra.nox-sensor-concentration-bank-1-sensor-2",
   ],
-  // Panels from the reference viewer.
+  // The default chart panels.
   defaultChartPreset: [
     { title: "Vehicle speed", unit: "mph", series: [{ key: "speed", label: "Speed" }] },
     { title: "Engine speed", unit: "rpm", series: [{ key: "rpm", label: "RPM" }] },

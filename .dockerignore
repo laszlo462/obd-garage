@@ -4,7 +4,6 @@
 .zed
 node_modules
 dist
-reference
 prototypes
 deploy
 docs
