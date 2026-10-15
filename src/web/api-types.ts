@@ -19,3 +19,4 @@ export type NoteView = InferResponseType<
   200
 >[number];
 export type VehicleRow = InferResponseType<Api["api"]["vehicles"]["$get"], 200>[number];
+export type ExportSummary = InferResponseType<Api["api"]["export"]["summary"]["$get"], 200>;

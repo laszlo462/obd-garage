@@ -14,6 +14,8 @@ export function DriveLogMenuSheet(props: {
   onDeleted: () => void;
   /** Called when Change Vehicle… is tapped; the caller closes this sheet and opens Assign to…. */
   onChangeVehicle: () => void;
+  /** Called when Export this day… is tapped; the caller closes this sheet and opens the Export sheet. */
+  onExport: () => void;
 }) {
   const { detail } = props;
   const api = useApi();
@@ -49,6 +51,9 @@ export function DriveLogMenuSheet(props: {
       <div class="sheet-body">
         <button type="button" class="menu-row" onClick={props.onChangeVehicle}>
           Change Vehicle{"…"}
+        </button>
+        <button type="button" class="menu-row" onClick={props.onExport}>
+          Export this day{"…"}
         </button>
         <a
           class="menu-row"
