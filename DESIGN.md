@@ -252,28 +252,30 @@ opens the Note sheet. The sheet shows the text, the time and when the Note was a
   Vehicle info.
   - **Trouble codes:** the code in mono 17 px (`--bad`, or `--warn` when pending), the description, and status
     badges (Stored, Permanent, Pending, plus "New" or "Also in 21 Aug" when comparing).
-    - *After v0.1 ([#116](https://github.com/laszlo462/obd-garage/issues/116)):* when comparing, a code that was in
+    - *[#144](https://github.com/laszlo462/obd-garage/issues/144):* when comparing, a code that was in
       the compared Report but not in this one follows the list as a muted row with a "Gone since 21 Aug" badge. A
       code in both Reports whose statuses changed gets one badge that lists the changes, e.g. "+Stored −Pending".
   - **Readiness monitors:** name, a status badge (Complete `--ok`, Incomplete `--warn`, Not supported neutral) and
     "was …" when the status changed.
-    - *After v0.1 (#116):* each ECU heading has a count line, "n complete · n incomplete · n not supported". Not
+    - *#144:* each ECU heading has a count line, "n complete · n incomplete · n not supported". Not
       supported monitors are hidden by default; the "n not supported" part is a toggle that shows them.
   - **Mode $06:** the segmented control **Least headroom** (default) / **Report order**. Each row has:
     - the test name and its TID / CID
     - the value with its unit, and "n % headroom" coloured by margin: `--bad` under 5 %, `--warn` under 20 %, `--ok` otherwise
     - "was x" when comparing
     - a 6 px range bar from min to max with a value marker, and min and max labels
-    - *After v0.1 (#116):* when comparing and either limit changed, "limits were a – b" beside "was x", and one line
-      above the list: "Limits move with operating point. Compare values only where the limits match."
+    - *[#145](https://github.com/laszlo462/obd-garage/issues/145):* when comparing and either limit changed,
+      "limits were a – b" beside "was x", and one line above the list: "Limits move with operating point. Compare
+      values only where the limits match."
   - **Freeze frame, live data, Vehicle info:** two-column key/value rows with mono values.
-    - *After v0.1 (#116):* freeze frame and live data show "was …" on a value that changed against the compared
-      Report. Live data has a "Filter PIDs…" search box above the groups (a home-screen app has no find-in-page).
-      EI-AECD timers at 0 in both Reports are hidden, with the line "n EI-AECD timers at 0 not shown."
+    - *[#146](https://github.com/laszlo462/obd-garage/issues/146):* freeze frame and live data show "was …" on a
+      value that changed against the compared Report. Live data has a "Filter PIDs…" search box above the groups (a
+      home-screen app has no find-in-page). EI-AECD timers at 0 in both Reports are hidden, with the line "n EI-AECD
+      timers at 0 not shown."
   - **IUMPR:** per ECU, a meta line (ignition cycles, general denominator), then one row per monitor in aligned
     columns under a header row: **Monitor · Completed · Conditions met · Ratio**. Values are mono, and the ratio has
     a bar ("off scale" above the bar's maximum). When comparing, the row ends with "+n / +n since 21 Aug".
-    - *After v0.1 (#116):* the since line adds the ratio when conditions met rose: "+3 / +4 = 0.75 since 21 Aug".
+    - *#145:* the since line adds the ratio when conditions met rose: "+3 / +4 = 0.75 since 21 Aug".
   - **Notes:** whole-Report Notes with **Add Note**.
 
 ## Screen inventory
