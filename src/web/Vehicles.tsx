@@ -4,7 +4,7 @@ import type { VehicleRow } from "./api-types.ts";
 import { DeleteVehicleSheet } from "./DeleteVehicleSheet.tsx";
 import { ExportSheet } from "./ExportSheet.tsx";
 import { count, shortDate } from "./format.ts";
-import { useCatalogue } from "./use-catalogue.ts";
+import { profileName, rulePackName, useCatalogue } from "./use-catalogue.ts";
 
 /** The Vehicles screen: one panel per Vehicle. */
 export function Vehicles() {
@@ -24,14 +24,12 @@ export function Vehicles() {
           <p class="mono">{v.vin}</p>
           <dl class="panel-facts">
             <dt>Profile</dt>
-            <dd>{catalogue?.profiles.find((p) => p.id === v.profileId)?.name}</dd>
+            <dd>{profileName(catalogue, v.profileId)}</dd>
             <dt>Rule Packs</dt>
             <dd>
               {v.packIds.length === 0
                 ? "No Rule Packs"
-                : v.packIds
-                    .map((id) => catalogue?.rulePacks.find((p) => p.id === id)?.name ?? id)
-                    .join(", ")}
+                : v.packIds.map((id) => rulePackName(catalogue, id)).join(", ")}
             </dd>
           </dl>
           <p class="failed-meta">

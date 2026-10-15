@@ -183,11 +183,12 @@ describe("Upload flow: Change on the New vehicle sheet", () => {
     await waitFor(() => expect(assignCalls).toEqual([{ logIds: [12], vehicleId: 5 }]));
   });
 
-  it("shows the Profile saved in settings on the reopened sheet", async () => {
+  it("names the Profile, and the one saved in settings on the reopened sheet", async () => {
     const vehiclePatches: unknown[] = [];
     await openNewVehicleSheet({ vehiclePatches });
     const before = screen.getByRole("dialog", { name: "New vehicle added" });
-    expect(within(before).getByText("generic")).toBeTruthy();
+    expect(await within(before).findByText("Generic")).toBeTruthy();
+    expect(within(before).queryByText("generic")).toBeNull();
     fireEvent.click(screen.getByRole("link", { name: "Change" }));
     fireEvent.click(await screen.findByRole("radio", { name: "Ford 6.7" }));
     await waitFor(() => expect(vehiclePatches).toHaveLength(1));
@@ -198,8 +199,9 @@ describe("Upload flow: Change on the New vehicle sheet", () => {
     );
     fireEvent.click(barBack());
     const after = await screen.findByRole("dialog", { name: "New vehicle added" });
-    expect(within(after).getByText("ford-6.7")).toBeTruthy();
-    expect(within(after).queryByText("generic")).toBeNull();
+    expect(await within(after).findByText("Ford 6.7")).toBeTruthy();
+    expect(within(after).queryByText("ford-6.7")).toBeNull();
+    expect(within(after).queryByText("Generic")).toBeNull();
   });
 
   it("closes for good, as before, when no Unassigned log shares the day", async () => {
