@@ -9,6 +9,34 @@ export function summaryLine(summary: ExportSummary): string {
     : base;
 }
 
+/** A ticked Drive Log: the id the export posts and the name shown when it drops out. */
+export type ExportLog = { id: number; filename: string };
+
+/** Names the logs in `before` that `now` no longer holds, or null when none is gone. */
+export function goneNote(before: ExportLog[], now: ExportLog[]): string | null {
+  const here = new Set(now.map((l) => l.id));
+  const gone = before.filter((l) => !here.has(l.id));
+  return gone.length === 0
+    ? null
+    : `No longer Unassigned (deleted or assigned meanwhile), taken out of the export: ${gone.map((l) => l.filename).join(", ")}`;
+}
+
+/**
+ * The message a refused export left in the hidden download frame, or null when the frame holds
+ * nothing. A refusal is a JSON `{ error }` body. The body is untrusted: read as text only.
+ */
+export function frameError(doc: Document | null): string | null {
+  const text = (doc?.body?.textContent ?? "").trim();
+  if (text === "") return null;
+  try {
+    const error = (JSON.parse(text) as { error?: unknown } | null)?.error;
+    if (typeof error === "string") return error;
+  } catch {
+    // Not JSON: fall through to the generic message.
+  }
+  return "The export failed.";
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** A Date's local calendar day as YYYY-MM-DD. */

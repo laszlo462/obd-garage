@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { cleanup, fireEvent, screen, waitFor } from "@testing-library/preact";
+import { act, cleanup, fireEvent, screen, waitFor } from "@testing-library/preact";
+import { useState } from "preact/hooks";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExportSheet } from "./ExportSheet.tsx";
 import { renderWithApp } from "./test-render.tsx";
@@ -279,8 +280,13 @@ describe("ExportSheet: Vehicle scope", () => {
 });
 
 describe("ExportSheet: Unassigned scope", () => {
-  const unassigned = (logIds: number[]) => (
-    <ExportSheet scope={{ kind: "unassigned", logIds }} onClose={() => {}} />
+  const logsOf = (ids: number[]) => ids.map((id) => ({ id, filename: `log-${id}.csv` }));
+  const unassigned = (ids: number[], onRefused?: () => void) => (
+    <ExportSheet
+      scope={{ kind: "unassigned", logs: logsOf(ids) }}
+      onRefused={onRefused}
+      onClose={() => {}}
+    />
   );
 
   it("counts the selection in the title and has no dates, presets or VIN line", async () => {
@@ -312,5 +318,85 @@ describe("ExportSheet: Unassigned scope", () => {
       ["hidden", "5"],
     ]);
     expect(button.getAttribute("type")).toBe("submit");
+  });
+
+  it("posts into a hidden frame, so a refusal never replaces the page", () => {
+    renderWithApp(unassigned([3]), data());
+    const form = screen.getByRole("button", { name: "Download .zip" }).closest("form");
+    const frame = screen.getByRole("dialog").querySelector("iframe");
+    expect(frame?.getAttribute("name")).toBe("export-frame");
+    expect(form?.getAttribute("target")).toBe("export-frame");
+    expect(frame?.hasAttribute("hidden")).toBe(true);
+  });
+
+  /** Fires `load` on the frame as if it now holds `body`; happy-dom loads no iframe pages itself. */
+  const frameLoads = (body: string) => {
+    const frame = screen.getByRole("dialog").querySelector("iframe") as HTMLIFrameElement;
+    const doc = document.implementation.createHTMLDocument("");
+    doc.body.textContent = body;
+    Object.defineProperty(frame, "contentDocument", { value: doc, configurable: true });
+    fireEvent.load(frame);
+  };
+
+  it.each([
+    [404, '{"error":"Drive Log 3 not found"}', "Drive Log 3 not found"],
+    [409, '{"error":"An Original is missing on disk"}', "An Original is missing on disk"],
+  ])("shows why the server refused with a %i", (_status, body, message) => {
+    renderWithApp(unassigned([3]), data());
+    frameLoads(body);
+    const note = screen.getByText(message);
+    expect(note.tagName).toBe("P");
+    expect(note.classList.contains("sheet-note")).toBe(true);
+    expect(note.classList.contains("tone-bad")).toBe(true);
+  });
+
+  it("shows nothing when the frame loads an empty document", () => {
+    renderWithApp(unassigned([3]), data());
+    frameLoads("");
+    expect(screen.getByRole("dialog").querySelector(".tone-bad")).toBeNull();
+  });
+
+  it("clears the message when the form is submitted again", () => {
+    renderWithApp(unassigned([3]), data());
+    frameLoads('{"error":"Drive Log 3 not found"}');
+    expect(screen.getByText("Drive Log 3 not found")).toBeTruthy();
+    const form = screen.getByRole("button", { name: "Download .zip" }).closest("form");
+    fireEvent.submit(form as HTMLFormElement);
+    expect(screen.queryByText("Drive Log 3 not found")).toBeNull();
+  });
+
+  /** The sheet as `Unassigned` holds it: the parent can shrink `logs` after a refusal. */
+  const withShrinkingLogs = (ids: number[], onRefused: () => void) => {
+    let shrinkTo: (ids: number[]) => void = () => {};
+    const Harness = () => {
+      const [now, setNow] = useState(ids);
+      shrinkTo = setNow;
+      return unassigned(now, onRefused);
+    };
+    renderWithApp(<Harness />, data());
+    return (next: number[]) => act(() => shrinkTo(next));
+  };
+
+  it("disables Download .zip once no log is left to export", () => {
+    const shrink = withShrinkingLogs([3], vi.fn());
+    const button = screen.getByRole("button", { name: "Download .zip" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    shrink([]);
+    expect(button.disabled).toBe(true);
+  });
+
+  it("calls onRefused once, then names the logs that dropped out and counts the rest", () => {
+    const onRefused = vi.fn();
+    const shrink = withShrinkingLogs([3, 5, 8], onRefused);
+    frameLoads('{"error":"Unknown Drive Log."}');
+    expect(onRefused).toHaveBeenCalledTimes(1);
+    shrink([5]);
+    expect(screen.getByRole("dialog", { name: "Export 1 Drive Log" })).toBeTruthy();
+    expect(
+      screen.getByText(
+        "No longer Unassigned (deleted or assigned meanwhile), taken out of the export: log-3.csv, log-8.csv",
+      ).className,
+    ).toBe("sheet-note tone-bad");
+    expect(screen.queryByText("Unknown Drive Log.")).toBeNull();
   });
 });

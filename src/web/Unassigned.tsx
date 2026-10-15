@@ -133,8 +133,11 @@ export function Unassigned() {
         <ExportSheet
           scope={{
             kind: "unassigned",
-            logIds: rows.filter((r) => ticked.has(r.id)).map((r) => r.id),
+            logs: rows
+              .filter((r) => ticked.has(r.id))
+              .map(({ id, filename }) => ({ id, filename })),
           }}
+          onRefused={() => state.invalidate()}
           onClose={() => setExporting(false)}
         />
       )}
