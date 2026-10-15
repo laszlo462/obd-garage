@@ -1267,6 +1267,30 @@ a.btn-primary[aria-disabled="true"] {
   gap: 4px;
 }
 
+.dtc-gone {
+  opacity: 0.6;
+}
+
+.monitor-counts {
+  margin: 0 0 4px;
+  font-size: var(--fs-12);
+  color: var(--muted);
+}
+
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button[aria-pressed="true"] {
+  font-weight: 600;
+}
+
 .monitor-name,
 .kv-key {
   flex: 1;
