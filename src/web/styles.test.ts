@@ -468,12 +468,29 @@ describe("IUMPR table", () => {
     expect(rule(".iumpr-table th:first-child")).toMatch(/width:\s*\d+%/);
     expect(rule(".iumpr-name")).toMatch(/overflow-wrap:\s*anywhere/);
   });
+
+  it("keeps a gutter between the Completed and Conditions met headers", () => {
+    const gutter = rule(".iumpr-table th:nth-child(3)")?.match(/padding-left:\s*(\d+)px/);
+    expect(Number(gutter?.[1])).toBeGreaterThanOrEqual(12);
+    expect(rule(".iumpr-table td:nth-child(3)")).toMatch(/padding-left:\s*\d+px/);
+  });
 });
 
 describe("IUMPR table on a phone", () => {
   it("sizes cells by border-box, so the column percentages are the real widths", () => {
     expect(rule(".iumpr-table th")).toMatch(/box-sizing:\s*border-box/);
     expect(rule(".iumpr-table td")).toMatch(/box-sizing:\s*border-box/);
+  });
+
+  it("gives each count column room for its header word, and leaves the ratio its 29%", () => {
+    const width = (pseudo: string) =>
+      Number(rule(`.iumpr-table th:${pseudo}`)?.match(/width:\s*(\d+)%/)?.[1]);
+    const [monitor, completed, conditions] = ["first-child", "nth-child(2)", "nth-child(3)"].map(
+      width,
+    );
+    expect(completed).toBeGreaterThanOrEqual(21);
+    expect(conditions).toBeGreaterThanOrEqual(24);
+    expect(Number(monitor) + Number(completed) + Number(conditions)).toBeLessThanOrEqual(71);
   });
 
   it("lets the ratio bar shrink to its cell instead of holding a minimum width", () => {

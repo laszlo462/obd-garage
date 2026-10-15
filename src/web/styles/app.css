@@ -1704,17 +1704,24 @@ a.btn-primary[aria-disabled="true"] {
 }
 
 .iumpr-table th:first-child {
-  width: 34%;
+  /* Monitor names wrap; the count columns need room for their header word at phone width */
+  width: 26%;
 }
 
 .iumpr-table th:nth-child(2) {
-  width: 17%;
+  width: 21%;
   text-align: right;
 }
 
 .iumpr-table th:nth-child(3) {
-  width: 20%;
+  width: 24%;
   text-align: right;
+}
+
+.iumpr-table th:nth-child(3),
+.iumpr-table td:nth-child(3) {
+  /* Both count columns are right-aligned: a gutter keeps "Completed" off "Conditions met" */
+  padding-left: 12px;
 }
 
 .iumpr-table td.mono-value {
