@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "preact/hooks";
 import { useLocation, useRoute } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
+import { AssignSheet } from "./AssignSheet.tsx";
 import { useApi } from "./api.tsx";
 import type { DriveLogDetail, NoteView } from "./api-types.ts";
 import { AllChannelsSheet } from "./chart/AllChannelsSheet.tsx";
@@ -74,6 +75,8 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
     setCharted((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
   const [allChannels, setAllChannels] = useState(false);
   const [referenceSheet, setReferenceSheet] = useState(false);
+  // "assign" is the chip on an Unassigned log; "change" is Change Vehicle… and may send it back to Unassigned.
+  const [assignSheet, setAssignSheet] = useState<"assign" | "change" | null>(null);
   const panels = useMemo(
     () => pickerPanels(detail.chartPreset, charted, payload.channels),
     [detail.chartPreset, charted, payload.channels],
@@ -150,7 +153,11 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
             count(detail.channels.t.length, "row"),
           ].join(" · ")}
         </p>
-        <button type="button" class="reference-chip" onClick={() => setReferenceSheet(true)}>
+        <button
+          type="button"
+          class="reference-chip"
+          onClick={() => (unassigned ? setAssignSheet("assign") : setReferenceSheet(true))}
+        >
           {referenceChipText(detail.referenceReport, { unassigned: detail.vehicleId === null })}
         </button>
       </div>
@@ -274,11 +281,23 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
           onClose={() => setReferenceSheet(false)}
         />
       )}
+      {assignSheet && (
+        <AssignSheet
+          logIds={[detail.id]}
+          current={detail.vehicleId}
+          allowUnassign={assignSheet === "change"}
+          onClose={() => setAssignSheet(null)}
+        />
+      )}
       {menu && (
         <DriveLogMenuSheet
           detail={detail}
           onClose={() => setMenu(false)}
           onDeleted={props.onDeleted}
+          onChangeVehicle={() => {
+            setMenu(false);
+            setAssignSheet("change");
+          }}
         />
       )}
     </>

@@ -8,6 +8,7 @@ import { Recent } from "./Recent.tsx";
 import { Reports } from "./Reports.tsx";
 import { ReportViewer } from "./ReportViewer.tsx";
 import { isTabPath } from "./TabBar.tsx";
+import { Unassigned } from "./Unassigned.tsx";
 import { VehicleSettings } from "./VehicleSettings.tsx";
 import { Vehicles } from "./Vehicles.tsx";
 
@@ -26,6 +27,7 @@ export function Routes() {
         <Route path="/reports" component={Reports} />
         <Route path="/drive-logs" component={DriveLogs} />
         <Route path="/failed-uploads" component={FailedUploads} />
+        <Route path="/unassigned" component={Unassigned} />
         <Route path="/vehicles" component={Vehicles} />
         <Route path="/reports/:id" component={ReportViewer} />
         <Route path="/drive-logs/:id" component={DriveLogViewer} />

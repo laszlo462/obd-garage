@@ -865,6 +865,60 @@ main {
   color: var(--bad);
 }
 
+.btn-default:disabled,
+.btn-danger:disabled {
+  opacity: 0.5;
+}
+
+/* Unassigned: a tick, the row, and View as separate targets */
+.unassigned-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.unassigned-row {
+  align-items: center;
+}
+
+.row-check {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: var(--touch);
+}
+
+.row-check input {
+  accent-color: var(--accent);
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin: 3px 0 0;
+}
+
+.unassigned-row .btn-default {
+  min-height: var(--touch);
+}
+
+.unassigned-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.unassigned-actions .btn-primary {
+  flex: 1;
+  margin: 0;
+  width: auto;
+}
+
+.unassigned-actions .btn-default,
+.unassigned-actions .btn-danger {
+  min-height: var(--touch);
+}
+
 /* Load banner: the one strip for a failed load, under the app bar */
 .load-banner {
   display: flex;

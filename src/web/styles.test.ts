@@ -78,6 +78,11 @@ describe("app stylesheet", () => {
     expect(rule(".bar-control")).toMatch(/min-height:\s*var\(--touch\)/);
   });
 
+  it("gives an Unassigned row's tick label and its View link a 44px tap target", () => {
+    expect(rule(".row-check")).toMatch(/min-height:\s*var\(--touch\)/);
+    expect(rule(".unassigned-row .btn-default")).toMatch(/min-height:\s*var\(--touch\)/);
+  });
+
   it("sets body text in Inter at 15px on the --bg canvas", () => {
     const body = rule("body") ?? "";
     expect(body).toMatch(/font-family:\s*var\(--font-text\)/);
