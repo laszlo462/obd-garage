@@ -76,9 +76,96 @@ summary {
   min-width: 0;
 }
 
+main.viewer {
+  /* Room for the Note bar, so it never covers the data table. */
+  padding-bottom: calc(var(--gutter) + 44px + 24px + env(safe-area-inset-bottom));
+}
+
+.note-bar {
+  /* Drive Log viewer: ‹ row · Note here · row ›. The centre button has a fixed share, so nothing reflows. */
+  position: fixed;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  box-sizing: border-box;
+  padding: 8px var(--gutter);
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+
+.note-step {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 44px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--accent);
+  line-height: 1;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.note-step span {
+  font-size: 20px;
+}
+
+.note-step small {
+  font-size: 9.5px;
+  color: var(--muted);
+}
+
+.note-here {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-here-pinned {
+  border-color: var(--note);
+  background: var(--note);
+  color: #1b1400;
+}
+
 @media (min-width: 900px) {
   :root {
     --gutter: 20px;
+  }
+
+  .note-bar {
+    left: 50%;
+    right: auto;
+    bottom: 12px;
+    width: 100%;
+    max-width: 420px;
+    transform: translateX(-50%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-panel);
   }
 
   .viewer-grid {
@@ -1808,4 +1895,106 @@ main {
 .event-notrun .event-marker {
   width: 10px;
   height: 10px;
+}
+
+.pin-heads {
+  position: relative;
+  z-index: 3;
+  height: 0;
+}
+
+.pin-head {
+  position: absolute;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translateX(-50%);
+}
+
+.pin-head i {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--note);
+}
+
+.event-marker-pin {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--note);
+}
+
+.legend-swatch-note {
+  width: 2px;
+  background: var(--note);
+  justify-self: center;
+}
+
+.notes-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.notes-panel > .btn-default,
+.section-body > .btn-default {
+  margin: 8px 10px;
+}
+
+.notes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.note-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.note-text {
+  overflow-wrap: anywhere;
+}
+
+.note-added {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+
+.note-field {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.note-view-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }

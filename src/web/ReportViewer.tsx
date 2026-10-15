@@ -92,6 +92,7 @@ function ReportBody(props: { detail: ReportDetail; onDeleted: () => void }) {
         />
       )}
       <ReportSections
+        uploadId={detail.id}
         report={report}
         comparison={comparison}
         comparedDate={compared ? shortDate(compared.recordedAt) : null}

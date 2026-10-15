@@ -2,6 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { drawFreezeLines } from "../events/draw-freeze-lines.ts";
+import { drawNotePins } from "../events/draw-note-pins.ts";
 import { drawOverlays } from "../events/draw-overlays.ts";
 import { freezeLines } from "./freeze-lines.ts";
 import { createGestureTracker, type Intent, type TouchPoint } from "./gesture-tracker.ts";
@@ -41,6 +42,8 @@ export function DriveChart(props: {
   }[];
   /** The Reference Report's freeze-frame values, drawn as dashed lines over the series they match. */
   freezeFrame: readonly { key: string; value: number }[];
+  /** The `Time (sec)` of each pinned Note's row; a 2 px `--note` line is drawn there in every panel. */
+  pinTimes: readonly number[];
   cursorRow: number;
   onCursorRow(row: number): void;
   /** A new range to show, or `null` for the whole drive. */
@@ -95,6 +98,7 @@ export function DriveChart(props: {
         drawClear: [(u) => drawOverlays(u, live.current.events)],
         // Over the series, so a line is never hidden by a fill.
         draw: [
+          (u) => drawNotePins(u, live.current.pinTimes),
           (u) =>
             drawFreezeLines(
               u,
@@ -136,6 +140,11 @@ export function DriveChart(props: {
     props.startSec,
     props.freezeFrame,
   ]);
+
+  // Draw the pin lines again when the pinned Notes change.
+  useEffect(() => {
+    for (const u of charts.current) u.redraw();
+  }, [props.pinTimes]);
 
   // Show the range.
   useEffect(() => {

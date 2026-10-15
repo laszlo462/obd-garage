@@ -2,10 +2,10 @@ import { useMemo, useRef, useState } from "preact/hooks";
 import { useLocation, useRoute } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
 import { useApi } from "./api.tsx";
-import type { DriveLogDetail } from "./api-types.ts";
+import type { DriveLogDetail, NoteView } from "./api-types.ts";
 import { AllChannelsSheet } from "./chart/AllChannelsSheet.tsx";
 import { ChannelChips } from "./chart/ChannelChips.tsx";
-import { startSecondOfDay } from "./chart/clock.ts";
+import { clockAt, startSecondOfDay } from "./chart/clock.ts";
 import { DataTable } from "./chart/DataTable.tsx";
 import { DriveChart } from "./chart/DriveChart.tsx";
 import { freezeLines } from "./chart/freeze-lines.ts";
@@ -23,6 +23,13 @@ import { inPackSpan } from "./events/in-pack-span.ts";
 import { Legend } from "./events/Legend.tsx";
 import { outcomeLines } from "./events/outcome-lines.ts";
 import { count, duration, reportTitle } from "./format.ts";
+import { NoteBar } from "./notes/NoteBar.tsx";
+import { NotesPanel } from "./notes/NotesPanel.tsx";
+import { PinHeads } from "./notes/PinHeads.tsx";
+import { pinPositions } from "./notes/pin-positions.ts";
+import { pinnedRows } from "./notes/pinned-rows.ts";
+import { useNoteDialogs } from "./notes/use-note-dialogs.tsx";
+import { useNotes } from "./notes/use-notes.ts";
 import { ReferenceReportSheet } from "./ReferenceReportSheet.tsx";
 import { referenceChipText } from "./reference-chip.ts";
 import { useBarMenu } from "./use-bar-menu.ts";
@@ -100,6 +107,29 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
     () => (lookAlikes ? detail.events : detail.events.filter((e) => e.category !== "look-alike")),
     [detail.events, lookAlikes],
   );
+  const noteList = useNotes(detail.id);
+  const {
+    openAdd,
+    openView,
+    dialogs: noteDialogs,
+  } = useNoteDialogs(noteList, (n) =>
+    n.snappedTimeSec === null ? null : clockAt(startSec, n.snappedTimeSec),
+  );
+  const pins = useMemo(() => pinnedRows(noteList.notes, t), [noteList.notes, t]);
+  const here = pins.get(row);
+  const pinTimes = useMemo(() => [...pins.keys()].map((r) => t[r] ?? 0), [pins, t]);
+  const pinList = useMemo(
+    () =>
+      noteList.notes.flatMap((note) =>
+        note.snappedTimeSec === null ? [] : [{ note, startSec: note.snappedTimeSec }],
+      ),
+    [noteList.notes],
+  );
+  /** Snap the cursor to a pinned Note's row and open it. */
+  const showPin = (note: NoteView) => {
+    if (note.snappedTimeSec !== null) setRow(Math.max(0, nearestRow(t, note.snappedTimeSec)));
+    openView(note);
+  };
   const packNames = useMemo(
     () =>
       new Map(
@@ -142,6 +172,7 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
             elapsed={t[row] ?? 0}
             startSec={startSec}
             inWindow={inPackSpan(detail.events, t[row] ?? Number.NaN)}
+            noted={here !== undefined}
           />
           <div class="chart-card" ref={chartCard}>
             <Overview
@@ -151,6 +182,14 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
               range={range}
               whole={whole}
               onRange={zoomTo}
+            />
+            <PinHeads
+              pins={pinPositions([...pins.keys()], t, range).map((p) => ({
+                ...p,
+                notes: pins.get(p.row) ?? [],
+                label: `Note at ${clockAt(startSec, t[p.row] ?? 0)}`,
+              }))}
+              onOpen={showPin}
             />
             <DriveChart
               t={t}
@@ -162,12 +201,14 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
               range={range}
               events={shownEvents}
               freezeFrame={detail.referenceReport.freezeFrame}
+              pinTimes={pinTimes}
               cursorRow={row}
               onCursorRow={setRow}
               onRange={zoomTo}
             />
             <Legend
               events={shownEvents}
+              note={pinList.length > 0}
               freezeFrame={panels.some(
                 (p) => freezeLines(p, detail.referenceReport.freezeFrame).length > 0,
               )}
@@ -187,13 +228,35 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
             packNames={packNames}
             notRun={outcomeLines(detail.ruleOutcomes, { unassigned })}
             lookAlikes={unassigned ? null : { on: lookAlikes, onChange: setLookAlikes }}
+            pins={pinList}
+            onOpenPin={showPin}
             onSeek={(e) => {
               setRow(Math.max(0, nearestRow(t, e.startSec ?? 0)));
               chartCard.current?.scrollIntoView({ block: "nearest" });
             }}
           />
+          <section class="notes-panel" aria-label="Notes">
+            <h3 class="events-head">Notes</h3>
+            <NotesPanel
+              notes={noteList.notes}
+              addLabel="Add"
+              onAdd={() => openAdd(null)}
+              onOpen={openView}
+            />
+          </section>
         </div>
       </div>
+      <NoteBar
+        clock={clockAt(startSec, t[row] ?? 0)}
+        onStep={(delta) => setRow((r) => Math.min(Math.max(r + delta, 0), t.length - 1))}
+        pinned={here !== undefined}
+        onNote={() =>
+          here?.[0]
+            ? openView(here[0])
+            : openAdd(t[row] ?? 0, `Note at ${clockAt(startSec, t[row] ?? 0)}`)
+        }
+      />
+      {noteDialogs}
       {allChannels && (
         <AllChannelsSheet
           channels={payload.channels}

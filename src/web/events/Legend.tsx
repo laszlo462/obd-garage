@@ -13,10 +13,12 @@ export function Legend(props: {
   events: readonly { kind: string; category: string }[];
   /** True when a freeze-frame line is charted. */
   freezeFrame: boolean;
+  /** True when a Note is pinned. */
+  note?: boolean;
 }) {
   const present = new Set(props.events.map(overlayPattern));
   const kinds = ORDER.filter((k) => present.has(k));
-  if (kinds.length === 0 && !props.freezeFrame) return null;
+  if (kinds.length === 0 && !props.freezeFrame && !props.note) return null;
   return (
     <ul class="legend" aria-label="Legend">
       {kinds.map((k) => (
@@ -29,6 +31,12 @@ export function Legend(props: {
         <li>
           <i class="legend-swatch legend-swatch-freeze" aria-hidden="true" />
           Freeze frame
+        </li>
+      )}
+      {props.note && (
+        <li>
+          <i class="legend-swatch legend-swatch-note" aria-hidden="true" />
+          Note
         </li>
       )}
     </ul>

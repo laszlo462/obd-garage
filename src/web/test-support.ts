@@ -5,6 +5,7 @@ import type {
   DriveLogDetail,
   DriveLogRow,
   FeedRow,
+  NoteView,
   ProfileRow,
   ReportDetail,
   ReportRow,
@@ -12,6 +13,7 @@ import type {
   StatusData,
   VehicleRow,
 } from "./api-types.ts";
+import { nearestRow } from "./chart/nearest-row.ts";
 import type { UploadResult } from "./upload-batch.ts";
 
 export type UnassignedRow = InferResponseType<Api["api"]["drive-logs"]["$get"], 200>[number];
@@ -34,7 +36,8 @@ export type FailRoute =
   | "assign"
   | "reference"
   | "profiles"
-  | "rulePacks";
+  | "rulePacks"
+  | "notes";
 
 export type StubData = {
   vehicles?: VehicleRow[];
@@ -82,6 +85,19 @@ export type StubData = {
   vehiclePatches?: unknown[];
   /** A PATCH waits for this promise before it answers. */
   vehiclePatchGate?: Promise<unknown>;
+  /**
+   * The Notes per upload id. `POST /api/uploads/:id/notes`, `PATCH` and `DELETE /api/notes/:id` change this
+   * map like the server; a pinned Note snaps to the nearest row of the Drive Log in `driveLogDetails`.
+   */
+  notes?: Record<number, NoteView[]>;
+  /** Every Notes call is pushed here: `uploadId` for the list routes, `id` for a Note. */
+  noteCalls?: {
+    method: "GET" | "POST" | "PATCH" | "DELETE";
+    uploadId?: number;
+    id?: number;
+    text?: string;
+    pinnedAt?: number | null;
+  }[];
   /** Each `GET /api/vehicles` pushes a marker here. */
   vehicleLoads?: unknown[];
   /**
@@ -280,6 +296,40 @@ export function stubApi(data: StubData = {}): Api {
             original: {
               $path: (args: { param: { id: string } }) => `/api/uploads/${args.param.id}/original`,
             },
+            notes: {
+              $get: route(data, "notes", (args: { param: { id: string } }) => {
+                const uploadId = Number(args.param.id);
+                data.noteCalls?.push({ method: "GET", uploadId });
+                return json(data.notes?.[uploadId] ?? []);
+              }),
+              $post: route(
+                data,
+                "notes",
+                (args: {
+                  param: { id: string };
+                  json: { text: string; pinnedAt?: number | null };
+                }) => {
+                  const uploadId = Number(args.param.id);
+                  const { text, pinnedAt = null } = args.json;
+                  data.noteCalls?.push({ method: "POST", uploadId, text, pinnedAt });
+                  const t = data.driveLogDetails?.[uploadId]?.channels.t;
+                  const all = Object.values(data.notes ?? {}).flat();
+                  const note = noteRow({
+                    id: Math.max(0, ...all.map((n) => n.id)) + 1,
+                    uploadId,
+                    text,
+                    pinnedTimeSec: pinnedAt,
+                    snappedTimeSec:
+                      pinnedAt === null ? null : (t?.[nearestRow(t, pinnedAt)] ?? pinnedAt),
+                  });
+                  data.notes = {
+                    ...data.notes,
+                    [uploadId]: [...(data.notes?.[uploadId] ?? []), note],
+                  };
+                  return Promise.resolve(Response.json(note, { status: 201 }));
+                },
+              ),
+            },
           },
         },
       ),
@@ -307,6 +357,32 @@ export function stubApi(data: StubData = {}): Api {
           },
         },
       ),
+      notes: {
+        ":id": {
+          $patch: route(
+            data,
+            "notes",
+            (args: { param: { id: string }; json: { text: string } }) => {
+              const id = Number(args.param.id);
+              data.noteCalls?.push({ method: "PATCH", id, text: args.json.text });
+              const note = Object.values(data.notes ?? {})
+                .flat()
+                .find((n) => n.id === id);
+              if (!note)
+                return Promise.resolve(Response.json({ error: "Unknown Note." }, { status: 404 }));
+              note.text = args.json.text;
+              return json(note);
+            },
+          ),
+          $delete: route(data, "notes", (args: { param: { id: string } }) => {
+            const id = Number(args.param.id);
+            data.noteCalls?.push({ method: "DELETE", id });
+            for (const [uploadId, list] of Object.entries(data.notes ?? {}))
+              if (data.notes) data.notes[Number(uploadId)] = list.filter((n) => n.id !== id);
+            return json({ deleted: id });
+          }),
+        },
+      },
       profiles: { $get: route(data, "profiles", () => json(data.profiles ?? [])) },
       "rule-packs": { $get: route(data, "rulePacks", () => json(data.rulePacks ?? [])) },
       "failed-uploads": { $get: route(data, "failedUploads", () => json(data.failed ?? [])) },
@@ -388,6 +464,17 @@ export const driveLogRow = (over: Partial<DriveLogRow> = {}): DriveLogRow => ({
   noteCount: 0,
   eventCount: 0,
   skippedRows: 0,
+  ...over,
+});
+
+/** A whole-upload Note of upload 1; pass `pinnedTimeSec` and `snappedTimeSec` to pin it. */
+export const noteRow = (over: Partial<NoteView> = {}): NoteView => ({
+  id: 1,
+  uploadId: 1,
+  text: "A note",
+  pinnedTimeSec: null,
+  snappedTimeSec: null,
+  createdAt: "2026-10-04T09:00:00.000Z",
   ...over,
 });
 

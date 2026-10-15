@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { validator } from "hono/validator";
 import type { Db, Note } from "../db.ts";
 
 const parseId = (text: string) => (/^\d+$/.test(text) ? Number(text) : Number.NaN);
@@ -50,57 +51,71 @@ export function notesRoute(deps: { db: Db; now?: () => Date }) {
     };
   };
 
-  return new Hono()
-    .get("/uploads/:id/notes", (c) => {
-      const upload = db.getUpload(parseId(c.req.param("id")));
-      if (!upload) return c.json({ error: "Unknown upload." }, 404);
-      let axis: { value: TimeAxis | undefined } | undefined;
-      const axisOnce = () => {
-        axis ??= { value: timeAxis(db, upload.id) };
-        return axis.value;
-      };
-      return c.json(db.listNotes(upload.id).map((n) => view(n, axisOnce)));
-    })
-    .post("/uploads/:id/notes", async (c) => {
-      const upload = db.getUpload(parseId(c.req.param("id")));
-      if (!upload) return c.json({ error: "Unknown upload." }, 404);
-      const body = (await c.req.json().catch(() => null)) as {
-        text?: unknown;
-        pinnedAt?: unknown;
-      } | null;
-      const text = textOf(body);
-      if (text === undefined) return c.json({ error: "Expected { text: string } with text." }, 400);
-      const pinnedAt = body?.pinnedAt ?? null;
-      if (pinnedAt !== null && (typeof pinnedAt !== "number" || !Number.isFinite(pinnedAt)))
-        return c.json({ error: "pinnedAt must be a number (the log's Time (sec))." }, 400);
-      if (pinnedAt !== null) {
-        if (upload.kind !== "drive-log")
-          return c.json({ error: "Only a Drive Log Note can be pinned to a moment." }, 400);
-        const axis = timeAxis(db, upload.id);
-        if (!axis) return c.json({ error: "This Drive Log has no readable time range." }, 400);
-        if ((pinnedAt as number) < axis.first || (pinnedAt as number) > axis.last)
-          return c.json({ error: "pinnedAt is outside the Drive Log's time range." }, 400);
-      }
-      const note = db.addNote({
-        uploadId: upload.id,
-        text,
-        pinnedTimeSec: pinnedAt as number | null,
-        createdAt: now().toISOString(),
-      });
-      return c.json(view(note), 201);
-    })
-    .patch("/notes/:id", async (c) => {
-      const note = db.getNote(parseId(c.req.param("id")));
-      if (!note) return c.json({ error: "Unknown Note." }, 404);
-      const text = textOf((await c.req.json().catch(() => null)) as { text?: unknown } | null);
-      if (text === undefined) return c.json({ error: "Expected { text: string } with text." }, 400);
-      db.setNoteText(note.id, text);
-      return c.json(view({ ...note, text }));
-    })
-    .delete("/notes/:id", (c) => {
-      const note = db.getNote(parseId(c.req.param("id")));
-      if (!note) return c.json({ error: "Unknown Note." }, 404);
-      db.deleteNote(note.id);
-      return c.json({ deleted: note.id });
-    });
+  return (
+    new Hono()
+      .get("/uploads/:id/notes", (c) => {
+        const upload = db.getUpload(parseId(c.req.param("id")));
+        if (!upload) return c.json({ error: "Unknown upload." }, 404);
+        let axis: { value: TimeAxis | undefined } | undefined;
+        const axisOnce = () => {
+          axis ??= { value: timeAxis(db, upload.id) };
+          return axis.value;
+        };
+        return c.json(db.listNotes(upload.id).map((n) => view(n, axisOnce)));
+      })
+      // Type-only: the typed client sees the body; the handler still validates it.
+      .post(
+        "/uploads/:id/notes",
+        validator("json", (b) => b as { text: string; pinnedAt?: number | null }),
+        async (c) => {
+          const upload = db.getUpload(parseId(c.req.param("id")));
+          if (!upload) return c.json({ error: "Unknown upload." }, 404);
+          const body = (await c.req.json().catch(() => null)) as {
+            text?: unknown;
+            pinnedAt?: unknown;
+          } | null;
+          const text = textOf(body);
+          if (text === undefined)
+            return c.json({ error: "Expected { text: string } with text." }, 400);
+          const pinnedAt = body?.pinnedAt ?? null;
+          if (pinnedAt !== null && (typeof pinnedAt !== "number" || !Number.isFinite(pinnedAt)))
+            return c.json({ error: "pinnedAt must be a number (the log's Time (sec))." }, 400);
+          if (pinnedAt !== null) {
+            if (upload.kind !== "drive-log")
+              return c.json({ error: "Only a Drive Log Note can be pinned to a moment." }, 400);
+            const axis = timeAxis(db, upload.id);
+            if (!axis) return c.json({ error: "This Drive Log has no readable time range." }, 400);
+            if ((pinnedAt as number) < axis.first || (pinnedAt as number) > axis.last)
+              return c.json({ error: "pinnedAt is outside the Drive Log's time range." }, 400);
+          }
+          const note = db.addNote({
+            uploadId: upload.id,
+            text,
+            pinnedTimeSec: pinnedAt as number | null,
+            createdAt: now().toISOString(),
+          });
+          return c.json(view(note), 201);
+        },
+      )
+      // Type-only: the typed client sees the body; the handler still validates it.
+      .patch(
+        "/notes/:id",
+        validator("json", (b) => b as { text: string }),
+        async (c) => {
+          const note = db.getNote(parseId(c.req.param("id")));
+          if (!note) return c.json({ error: "Unknown Note." }, 404);
+          const text = textOf((await c.req.json().catch(() => null)) as { text?: unknown } | null);
+          if (text === undefined)
+            return c.json({ error: "Expected { text: string } with text." }, 400);
+          db.setNoteText(note.id, text);
+          return c.json(view({ ...note, text }));
+        },
+      )
+      .delete("/notes/:id", (c) => {
+        const note = db.getNote(parseId(c.req.param("id")));
+        if (!note) return c.json({ error: "Unknown Note." }, 404);
+        db.deleteNote(note.id);
+        return c.json({ deleted: note.id });
+      })
+  );
 }

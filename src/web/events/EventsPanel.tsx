@@ -1,13 +1,16 @@
-import type { DriveLogDetail } from "../api-types.ts";
+import type { DriveLogDetail, NoteView } from "../api-types.ts";
 import { elapsedAt } from "../chart/clock.ts";
 import { duration } from "../format.ts";
 import { overlayPattern } from "./overlay-style.ts";
 
 export type EventRow = DriveLogDetail["events"][number];
 
+type Row = { startSec: number } & ({ event: EventRow } | { pin: NoteView });
+
 /**
- * The Events of a Drive Log by time, then the rules that did not run. A tap on a row seeks the chart's
- * cursor to the Event's start. Titles and text go in as text, never markup.
+ * The Events of a Drive Log and its pinned Notes by time, then the rules that did not run. A tap on an Event
+ * seeks the chart's cursor to its start; a tap on a pin row opens that Note. Titles and text go in as text,
+ * never markup.
  */
 export function EventsPanel(props: {
   events: readonly EventRow[];
@@ -18,15 +21,20 @@ export function EventsPanel(props: {
   /** The Look-alikes switch; `null` hides it (an Unassigned log has no Reference Report). */
   lookAlikes: { on: boolean; onChange(on: boolean): void } | null;
   onSeek(event: EventRow): void;
+  /** The pinned Notes, each at its snapped time; they join the list as pin rows. */
+  pins?: readonly { note: NoteView; startSec: number }[];
+  onOpenPin?(note: NoteView): void;
 }) {
-  const rows = [...props.events]
-    .filter((e) => e.startSec !== null)
-    .sort((a, b) => (a.startSec as number) - (b.startSec as number));
+  const events = props.events.filter((e) => e.startSec !== null);
+  const rows: Row[] = [
+    ...events.map((event) => ({ event, startSec: event.startSec as number })),
+    ...(props.pins ?? []).map(({ note, startSec }) => ({ pin: note, startSec })),
+  ].sort((a, b) => a.startSec - b.startSec);
   return (
     <section class="events-panel" aria-label="Events">
       <div class="events-header">
         <h3 class="events-head">
-          Events<span class="count">{rows.length}</span>
+          Events<span class="count">{events.length}</span>
         </h3>
         {props.lookAlikes && (
           <label class="switch-row look-switch">
@@ -42,28 +50,48 @@ export function EventsPanel(props: {
         )}
       </div>
       <ul class="events-list">
-        {rows.map((e) => (
-          <li key={`${e.ruleId}@${e.startSec}`}>
-            <button type="button" class="event-row" onClick={() => props.onSeek(e)}>
-              <i class={`event-marker event-marker-${overlayPattern(e)}`} aria-hidden="true" />
-              <span class="event-body">
-                {e.packId !== null && (
-                  <span class="event-pack">{props.packNames.get(e.packId) ?? e.packId}</span>
-                )}
-                <span class="event-title">{e.title}</span>
-                <span class="event-detail">{e.text}</span>
-              </span>
-              <span class="event-times">
-                <span class="event-start">{elapsedAt(e.startSec as number)}</span>
-                {e.kind === "span" && (
-                  <span class="event-duration">
-                    {duration((e.endSec as number) - (e.startSec as number))}
-                  </span>
-                )}
-              </span>
-            </button>
-          </li>
-        ))}
+        {rows.map((row) =>
+          "pin" in row ? (
+            <li key={`note-${row.pin.id}`}>
+              <button type="button" class="event-row" onClick={() => props.onOpenPin?.(row.pin)}>
+                <i class="event-marker event-marker-pin" aria-hidden="true" />
+                <span class="event-body">
+                  <span class="event-title">Note</span>
+                  <span class="event-detail">{row.pin.text}</span>
+                </span>
+                <span class="event-times">
+                  <span class="event-start">{elapsedAt(row.startSec)}</span>
+                </span>
+              </button>
+            </li>
+          ) : (
+            <li key={`${row.event.ruleId}@${row.event.startSec}`}>
+              <button type="button" class="event-row" onClick={() => props.onSeek(row.event)}>
+                <i
+                  class={`event-marker event-marker-${overlayPattern(row.event)}`}
+                  aria-hidden="true"
+                />
+                <span class="event-body">
+                  {row.event.packId !== null && (
+                    <span class="event-pack">
+                      {props.packNames.get(row.event.packId) ?? row.event.packId}
+                    </span>
+                  )}
+                  <span class="event-title">{row.event.title}</span>
+                  <span class="event-detail">{row.event.text}</span>
+                </span>
+                <span class="event-times">
+                  <span class="event-start">{elapsedAt(row.startSec)}</span>
+                  {row.event.kind === "span" && (
+                    <span class="event-duration">
+                      {duration((row.event.endSec as number) - row.startSec)}
+                    </span>
+                  )}
+                </span>
+              </button>
+            </li>
+          ),
+        )}
         {props.notRun.map((line) => (
           <li key={line} class="event-notrun">
             <i class="event-marker event-marker-notrun" aria-hidden="true" />

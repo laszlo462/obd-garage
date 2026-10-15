@@ -4,7 +4,9 @@ import type { Range } from "./range.ts";
 
 /** The time axis under the last panel. */
 export const AXIS_HEIGHT = 22;
-const Y_AXIS_WIDTH = 44;
+/** The plot sits Y_AXIS_WIDTH px in from the panel's left edge and PAD_RIGHT px short of its right edge. */
+export const Y_AXIS_WIDTH = 44;
+export const PAD_RIGHT = 8;
 /** Room above the plot for the panel's label, and below it for the bottom tick label. */
 const PAD_TOP = 18;
 const PAD_BOTTOM = 8;
@@ -74,7 +76,7 @@ export function panelOptions(spec: PanelSpec): uPlot.Options {
     width: spec.width,
     height: spec.height,
     legend: { show: false },
-    padding: [PAD_TOP, 8, PAD_BOTTOM, 0],
+    padding: [PAD_TOP, PAD_RIGHT, PAD_BOTTOM, 0],
     scales: {
       x: { time: false, min: spec.range.min, max: spec.range.max },
       y: { range: (_u, min, max) => yRange(min, max, spec.freezeValues) },
