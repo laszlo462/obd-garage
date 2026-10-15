@@ -26,7 +26,9 @@ Project agents live in `.claude/agents/` so cloud sessions have them too.
 - `explorer` (Haiku, read-only) for lookups like "where is X defined".
 - `implementer` (Sonnet) for implementation: one build issue, test-first.
 - On every implementer hand-back, run `npm run check:slice` before shipping. A new test that passes without
-  the change is a finding; uncovered changed lines are for review, not automatic failures.
+  the change is a finding; uncovered changed lines are for review, not automatic failures. A case
+  checked by hand can be listed apart with `-- --guard "<substring of its key>"`. A slice with no
+  production change can't be judged; the check says so and exits 0.
 - `shipper` (Haiku) to commit, push and open a PR once the owner asks to ship.
 - Merging stays with the owner.
 - When a PR is ready, also list its known gaps. Name the open issue that should own each gap, and offer to
