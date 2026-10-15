@@ -1,14 +1,19 @@
 import { useMemo, useRef, useState } from "preact/hooks";
 import { useLocation, useRoute } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
+import { useApi } from "./api.tsx";
 import type { DriveLogDetail } from "./api-types.ts";
+import { AllChannelsSheet } from "./chart/AllChannelsSheet.tsx";
+import { ChannelChips } from "./chart/ChannelChips.tsx";
 import { startSecondOfDay } from "./chart/clock.ts";
+import { DataTable } from "./chart/DataTable.tsx";
 import { DriveChart } from "./chart/DriveChart.tsx";
+import { Notices } from "./chart/Notices.tsx";
 import { nearestRow } from "./chart/nearest-row.ts";
 import { Overview } from "./chart/Overview.tsx";
 import { Readout } from "./chart/Readout.tsx";
 import { clampRange, type Range } from "./chart/range.ts";
-import { chartPanels } from "./chart/series.ts";
+import { channelOrder, pickerPanels, presetKeys } from "./chart/series.ts";
 import { seriesColors } from "./chart/series-colors.ts";
 import { useSchemeChanges } from "./chart/use-scheme.ts";
 import { DriveLogMenuSheet } from "./DriveLogMenuSheet.tsx";
@@ -18,7 +23,7 @@ import { Legend } from "./events/Legend.tsx";
 import { outcomeLines } from "./events/outcome-lines.ts";
 import { count, duration, reportTitle } from "./format.ts";
 import { useBarMenu } from "./use-bar-menu.ts";
-import { useDriveLogLoad } from "./use-drive-log-load.ts";
+import { useDetailLoad } from "./use-detail-load.ts";
 import { useIsDesktop } from "./viewport.ts";
 
 /** The Drive Log viewer: header, chart and readout of one Drive Log. */
@@ -28,7 +33,13 @@ export function DriveLogViewer() {
   const location = useLocation();
   // Once deleted, the Drive Log must not reload when app state is invalidated: it is gone.
   const gone = useRef(false);
-  const load = useDriveLogLoad(id, !gone.current);
+  const api = useApi();
+  const load = useDetailLoad<DriveLogDetail>(
+    id,
+    !gone.current,
+    (logId) => api.api["drive-logs"][":id"].$get({ param: { id: String(logId) } }),
+    "This Drive Log has no data.",
+  );
   if (load.state === "conflict") return <p class="list-note">{load.message}</p>;
   if (load.state !== "ready") return null;
   const back = () => {
@@ -46,10 +57,24 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
   const [menu, setMenu] = useState(false);
   useBarMenu(() => setMenu(true));
   const vehicle = state.vehicles.value.find((v) => v.id === detail.vehicleId);
-  const panels = useMemo(() => chartPanels(detail), [detail]);
-  const series = panels.flatMap((p) => p.series);
+  const { channels: payload } = detail;
+  // The charted Channel keys in picker order; it starts as the preset and resets with the Drive Log.
+  const [charted, setCharted] = useState(() => presetKeys(detail.chartPreset));
+  const toggle = (key: string) =>
+    setCharted((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  const [allChannels, setAllChannels] = useState(false);
+  const panels = useMemo(
+    () => pickerPanels(detail.chartPreset, charted, payload.channels),
+    [detail.chartPreset, charted, payload.channels],
+  );
+  // The readout lists the Channels in picker order, whatever panel each one is in.
+  const series = useMemo(
+    () => panels.flatMap((p) => p.series).sort((a, b) => a.index - b.index),
+    [panels],
+  );
+  const order = channelOrder(charted, payload.channels, payload.hidden);
   const scheme = useSchemeChanges();
-  const colors = useMemo(() => seriesColors(series.length), [series.length, scheme]);
+  const colors = useMemo(() => seriesColors(charted.length), [charted.length, scheme]);
   const desktop = useIsDesktop();
   const t = detail.channels.t;
   const [row, setRow] = useState(0);
@@ -92,6 +117,15 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
       </div>
       <div class="viewer-grid">
         <div class="viewer-main">
+          <Notices messages={[...detail.decodeNotices, ...detail.warnings]} />
+          <ChannelChips
+            channels={payload.channels}
+            charted={order.charted}
+            others={order.others}
+            colors={colors}
+            onToggle={toggle}
+            onAll={() => setAllChannels(true)}
+          />
           <Readout
             series={series}
             colors={colors}
@@ -124,6 +158,13 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
             />
             <Legend events={shownEvents} />
           </div>
+          <DataTable
+            t={t}
+            channels={payload.channels}
+            keys={[...order.charted, ...order.others]}
+            row={row}
+            startSec={startSec}
+          />
         </div>
         <div class="viewer-side">
           <EventsPanel
@@ -139,6 +180,15 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
           />
         </div>
       </div>
+      {allChannels && (
+        <AllChannelsSheet
+          channels={payload.channels}
+          hidden={payload.hidden}
+          charted={charted}
+          onToggle={toggle}
+          onClose={() => setAllChannels(false)}
+        />
+      )}
       {menu && (
         <DriveLogMenuSheet
           detail={detail}

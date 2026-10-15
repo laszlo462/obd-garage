@@ -188,11 +188,24 @@ describe("Drive Log viewer layout", () => {
     expect(value).toMatch(/font-variant-numeric:\s*tabular-nums/);
   });
 
-  it("sizes the phone readout columns to their content and never clips a slot, so units stay whole", () => {
-    expect(rule(".readout-slots")).toMatch(/grid-template-columns:\s*repeat\(3,\s*max-content\)/);
+  it("splits the phone readout into three equal columns that can shrink, so any set of Channels fits at 360px", () => {
+    expect(rule(".readout-slots")).toMatch(
+      /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/,
+    );
+    expect(rule(".readout-slot")).toMatch(/min-width:\s*0/);
+    // A unit gives way before the value does; the slot itself never clips.
+    expect(rule(".readout-unit")).toMatch(/overflow:\s*hidden/);
+    expect(rule(".readout-unit")).toMatch(/text-overflow:\s*ellipsis/);
+    expect(rule(".readout-value")).toMatch(/flex:\s*none/);
     expect(rule(".readout-slot")).not.toMatch(/overflow:\s*hidden/);
     expect(rule(".readout-value")).toMatch(/font-size:\s*var\(--fs-12\)/);
     expect(rule(".readout-unit")).toMatch(/font-size:\s*9px/);
+  });
+
+  it("gives the readout slots the whole width, without a list's indent", () => {
+    expect(rule(".readout-slots")).toMatch(/margin:\s*0;/);
+    expect(rule(".readout-slots")).toMatch(/padding:\s*0;/);
+    expect(rule(".readout-slots")).toMatch(/list-style:\s*none/);
   });
 
   // The fit itself (375 and 390 px phones) needs a browser; these are the rules it relies on.
@@ -225,6 +238,33 @@ describe("Drive Log viewer layout", () => {
 
   it("puts the chart in one bordered panel", () => {
     expect(rule(".chart-card")).toMatch(/border:\s*1px solid var\(--line\)/);
+  });
+});
+
+describe("Channel picker", () => {
+  it("scrolls the chips sideways with no scrollbar and a 1px --line border on each", () => {
+    expect(rule(".chips")).toMatch(/overflow-x:\s*auto/);
+    expect(rule(".chips")).toMatch(/scrollbar-width:\s*none/);
+    expect(rule(".chip")).toMatch(/border:\s*1px solid var\(--line\)/);
+  });
+
+  it("borders a selected chip in its series colour with a 12% tint and a leading dot", () => {
+    const selected = rule('.chip[aria-pressed="true"]') ?? "";
+    expect(selected).toMatch(/border-color:\s*var\(--chip\)/);
+    expect(selected).toMatch(/color-mix\(in srgb,\s*var\(--chip\)\s*12%,\s*transparent\)/);
+    expect(rule(".chip-dot")).toMatch(/background:\s*var\(--chip\)/);
+    expect(rule('.chip:not([aria-pressed="true"]) .chip-dot')).toMatch(/display:\s*none/);
+  });
+
+  it("draws a Notice with a --warn-t fill and --warn text", () => {
+    expect(rule(".notice")).toMatch(/background:\s*var\(--warn-t\)/);
+    expect(rule(".notice")).toMatch(/color:\s*var\(--warn\)/);
+  });
+
+  it("writes the data table in mono 12px, scrolling sideways, and tints the cursor row", () => {
+    expect(rule(".data-table-scroll")).toMatch(/overflow-x:\s*auto/);
+    expect(rule(".data-table table")).toMatch(/font:\s*var\(--fs-12\)\s+var\(--font-mono\)/);
+    expect(rule('.data-table tr[aria-current="true"]')).toMatch(/background:\s*var\(--accent-t\)/);
   });
 });
 
