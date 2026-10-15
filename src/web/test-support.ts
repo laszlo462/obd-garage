@@ -43,7 +43,7 @@ export type StubData = {
   vehicles?: VehicleRow[];
   unassigned?: UnassignedRow[];
   failed?: FailedRow[];
-  /** `DELETE /api/uploads/:id` records the id here and drops it from `failed`, like the server. */
+  /** `DELETE /api/uploads/:id` records the id here and drops it from `failed` and `unassigned`, like the server. */
   deletedUploads?: number[];
   /** The Recent feed per Vehicle id, newest first. The stub pages it with `before` like the server. */
   uploads?: Record<number, FeedRow[]>;
@@ -59,6 +59,11 @@ export type StubData = {
   driveLogs?: Record<number, DriveLogRow[]>;
   /** `GET /api/drive-logs/:id` answers from this map by id; an unknown id answers 404. */
   driveLogDetails?: Record<number, DriveLogDetail>;
+  /**
+   * What an assign re-derives on the server: `POST /api/drive-logs/assign` swaps the log's entry in
+   * `driveLogDetails` for the one here. Without one, the stub only moves the stored `vehicleId`.
+   */
+  assignedDetails?: Record<number, DriveLogDetail>;
   status?: Record<number, StatusData>;
   version?: string;
   profiles?: ProfileRow[];
@@ -224,10 +229,25 @@ export function stubApi(data: StubData = {}): Api {
           },
         },
         assign: {
-          $post: route(data, "assign", (args: { json: unknown }) => {
-            data.assignCalls?.push(args.json);
-            return json({ assigned: 0 });
-          }),
+          $post: route(
+            data,
+            "assign",
+            (args: { json: { logIds: number[]; vehicleId: number | null } }) => {
+              data.assignCalls?.push(args.json);
+              const { logIds, vehicleId } = args.json;
+              // Like the server, assigned logs leave `unassigned` and the detail moves to the Vehicle.
+              // Passing `null` is not modelled: the stub does not put a log back into `unassigned`.
+              if (vehicleId !== null)
+                data.unassigned = data.unassigned?.filter((r) => !logIds.includes(r.id));
+              for (const id of logIds) {
+                const richer = data.assignedDetails?.[id];
+                const detail = data.driveLogDetails?.[id];
+                if (richer && data.driveLogDetails) data.driveLogDetails[id] = richer;
+                else if (detail) detail.vehicleId = vehicleId;
+              }
+              return json({ assigned: logIds.length });
+            },
+          ),
         },
         $get: (args?: { query?: { unassigned?: string; vehicle?: string } }) => {
           if (args?.query?.vehicle !== undefined)
@@ -291,6 +311,7 @@ export function stubApi(data: StubData = {}): Api {
               const id = Number(args.param.id);
               data.deletedUploads?.push(id);
               data.failed = data.failed?.filter((f) => f.id !== id);
+              data.unassigned = data.unassigned?.filter((r) => r.id !== id);
               return json({ deleted: id });
             }),
             original: {

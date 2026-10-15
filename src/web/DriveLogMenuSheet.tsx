@@ -6,12 +6,14 @@ import { ConfirmSheet } from "./ConfirmSheet.tsx";
 import { reportTitle } from "./format.ts";
 import { Sheet } from "./Sheet.tsx";
 
-/** The viewer's `…` sheet: Download original and Delete… (which asks first). */
+/** The viewer's `…` sheet: Change Vehicle…, Download original and Delete… (which asks first). */
 export function DriveLogMenuSheet(props: {
   detail: DriveLogDetail;
   onClose: () => void;
   /** Called after the server deleted the Drive Log and app state refreshed. */
   onDeleted: () => void;
+  /** Called when Change Vehicle… is tapped; the caller closes this sheet and opens Assign to…. */
+  onChangeVehicle: () => void;
 }) {
   const { detail } = props;
   const api = useApi();
@@ -45,6 +47,9 @@ export function DriveLogMenuSheet(props: {
   return (
     <Sheet title="Drive Log" actionLabel="Close" onClose={props.onClose}>
       <div class="sheet-body">
+        <button type="button" class="menu-row" onClick={props.onChangeVehicle}>
+          Change Vehicle{"…"}
+        </button>
         <a
           class="menu-row"
           href={api.api.uploads[":id"].original.$path({ param: { id: String(detail.id) } })}
