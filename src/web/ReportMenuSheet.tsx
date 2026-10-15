@@ -12,6 +12,8 @@ export function ReportMenuSheet(props: {
   onClose: () => void;
   /** Called after the server deleted the Report and app state refreshed. */
   onDeleted: () => void;
+  /** Called when Export this day… is tapped; the caller closes this sheet and opens the Export sheet. */
+  onExport: () => void;
 }) {
   const { detail } = props;
   const api = useApi();
@@ -45,6 +47,9 @@ export function ReportMenuSheet(props: {
   return (
     <Sheet title="Report" actionLabel="Close" onClose={props.onClose}>
       <div class="sheet-body">
+        <button type="button" class="menu-row" onClick={props.onExport}>
+          Export this day{"…"}
+        </button>
         <a
           class="menu-row"
           href={api.api.uploads[":id"].original.$path({ param: { id: String(detail.id) } })}

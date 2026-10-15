@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import { useAppState } from "./AppState.tsx";
 import type { VehicleRow } from "./api-types.ts";
 import { DeleteVehicleSheet } from "./DeleteVehicleSheet.tsx";
+import { ExportSheet } from "./ExportSheet.tsx";
 import { count, shortDate } from "./format.ts";
 import { useCatalogue } from "./use-catalogue.ts";
 
@@ -11,6 +12,7 @@ export function Vehicles() {
   const current = state.currentVehicle.value;
   const catalogue = useCatalogue();
   const [confirming, setConfirming] = useState<VehicleRow | null>(null);
+  const [exporting, setExporting] = useState<number | null>(null);
   return (
     <>
       {state.vehicles.value.map((v) => (
@@ -49,8 +51,7 @@ export function Vehicles() {
             <a class="btn-default" href={`/vehicles/${v.id}/settings`}>
               Settings
             </a>
-            {/* Inert until the Export slice. */}
-            <button type="button" class="btn-default">
+            <button type="button" class="btn-default" onClick={() => setExporting(v.id)}>
               Export…
             </button>
             <button
@@ -70,6 +71,12 @@ export function Vehicles() {
       </p>
       {confirming && (
         <DeleteVehicleSheet vehicle={confirming} onClose={() => setConfirming(null)} />
+      )}
+      {exporting !== null && (
+        <ExportSheet
+          scope={{ kind: "vehicle", vehicleId: exporting }}
+          onClose={() => setExporting(null)}
+        />
       )}
     </>
   );

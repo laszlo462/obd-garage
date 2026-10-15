@@ -4,6 +4,7 @@ import { AssignSheet } from "./AssignSheet.tsx";
 import { useApi } from "./api.tsx";
 import type { DriveLogRow } from "./api-types.ts";
 import { ConfirmSheet } from "./ConfirmSheet.tsx";
+import { ExportSheet } from "./ExportSheet.tsx";
 import { count } from "./format.ts";
 import { UnassignedRow } from "./UnassignedRow.tsx";
 import { okJson } from "./use-vehicle-load.ts";
@@ -16,6 +17,7 @@ export function Unassigned() {
   const [ticked, setTicked] = useState<Set<number>>(new Set());
   const [assigning, setAssigning] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const owner = useRef({});
   // Reloads on `revision`. A failure goes to the shell banner and the old rows stay.
   const revision = state.revision.value;
@@ -96,8 +98,12 @@ export function Unassigned() {
         >
           Assign to{"…"}
         </button>
-        {/* Export of Unassigned logs arrives with the Export slice. */}
-        <button type="button" class="btn-default" disabled>
+        <button
+          type="button"
+          class="btn-default"
+          disabled={ticked.size === 0}
+          onClick={() => setExporting(true)}
+        >
           Export
         </button>
         <button
@@ -121,6 +127,15 @@ export function Unassigned() {
           confirmLabel="Delete"
           onConfirm={removeTicked}
           onCancel={() => setConfirming(false)}
+        />
+      )}
+      {exporting && (
+        <ExportSheet
+          scope={{
+            kind: "unassigned",
+            logIds: rows.filter((r) => ticked.has(r.id)).map((r) => r.id),
+          }}
+          onClose={() => setExporting(false)}
         />
       )}
       {assigning && (

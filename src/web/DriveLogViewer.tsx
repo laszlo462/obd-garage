@@ -19,6 +19,7 @@ import { channelOrder, pickerPanels, presetKeys } from "./chart/series.ts";
 import { seriesColors } from "./chart/series-colors.ts";
 import { useSchemeChanges } from "./chart/use-scheme.ts";
 import { DriveLogMenuSheet } from "./DriveLogMenuSheet.tsx";
+import { ExportSheet } from "./ExportSheet.tsx";
 import { EventsPanel } from "./events/EventsPanel.tsx";
 import { inPackSpan } from "./events/in-pack-span.ts";
 import { Legend } from "./events/Legend.tsx";
@@ -66,6 +67,7 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
   const { detail } = props;
   const state = useAppState();
   const [menu, setMenu] = useState(false);
+  const [exporting, setExporting] = useState(false);
   useBarMenu(() => setMenu(true));
   const vehicle = state.vehicles.value.find((v) => v.id === detail.vehicleId);
   const { channels: payload } = detail;
@@ -298,6 +300,24 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
             setMenu(false);
             setAssignSheet("change");
           }}
+          onExport={() => {
+            setMenu(false);
+            setExporting(true);
+          }}
+        />
+      )}
+      {exporting && (
+        <ExportSheet
+          scope={
+            detail.vehicleId === null
+              ? { kind: "unassigned", logIds: [detail.id] }
+              : {
+                  kind: "vehicle",
+                  vehicleId: detail.vehicleId,
+                  day: detail.recordedAt?.slice(0, 10),
+                }
+          }
+          onClose={() => setExporting(false)}
         />
       )}
     </>

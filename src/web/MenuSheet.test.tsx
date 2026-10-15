@@ -11,14 +11,14 @@ const vehicles = [vehicleRow({ id: 4 }), vehicleRow({ id: 9, label: "2018 Honda 
 
 describe("MenuSheet", () => {
   it("links Vehicles with their count", async () => {
-    renderWithApp(<MenuSheet onClose={() => {}} />, { vehicles });
+    renderWithApp(<MenuSheet onClose={() => {}} onExport={() => {}} />, { vehicles });
     const link = await screen.findByRole("link", { name: /^Vehicles/ });
     expect(link.getAttribute("href")).toBe("/vehicles");
     await waitFor(() => expect(link.textContent).toContain("2"));
   });
 
   it("shows count badges for Unassigned and Failed Uploads", async () => {
-    renderWithApp(<MenuSheet onClose={() => {}} />, {
+    renderWithApp(<MenuSheet onClose={() => {}} onExport={() => {}} />, {
       vehicles,
       unassigned: [
         {
@@ -62,7 +62,7 @@ describe("MenuSheet", () => {
   });
 
   it("hides the count badges at zero", async () => {
-    renderWithApp(<MenuSheet onClose={() => {}} />, { vehicles });
+    renderWithApp(<MenuSheet onClose={() => {}} onExport={() => {}} />, { vehicles });
     const unassigned = await screen.findByRole("link", { name: /Unassigned/ });
     await waitFor(() =>
       expect(screen.getByRole("link", { name: /^Vehicles/ }).textContent).toContain("2"),
@@ -72,7 +72,10 @@ describe("MenuSheet", () => {
   });
 
   it("names the Current Vehicle on the Export placeholder and shows the app version", async () => {
-    renderWithApp(<MenuSheet onClose={() => {}} />, { vehicles, version: "1.4.0" });
+    renderWithApp(<MenuSheet onClose={() => {}} onExport={() => {}} />, {
+      vehicles,
+      version: "1.4.0",
+    });
     expect(await screen.findByRole("button", { name: "Export 2012 Ford F-250…" })).toBeTruthy();
     expect(await screen.findByText("Version 1.4.0")).toBeTruthy();
   });

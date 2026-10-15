@@ -438,6 +438,45 @@ describe("GET /api/export input", () => {
   });
 });
 
+describe("POST /api/export/unassigned as a form", () => {
+  it("takes repeated logIds fields and returns the same zip as the JSON body", async () => {
+    const a = await upload(syntheticLog("10/05/2026 09:00:00.0000 AM"), "a.csv");
+    const c = await upload(syntheticLog("10/09/2026 09:00:00.0000 AM"), "c.csv");
+    const ids = [c.uploadId, a.uploadId] as number[];
+
+    const asJson = await postUnassigned({ logIds: ids });
+    const form = await app.request("/api/export/unassigned", {
+      method: "POST",
+      body: new URLSearchParams(ids.map((id) => ["logIds", String(id)])),
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+    });
+
+    expect(form.status).toBe(200);
+    expect(form.headers.get("content-disposition")).toBe(asJson.headers.get("content-disposition"));
+    const unzip = async (res: Response) => unzipSync(new Uint8Array(await res.arrayBuffer()));
+    expect(await unzip(form)).toEqual(await unzip(asJson));
+  });
+
+  it("answers 400 for a form with no logIds or a non-integer one", async () => {
+    const post = async (body: string) =>
+      (
+        await app.request("/api/export/unassigned", {
+          method: "POST",
+          body,
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+        })
+      ).status;
+    expect(await post("")).toBe(400);
+    expect(await post("logIds=abc")).toBe(400);
+    expect(await post("logIds=1.5")).toBe(400);
+    // Spellings that a loose Number() would turn into an integer.
+    expect(await post("logIds=")).toBe(400);
+    expect(await post("logIds=1e0")).toBe(400);
+    expect(await post("logIds=0x1")).toBe(400);
+    expect(await post("logIds=%201")).toBe(400);
+  });
+});
+
 describe("POST /api/export/unassigned input", () => {
   it("answers 400 for a bad selection, 404 for an unknown id and 409 for a log that is not Unassigned", async () => {
     const { vehicleId, reportId } = await vehicleWithReport();
@@ -651,5 +690,101 @@ describe("Bundle entry names", () => {
   it("falls back to 'upload' when a name is only separators and control characters", async () => {
     const files = await exportLogs(["/\\\u0001\u0007/"]);
     expect(json(files, "manifest.json").driveLogs[0].file).toBe("drive-logs/upload");
+  });
+});
+
+const summaryOf = async (query: string) => {
+  const res = await app.request(`/api/export/summary?${query}`);
+  expect(res.status).toBe(200);
+  return (await res.json()) as {
+    driveLogs: number;
+    reports: number;
+    referenceOnly: number;
+    firstDay: string | null;
+    lastDay: string | null;
+    missing: string[];
+  };
+};
+
+describe("GET /api/export/summary", () => {
+  it("counts what the zip for the same query holds, per its manifest", async () => {
+    const aug = await upload(AUG, "aug.html");
+    const vehicleId = aug.vehicleCreated?.id as number;
+    await upload(OCT, "oct.html");
+    const log = await upload(LOG, "log.csv", vehicleId);
+    await app.request(`/api/drive-logs/${log.uploadId}/reference`, {
+      method: "PUT",
+      body: JSON.stringify({ reportId: aug.uploadId }),
+      headers: { "content-type": "application/json" },
+    });
+    const query = `vehicle=${vehicleId}&from=2026-10-02&to=2026-10-02`;
+
+    const summary = await summaryOf(query);
+    const manifest = json(await exportZip(query), "manifest.json") as {
+      driveLogs: unknown[];
+      reports: { inRange: boolean }[];
+    };
+
+    expect(summary).toMatchObject({ driveLogs: 1, reports: 1, referenceOnly: 1 });
+    expect(summary.driveLogs).toBe(manifest.driveLogs.length);
+    expect(summary.reports).toBe(manifest.reports.filter((r) => r.inRange).length);
+    expect(summary.referenceOnly).toBe(manifest.reports.filter((r) => !r.inRange).length);
+  });
+
+  it("lists the uploaded names of Originals missing on disk, a Reference Report included", async () => {
+    const aug = await upload(AUG, "aug.html");
+    const vehicleId = aug.vehicleCreated?.id as number;
+    const log = await upload(LOG, "log.csv", vehicleId);
+    await app.request(`/api/drive-logs/${log.uploadId}/reference`, {
+      method: "PUT",
+      body: JSON.stringify({ reportId: aug.uploadId }),
+      headers: { "content-type": "application/json" },
+    });
+    for (const id of [log.uploadId, aug.uploadId])
+      rmSync(originalPath(dir, db.getUpload(id as number)?.storedPath as string));
+
+    const summary = await summaryOf(`vehicle=${vehicleId}&from=2026-10-02&to=2026-10-02`);
+    expect(summary.missing.sort()).toEqual(["aug.html", "log.csv"]);
+  });
+
+  it("answers 200 with zero counts for an empty range, and 400 or 404 like the export for a bad query", async () => {
+    const { vehicleId } = await vehicleWithReport();
+    await upload(LOG, "log.csv", vehicleId);
+    expect(await summaryOf(`vehicle=${vehicleId}&from=2026-11-01&to=2026-11-30`)).toMatchObject({
+      driveLogs: 0,
+      reports: 0,
+      referenceOnly: 0,
+    });
+    const status = async (query: string) =>
+      (await app.request(`/api/export/summary?${query}`)).status;
+    expect(await status("from=2026-10-02&to=2026-10-02")).toBe(400);
+    expect(await status(`vehicle=${vehicleId}&from=2026-10-03&to=2026-10-02`)).toBe(400);
+    expect(await status("vehicle=999&from=2026-10-02&to=2026-10-02")).toBe(404);
+  });
+
+  it("gives the Vehicle's first and last recorded days whatever the range, and null for none", async () => {
+    const aug = await upload(AUG, "aug.html");
+    const vehicleId = aug.vehicleCreated?.id as number;
+    await upload(LOG, "log.csv", vehicleId);
+    const range = "from=2026-01-01&to=2026-01-02";
+    expect(await summaryOf(`vehicle=${vehicleId}&${range}`)).toMatchObject({
+      firstDay: "2026-08-21",
+      lastDay: "2026-10-02",
+    });
+
+    const empty = db.addVehicle({
+      vin: "TESTVIN0000000001",
+      label: "Empty",
+      profileId: "",
+      packIds: [],
+    });
+    expect(await summaryOf(`vehicle=${empty.id}&${range}`)).toEqual({
+      driveLogs: 0,
+      reports: 0,
+      referenceOnly: 0,
+      firstDay: null,
+      lastDay: null,
+      missing: [],
+    });
   });
 });

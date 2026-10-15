@@ -53,7 +53,7 @@ describe("Unassigned", () => {
     ).toBe(true);
   });
 
-  it("keeps Assign to… and Delete disabled until a log is ticked, and Export always", async () => {
+  it("keeps Assign to…, Export and Delete disabled until a log is ticked", async () => {
     renderApp({
       vehicles: [vehicleRow()],
       unassigned: [driveLogRow({ id: 5 }), driveLogRow({ id: 6 })],
@@ -71,7 +71,7 @@ describe("Unassigned", () => {
     fireEvent.click(first as HTMLElement);
     expect(actions().assign.disabled).toBe(false);
     expect(actions().remove.disabled).toBe(false);
-    expect(actions().exportLogs.disabled).toBe(true);
+    expect(actions().exportLogs.disabled).toBe(false);
     fireEvent.click(first as HTMLElement);
     expect(actions().assign.disabled).toBe(true);
   });

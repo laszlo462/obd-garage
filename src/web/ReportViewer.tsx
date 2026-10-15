@@ -3,6 +3,7 @@ import { useLocation, useRoute } from "preact-iso";
 import type { ParsedReport } from "../core/report.ts";
 import { useAppState } from "./AppState.tsx";
 import type { ReportDetail, ReportRow } from "./api-types.ts";
+import { ExportSheet } from "./ExportSheet.tsx";
 import { reportTitle, shortDate } from "./format.ts";
 import { ReportMenuSheet } from "./ReportMenuSheet.tsx";
 import { compareReports } from "./report/compare.ts";
@@ -47,6 +48,7 @@ function ReportBody(props: { detail: ReportDetail; onDeleted: () => void }) {
   const state = useAppState();
   const vehicle = state.vehicles.value.find((v) => v.id === detail.vehicleId);
   const [menu, setMenu] = useState(false);
+  const [exporting, setExporting] = useState(false);
   useBarMenu(() => setMenu(true));
   const rows = useVehicleReports(detail.vehicleId);
   const [choice, setChoice] = useState<Choice>("default");
@@ -89,6 +91,20 @@ function ReportBody(props: { detail: ReportDetail; onDeleted: () => void }) {
           detail={detail}
           onClose={() => setMenu(false)}
           onDeleted={props.onDeleted}
+          onExport={() => {
+            setMenu(false);
+            setExporting(true);
+          }}
+        />
+      )}
+      {exporting && detail.vehicleId !== null && (
+        <ExportSheet
+          scope={{
+            kind: "vehicle",
+            vehicleId: detail.vehicleId,
+            day: detail.recordedAt?.slice(0, 10),
+          }}
+          onClose={() => setExporting(false)}
         />
       )}
       <ReportSections

@@ -2,6 +2,7 @@ import { ChevronDown, ChevronLeft, Ellipsis, Menu } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { useLocation } from "preact-iso";
 import { useAppState } from "./AppState.tsx";
+import { ExportSheet } from "./ExportSheet.tsx";
 import { MenuSheet } from "./MenuSheet.tsx";
 import { screenName } from "./screen-name.ts";
 import { AddButton, isTabPath, Tabs } from "./TabBar.tsx";
@@ -13,6 +14,7 @@ export function AppBar() {
   const { path } = useLocation();
   const desktop = useIsDesktop();
   const [sheet, setSheet] = useState<"switcher" | "menu" | null>(null);
+  const [exporting, setExporting] = useState<number | null>(null);
   const last = useRef(path);
   useEffect(() => {
     if (path === last.current) return;
@@ -69,7 +71,21 @@ export function AppBar() {
           {state.needsAttention.value && <span class="dot" />}
         </button>
       </header>
-      {sheet === "menu" && <MenuSheet onClose={() => setSheet(null)} />}
+      {sheet === "menu" && (
+        <MenuSheet
+          onClose={() => setSheet(null)}
+          onExport={(vehicleId) => {
+            setSheet(null);
+            setExporting(vehicleId);
+          }}
+        />
+      )}
+      {exporting !== null && (
+        <ExportSheet
+          scope={{ kind: "vehicle", vehicleId: exporting }}
+          onClose={() => setExporting(null)}
+        />
+      )}
       {sheet === "switcher" && <VehicleSwitcherSheet onClose={() => setSheet(null)} />}
     </>
   );

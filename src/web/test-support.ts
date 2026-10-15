@@ -4,6 +4,7 @@ import type { Api } from "./api.tsx";
 import type {
   DriveLogDetail,
   DriveLogRow,
+  ExportSummary,
   FeedRow,
   NoteView,
   ProfileRow,
@@ -37,7 +38,10 @@ export type FailRoute =
   | "reference"
   | "profiles"
   | "rulePacks"
-  | "notes";
+  | "notes"
+  | "exportSummary";
+
+type SummaryQuery = { vehicle: string; from: string; to: string };
 
 export type StubData = {
   vehicles?: VehicleRow[];
@@ -103,6 +107,13 @@ export type StubData = {
     text?: string;
     pinnedAt?: number | null;
   }[];
+  /**
+   * What `GET /api/export/summary` answers: one summary, or a function of the query (it may return a
+   * promise, so a test can answer an older query late).
+   */
+  exportSummary?: ExportSummary | ((query: SummaryQuery) => ExportSummary | Promise<ExportSummary>);
+  /** Each `GET /api/export/summary` pushes its query here. */
+  summaryCalls?: SummaryQuery[];
   /** Each `GET /api/vehicles` pushes a marker here. */
   vehicleLoads?: unknown[];
   /**
@@ -404,6 +415,26 @@ export function stubApi(data: StubData = {}): Api {
           }),
         },
       },
+      export: Object.assign(
+        {
+          $path: (args?: { query?: Record<string, string> }) =>
+            `/api/export${args?.query ? `?${new URLSearchParams(args.query)}` : ""}`,
+        },
+        {
+          summary: {
+            $get: route(data, "exportSummary", async (args: { query: SummaryQuery }) => {
+              data.summaryCalls?.push(args.query);
+              const answer = data.exportSummary;
+              return Response.json(
+                typeof answer === "function"
+                  ? await answer(args.query)
+                  : (answer ?? exportSummary()),
+              );
+            }),
+          },
+          unassigned: { $path: () => "/api/export/unassigned" },
+        },
+      ),
       profiles: { $get: route(data, "profiles", () => json(data.profiles ?? [])) },
       "rule-packs": { $get: route(data, "rulePacks", () => json(data.rulePacks ?? [])) },
       "failed-uploads": { $get: route(data, "failedUploads", () => json(data.failed ?? [])) },
@@ -485,6 +516,17 @@ export const driveLogRow = (over: Partial<DriveLogRow> = {}): DriveLogRow => ({
   noteCount: 0,
   eventCount: 0,
   skippedRows: 0,
+  ...over,
+});
+
+/** An export summary of one Drive Log and no Reports, on a Vehicle recorded 1 to 2 Oct 2026. */
+export const exportSummary = (over: Partial<ExportSummary> = {}): ExportSummary => ({
+  driveLogs: 1,
+  reports: 0,
+  referenceOnly: 0,
+  firstDay: "2026-10-01",
+  lastDay: "2026-10-02",
+  missing: [],
   ...over,
 });
 

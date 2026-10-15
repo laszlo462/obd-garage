@@ -84,13 +84,30 @@ export function exportRoute(deps: {
 }) {
   const { db, dataDir, registry, appVersion, now } = deps;
 
+  /** The Reference Report a Drive Log points at, if it still exists. */
+  function referenceOf(log: Upload): Upload | undefined {
+    const refId = (db.getDerived(log.id)?.metadata as { referenceReportId?: number | null })
+      ?.referenceReportId;
+    return refId == null ? undefined : db.getUpload(refId);
+  }
+
+  /** Every Report the zip holds: those recorded in the range, plus the Reference Reports of its Drive Logs. */
+  function planReports(plan: Plan): Map<number, Upload> {
+    const reports = new Map<number, Upload>(plan.reports.map((r) => [r.id, r]));
+    for (const log of plan.logs) {
+      const ref = referenceOf(log);
+      if (ref) reports.set(ref.id, ref);
+    }
+    return reports;
+  }
+
   function bundle(plan: Plan) {
     const { from, to } = plan;
     const files: Record<string, Uint8Array> = {};
     /** Originals are streamed from disk, hashed on the way; the manifest is written once they are. */
     const originals: { path: string; storedPath: string; entry: { sha256: string } }[] = [];
     const usedNames = new Set<string>();
-    const referenced = new Map<number, Upload>(plan.reports.map((r) => [r.id, r]));
+    const referenced = planReports(plan);
     const timeline: { at: string; line: string; notes: string[] }[] = [];
     const noteTexts = (id: number) => db.listNotes(id).map((n) => n.text);
     const driveLogs = [...plan.logs].sort(chronological).map((log) => {
@@ -139,10 +156,7 @@ export function exportRoute(deps: {
         line: `Drive Log ${file}, ${db.getDerived(log.id)?.events.length ?? 0} Events`,
         notes: noteTexts(log.id),
       });
-      const refId = (db.getDerived(log.id)?.metadata as { referenceReportId?: number | null })
-        ?.referenceReportId;
-      const ref = refId == null ? undefined : db.getUpload(refId);
-      if (ref) referenced.set(ref.id, ref);
+      const ref = referenceOf(log);
       const entry = {
         file,
         originalFilename: log.uploadedFilename,
@@ -294,18 +308,17 @@ export function exportRoute(deps: {
     };
   }
 
+  /** The uploaded names of the plan's Originals that are not on disk. */
+  const missingOf = (plan: Plan) =>
+    [...plan.logs, ...planReports(plan).values()]
+      .filter((u) => !existsSync(originalPath(dataDir, u.storedPath)))
+      .map((u) => u.uploadedFilename);
+
   const respond = (c: Context, plan: Plan) => {
     // Check every Original first: once streaming starts, a missing file could only abort the download.
-    const wanted = new Map<number, Upload>([...plan.logs, ...plan.reports].map((u) => [u.id, u]));
-    for (const log of plan.logs) {
-      const refId = (db.getDerived(log.id)?.metadata as { referenceReportId?: number | null })
-        ?.referenceReportId;
-      const ref = refId == null ? undefined : db.getUpload(refId);
-      if (ref) wanted.set(ref.id, ref);
-    }
-    for (const u of wanted.values())
-      if (!existsSync(originalPath(dataDir, u.storedPath)))
-        return c.json({ error: `An Original is missing on disk: ${u.uploadedFilename}` }, 409);
+    const [missing] = missingOf(plan);
+    if (missing !== undefined)
+      return c.json({ error: `An Original is missing on disk: ${missing}` }, 409);
     const { name, chunks } = bundle(plan);
     const source = chunks();
     const body = new ReadableStream<Uint8Array>({
@@ -322,25 +335,65 @@ export function exportRoute(deps: {
     });
   };
 
+  /**
+   * The Vehicle-scope plan for `?vehicle=&from=&to=`, or the status and message for a bad query. It
+   * answers with data, not a `Response`, so each route's typed client response stays precise.
+   */
+  function vehiclePlan(
+    c: Context,
+  ): { plan: Extract<Plan, { scope: "vehicle" }> } | { status: 400 | 404; error: string } {
+    const vehicleText = c.req.query("vehicle");
+    const from = c.req.query("from");
+    const to = c.req.query("to");
+    if (!/^\d+$/.test(vehicleText ?? "") || !isDay(from) || !isDay(to) || from > to)
+      return { status: 400, error: "Expected ?vehicle=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD." };
+    const vehicle = db.getVehicle(Number(vehicleText));
+    if (!vehicle) return { status: 404, error: "Unknown vehicle." };
+    const inRange = (u: Upload) => dayOf(u.recordedAt) >= from && dayOf(u.recordedAt) <= to;
+    const logs = db.listUploads({ kind: "drive-log", vehicleId: vehicle.id }).filter(inRange);
+    const reports = db.listUploads({ kind: "report", vehicleId: vehicle.id }).filter(inRange);
+    return { plan: { scope: "vehicle", vehicle, from, to, logs, reports } };
+  }
+
   return new Hono()
     .get("/", (c) => {
-      const vehicleText = c.req.query("vehicle");
-      const from = c.req.query("from");
-      const to = c.req.query("to");
-      if (!/^\d+$/.test(vehicleText ?? "") || !isDay(from) || !isDay(to) || from > to)
-        return c.json({ error: "Expected ?vehicle=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD." }, 400);
-      const vehicle = db.getVehicle(Number(vehicleText));
-      if (!vehicle) return c.json({ error: "Unknown vehicle." }, 404);
-      const inRange = (u: Upload) => dayOf(u.recordedAt) >= from && dayOf(u.recordedAt) <= to;
-      const logs = db.listUploads({ kind: "drive-log", vehicleId: vehicle.id }).filter(inRange);
-      const reports = db.listUploads({ kind: "report", vehicleId: vehicle.id }).filter(inRange);
-      if (logs.length === 0 && reports.length === 0)
+      const parsed = vehiclePlan(c);
+      if ("error" in parsed) return c.json({ error: parsed.error }, parsed.status);
+      const { plan } = parsed;
+      if (plan.logs.length === 0 && plan.reports.length === 0)
         return c.json({ error: "Nothing in this range" }, 422);
-      return respond(c, { scope: "vehicle", vehicle, from, to, logs, reports });
+      return respond(c, plan);
+    })
+    .get("/summary", (c) => {
+      const parsed = vehiclePlan(c);
+      if ("error" in parsed) return c.json({ error: parsed.error }, parsed.status);
+      const { plan } = parsed;
+      const reports = [...planReports(plan).values()];
+      const inRange = reports.filter((r) => plan.reports.some((p) => p.id === r.id)).length;
+      const days = [
+        ...db.listUploads({ kind: "drive-log", vehicleId: plan.vehicle.id }),
+        ...db.listUploads({ kind: "report", vehicleId: plan.vehicle.id }),
+      ]
+        .map((u) => dayOf(u.recordedAt))
+        .filter((day) => day !== "")
+        .sort();
+      return c.json({
+        driveLogs: plan.logs.length,
+        reports: inRange,
+        referenceOnly: reports.length - inRange,
+        firstDay: days[0] ?? null,
+        lastDay: days[days.length - 1] ?? null,
+        missing: missingOf(plan),
+      });
     })
     .post("/unassigned", async (c) => {
-      const body = (await c.req.json().catch(() => null)) as { logIds?: unknown } | null;
-      const ids = body?.logIds;
+      // A plain form submit sends repeated `logIds` fields, so the page need not fetch the zip.
+      const isForm = c.req.header("content-type")?.startsWith("application/x-www-form-urlencoded");
+      const ids = isForm
+        ? ((await c.req.formData().catch(() => null))?.getAll("logIds") ?? []).map((id) =>
+            typeof id === "string" && /^\d+$/.test(id) ? Number(id) : Number.NaN,
+          )
+        : ((await c.req.json().catch(() => null)) as { logIds?: unknown } | null)?.logIds;
       if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id)))
         return c.json({ error: "Expected { logIds: number[] } with at least one id." }, 400);
       const uploads = [...new Set(ids as number[])].map((id) => db.getUpload(id));

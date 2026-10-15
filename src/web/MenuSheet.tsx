@@ -1,8 +1,13 @@
 import { useAppState } from "./AppState.tsx";
 import { Sheet } from "./Sheet.tsx";
 
-export function MenuSheet(props: { onClose: () => void }) {
+export function MenuSheet(props: {
+  onClose: () => void;
+  /** Called with the Current Vehicle's id when Export… is tapped; the caller closes this sheet. */
+  onExport: (vehicleId: number) => void;
+}) {
   const state = useAppState();
+  const current = state.currentVehicle.value;
   return (
     <Sheet title="Menu" actionLabel="Close" onClose={props.onClose}>
       <div class="sheet-body">
@@ -22,9 +27,11 @@ export function MenuSheet(props: { onClose: () => void }) {
             <span class="count-badge">{state.failedCount.value}</span>
           )}
         </a>
-        <button type="button" class="menu-row">
-          Export {state.currentVehicle.value?.label ?? "Current Vehicle"}…
-        </button>
+        {current && (
+          <button type="button" class="menu-row" onClick={() => props.onExport(current.id)}>
+            Export {current.label}…
+          </button>
+        )}
         {state.version.value && <p class="version">Version {state.version.value}</p>}
       </div>
     </Sheet>

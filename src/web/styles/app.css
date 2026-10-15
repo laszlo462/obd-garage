@@ -530,8 +530,62 @@ main {
   font-weight: 600;
 }
 
-.btn-primary:disabled {
+.btn-primary:disabled,
+.btn-primary[aria-disabled="true"] {
   opacity: 0.5;
+}
+
+/* A link styled as the primary button, such as Download .zip. */
+a.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: var(--radius-control);
+}
+
+a.btn-primary[aria-disabled="true"] {
+  pointer-events: none;
+}
+
+/* Export sheet: presets, then the two dates */
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 12px;
+}
+
+.preset-row button {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--accent);
+}
+
+.preset-row button[aria-pressed="true"] {
+  background: var(--accent-t);
+  border-color: var(--accent);
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: var(--touch);
+  padding: 9px 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.field-row input {
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  min-height: 40px;
+  padding: 0 8px;
 }
 
 /* Upload flow */
