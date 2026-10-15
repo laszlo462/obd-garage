@@ -265,7 +265,7 @@ opens the Note sheet. The sheet shows the text, the time and when the Note was a
     - "was x" when comparing
     - a 6 px range bar from min to max with a value marker, and min and max labels
     - *[#145](https://github.com/laszlo462/obd-garage/issues/145):* when comparing and either limit changed,
-      "limits were a – b" beside "was x", and one line above the list: "Limits move with operating point. Compare
+      "limits were a – b" on its own line under the min and max labels, and one line above the list: "Limits move with operating point. Compare
       values only where the limits match."
   - **Freeze frame, live data, Vehicle info:** two-column key/value rows with mono values.
     - *[#146](https://github.com/laszlo462/obd-garage/issues/146):* freeze frame and live data show "was …" on a

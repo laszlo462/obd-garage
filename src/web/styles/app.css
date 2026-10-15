@@ -1421,8 +1421,14 @@ a.btn-primary[aria-disabled="true"] {
 }
 
 .m06-row .gauge,
-.m06-row .m06-limits {
+.m06-row .m06-limits,
+.m06-row .m06-limits-was {
   grid-column: 1 / -1;
+}
+
+/* Own line: beside the value it widens the auto column and squeezes the name on a phone. */
+.m06-limits-was {
+  text-align: right;
 }
 
 .gauge-pass {
