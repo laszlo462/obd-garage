@@ -19,6 +19,8 @@ export type PanelSpec = {
   /** Seconds past midnight of the log's first moment. */
   startSec: number;
   series: { label: string; color: string }[];
+  /** The freeze-frame values of this panel's series; the y scale includes them so their lines show. */
+  freezeValues?: readonly number[];
   range: Range;
   /** Colours read from the tokens now in force. */
   ink: string;
@@ -28,8 +30,17 @@ export type PanelSpec = {
   font: string;
 };
 
-/** The y range for the data in view; a single value gets a span around it instead of uPlot's 0 to 100. */
-function yRange(_u: uPlot, min: number, max: number): [number, number] {
+/**
+ * The y range for the data in view, widened to take in the panel's freeze-frame values so their lines
+ * show; a single value gets a span around it instead of uPlot's 0 to 100.
+ */
+export function yRange(
+  dataMin: number,
+  dataMax: number,
+  freezeValues: readonly number[] = [],
+): [number, number] {
+  const min = Math.min(dataMin, ...freezeValues);
+  const max = Math.max(dataMax, ...freezeValues);
   if (min === max) {
     const pad = Math.abs(min) * 0.1 || 1;
     return [min - pad, max + pad];
@@ -66,7 +77,7 @@ export function panelOptions(spec: PanelSpec): uPlot.Options {
     padding: [PAD_TOP, 8, PAD_BOTTOM, 0],
     scales: {
       x: { time: false, min: spec.range.min, max: spec.range.max },
-      y: { range: yRange },
+      y: { range: (_u, min, max) => yRange(min, max, spec.freezeValues) },
     },
     cursor: {
       x: true,

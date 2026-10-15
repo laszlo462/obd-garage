@@ -925,6 +925,21 @@ main {
   font-size: var(--fs-13);
 }
 
+.reference-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  margin-top: 8px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: var(--fs-13);
+  color: var(--ink);
+  background: transparent;
+  border: 1px dashed var(--muted);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
 .compare-bar {
   display: flex;
   align-items: center;
@@ -1636,6 +1651,12 @@ main {
   height: 12px;
 }
 
+.legend-swatch-freeze {
+  height: 0;
+  align-self: center;
+  border-top: 1.2px dashed var(--muted);
+}
+
 .event-marker {
   /* Events list. The marker patterns match the chart overlays: fill, accent dot, 45 degree hatch. */
   display: block;
@@ -1665,6 +1686,13 @@ main {
   background: repeating-linear-gradient(45deg, var(--ev-pack) 0 1.5px, transparent 1.5px 4px);
 }
 
+.event-marker-outline {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--ev-look);
+  background: color-mix(in srgb, var(--ev-look) 10%, transparent);
+}
+
 .event-marker-notrun {
   border: 1px dashed var(--muted);
 }
@@ -1684,6 +1712,26 @@ main {
   border-bottom: 1px solid var(--line);
   font-size: var(--fs-13);
   font-weight: 600;
+}
+
+.events-header {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.events-header .events-head {
+  flex: 1;
+  border-bottom: 0;
+}
+
+.look-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: var(--fs-13);
 }
 
 .events-list {

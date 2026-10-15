@@ -32,6 +32,7 @@ export type FailRoute =
   | "deleteVehicle"
   | "patchVehicle"
   | "assign"
+  | "reference"
   | "profiles"
   | "rulePacks";
 
@@ -69,6 +70,12 @@ export type StubData = {
   uploadError?: { status: number; error: string };
   /** Each `POST /api/drive-logs/assign` body is pushed here. */
   assignCalls?: unknown[];
+  /**
+   * Each `PUT` / `DELETE /api/drive-logs/:id/reference` pushes { method, id, reportId } here (`reportId` only
+   * for a PUT) and, like the server, moves the log's `referenceReport` in `driveLogDetails` to the new
+   * state, reading the Report's `recordedAt` from `reports`.
+   */
+  referenceCalls?: { method: "PUT" | "DELETE"; id: number; reportId?: number | null }[];
   /** Each `DELETE /api/vehicles/:id` pushes { param, query } here and drops the Vehicle from `vehicles`. */
   vehicleDeletes?: unknown[];
   /** Each `PATCH /api/vehicles/:id` pushes { param, json } here and updates the Vehicle in `vehicles`. */
@@ -102,6 +109,12 @@ const route =
       return Promise.resolve(Response.json({ error: "Stub failure." }, { status: 500 }));
     return answer(...args);
   };
+
+/** The `recordedAt` of a Report listed in `data.reports`, or null. */
+const reportRecordedAt = (data: StubData, reportId: number | null): string | null =>
+  Object.values(data.reports ?? {})
+    .flat()
+    .find((r) => r.id === reportId)?.recordedAt ?? null;
 
 /** A stand-in for the `hc<AppType>` client. Row types come from the real client type. */
 export function stubApi(data: StubData = {}): Api {
@@ -160,6 +173,39 @@ export function stubApi(data: StubData = {}): Api {
               );
             return json(detail);
           }),
+          reference: {
+            $put: route(
+              data,
+              "reference",
+              (args: { param: { id: string }; json: { reportId: number | null } }) => {
+                const id = Number(args.param.id);
+                const { reportId } = args.json;
+                data.referenceCalls?.push({ method: "PUT", id, reportId });
+                const detail = data.driveLogDetails?.[id];
+                if (detail)
+                  detail.referenceReport = {
+                    ...detail.referenceReport,
+                    id: reportId,
+                    state: reportId === null ? "cleared" : "set",
+                    recordedAt: reportRecordedAt(data, reportId),
+                  };
+                return json({ state: reportId === null ? "cleared" : "set", reportId });
+              },
+            ),
+            $delete: route(data, "reference", (args: { param: { id: string } }) => {
+              const id = Number(args.param.id);
+              data.referenceCalls?.push({ method: "DELETE", id });
+              const detail = data.driveLogDetails?.[id];
+              if (detail)
+                detail.referenceReport = {
+                  ...detail.referenceReport,
+                  id: detail.referenceReport.defaultId,
+                  state: "default",
+                  recordedAt: reportRecordedAt(data, detail.referenceReport.defaultId),
+                };
+              return json({ state: "default" });
+            }),
+          },
         },
         assign: {
           $post: route(data, "assign", (args: { json: unknown }) => {
@@ -420,7 +466,7 @@ export const reportDetail = (over: Partial<ReportDetail> = {}): ReportDetail =>
   }) as ReportDetail;
 
 /**
- * A small synthetic Drive Log of 11 rows (with a generic span at 20 to 30 s, a generic point at 45 s and a pack span at 60 to 80 s), 10 s apart (0 to 100 s): Speed climbs 0 to 100 mph by 10, RPM climbs
+ * A small synthetic Drive Log of 11 rows (with a generic span at 20 to 30 s, a generic point at 45 s, a pack span at 60 to 80 s and a Look-alike at 90 to 100 s), 10 s apart (0 to 100 s): Speed climbs 0 to 100 mph by 10, RPM climbs
  * from 800 by 100, Load is 20 then 25.5. Two panels, Speed and RPM; Load is charted by no panel.
  */
 export const driveLogDetail = (over: Partial<DriveLogDetail> = {}): DriveLogDetail => {
@@ -476,6 +522,16 @@ export const driveLogDetail = (over: Partial<DriveLogDetail> = {}): DriveLogDeta
         packId: "p0401",
         category: "pack",
       },
+      {
+        ruleId: "core.look-alike",
+        startSec: 90,
+        endSec: 100,
+        kind: "span",
+        title: "Looks like the freeze frame (P0401, 2026-10-02 report)",
+        text: "All 3 Channels shared with the freeze frame stayed within their tolerance bands for 10 s.",
+        packId: null,
+        category: "look-alike",
+      },
     ],
     ruleOutcomes: [
       { ruleId: "core.idle", packId: null, name: "Idle", status: "ran", events: 1 },
@@ -490,7 +546,13 @@ export const driveLogDetail = (over: Partial<DriveLogDetail> = {}): DriveLogDeta
     ],
     decodeNotices: [],
     warnings: [],
-    referenceReport: { id: null, state: "default" },
+    referenceReport: {
+      id: 2,
+      defaultId: 2,
+      state: "default",
+      recordedAt: "2026-10-02T21:32:14",
+      freezeFrame: [],
+    },
     ...over,
   } as DriveLogDetail;
 };

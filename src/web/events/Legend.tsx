@@ -4,14 +4,19 @@ const LABELS: Record<OverlayPattern, string> = {
   fill: "Event",
   "dashed-line": "Point event",
   hatch: "Rule Pack",
+  outline: "Look-alike",
 };
-const ORDER: OverlayPattern[] = ["fill", "dashed-line", "hatch"];
+const ORDER: OverlayPattern[] = ["fill", "dashed-line", "hatch", "outline"];
 
 /** A swatch for each kind of overlay the log has, drawn in the same pattern as the chart. */
-export function Legend(props: { events: readonly { kind: string; category: string }[] }) {
+export function Legend(props: {
+  events: readonly { kind: string; category: string }[];
+  /** True when a freeze-frame line is charted. */
+  freezeFrame: boolean;
+}) {
   const present = new Set(props.events.map(overlayPattern));
   const kinds = ORDER.filter((k) => present.has(k));
-  if (kinds.length === 0) return null;
+  if (kinds.length === 0 && !props.freezeFrame) return null;
   return (
     <ul class="legend" aria-label="Legend">
       {kinds.map((k) => (
@@ -20,6 +25,12 @@ export function Legend(props: { events: readonly { kind: string; category: strin
           {LABELS[k]}
         </li>
       ))}
+      {props.freezeFrame && (
+        <li>
+          <i class="legend-swatch legend-swatch-freeze" aria-hidden="true" />
+          Freeze frame
+        </li>
+      )}
     </ul>
   );
 }

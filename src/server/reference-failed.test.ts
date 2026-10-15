@@ -79,7 +79,7 @@ describe("a Failed Upload as the Reference Report", () => {
 
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toMatch(/failed/i);
-    expect(await reference(logId)).toEqual({ id: augId, state: "set" });
+    expect(await reference(logId)).toMatchObject({ id: augId, state: "set" });
   });
 
   it("keeps a chosen Report that fails on re-parse, and resolves to the default meanwhile", async () => {
@@ -90,7 +90,7 @@ describe("a Failed Upload as the Reference Report", () => {
     rmSync(pathOf(augId));
     reparse(augId);
 
-    expect(await reference(logId)).toEqual({ id: octId, state: "default" });
+    expect(await reference(logId)).toMatchObject({ id: octId, state: "default" });
     expect(derivedReference(logId)).toBe(octId);
     expect(db.getReferenceReport(logId)?.reportId).toBe(augId);
   });
@@ -104,7 +104,7 @@ describe("a Failed Upload as the Reference Report", () => {
     writeFileSync(pathOf(augId), AUG);
     reparse(augId);
 
-    expect(await reference(logId)).toEqual({ id: augId, state: "set" });
+    expect(await reference(logId)).toMatchObject({ id: augId, state: "set" });
     expect(derivedReference(logId)).toBe(augId);
   });
 });

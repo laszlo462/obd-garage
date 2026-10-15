@@ -309,7 +309,7 @@ describe("GET /api/drive-logs/:id", () => {
     expect(body.ruleOutcomes.length).toBeGreaterThan(0);
     expect(Array.isArray(body.decodeNotices)).toBe(true);
     expect(Array.isArray(body.warnings)).toBe(true);
-    expect(body.referenceReport).toEqual({ id: octId, state: "default" });
+    expect(body.referenceReport).toMatchObject({ id: octId, state: "default" });
   });
 
   it("hides the 6.7 Profile's hidden Channels that occur in the log", async () => {
@@ -437,17 +437,49 @@ describe("GET /api/drive-logs/:id", () => {
     });
   });
 
-  it("reports the Reference Report state: default, set, cleared", async () => {
+  it("reports the Reference Report state: default, set, cleared, with the default's id throughout", async () => {
     const { logId, augId, octId } = await setup();
-    const ref = async () =>
-      ((await getJson(`/drive-logs/${logId}`)) as { referenceReport: unknown }).referenceReport;
-    expect(await ref()).toEqual({ id: octId, state: "default" });
+    const ref = async () => {
+      const r = (
+        (await getJson(`/drive-logs/${logId}`)) as { referenceReport: Record<string, unknown> }
+      ).referenceReport;
+      return { id: r.id, defaultId: r.defaultId, state: r.state, recordedAt: r.recordedAt };
+    };
+    expect(await ref()).toEqual({
+      id: octId,
+      defaultId: octId,
+      state: "default",
+      recordedAt: "2026-10-02T21:32:14",
+    });
     await send(`/drive-logs/${logId}/reference`, "PUT", { reportId: augId });
-    expect(await ref()).toEqual({ id: augId, state: "set" });
+    expect(await ref()).toEqual({
+      id: augId,
+      defaultId: octId,
+      state: "set",
+      recordedAt: "2026-08-21T21:56:40",
+    });
     await send(`/drive-logs/${logId}/reference`, "PUT", { reportId: null });
-    expect(await ref()).toEqual({ id: null, state: "cleared" });
+    expect(await ref()).toEqual({ id: null, defaultId: octId, state: "cleared", recordedAt: null });
     await send(`/drive-logs/${logId}/reference`, "DELETE");
-    expect(await ref()).toEqual({ id: octId, state: "default" });
+    expect((await ref()).id).toBe(octId);
+  });
+
+  it("resolves the Reference Report's freeze frame into the log Channels' units, and none once cleared", async () => {
+    const { logId } = await setup();
+    const detail = async () =>
+      (await getJson(`/drive-logs/${logId}`)) as {
+        channels: { channels: Record<string, { unit?: string }> };
+        referenceReport: { freezeFrame: { key: string; value: number }[] };
+      };
+    const body = await detail();
+    const lines = body.referenceReport.freezeFrame;
+    expect(lines.find((l) => l.key === "rpm")?.value).toBe(1346);
+    // The Report says 54.68 MPH and the log charts speed in MPH; unit conversion is unit tested in core.
+    expect(body.channels.channels.speed?.unit).toBe("MPH");
+    expect(lines.find((l) => l.key === "speed")?.value).toBe(54.68);
+    expect(lines.some((l) => l.key === "time" || l.key === "runTime")).toBe(false);
+    await send(`/drive-logs/${logId}/reference`, "PUT", { reportId: null });
+    expect((await detail()).referenceReport.freezeFrame).toEqual([]);
   });
 
   it("serves an Unassigned log with no Reference Report", async () => {
@@ -455,7 +487,13 @@ describe("GET /api/drive-logs/:id", () => {
     const body = (await getJson(`/drive-logs/${big.uploadId}`)) as {
       referenceReport: unknown;
     };
-    expect(body.referenceReport).toEqual({ id: null, state: "default" });
+    expect(body.referenceReport).toEqual({
+      id: null,
+      defaultId: null,
+      state: "default",
+      recordedAt: null,
+      freezeFrame: [],
+    });
   });
 
   it("404s a Report id and an unknown id, and 409s a Failed Upload", async () => {
@@ -550,11 +588,11 @@ describe("DELETE /api/uploads/:id", () => {
     const { logId, augId, octId } = await setup();
     const ref = async () =>
       ((await getJson(`/drive-logs/${logId}`)) as { referenceReport: unknown }).referenceReport;
-    expect(await ref()).toEqual({ id: octId, state: "default" });
+    expect(await ref()).toMatchObject({ id: octId, state: "default" });
     await send(`/uploads/${octId}`, "DELETE");
-    expect(await ref()).toEqual({ id: augId, state: "default" });
+    expect(await ref()).toMatchObject({ id: augId, state: "default" });
     await send(`/uploads/${augId}`, "DELETE");
-    expect(await ref()).toEqual({ id: null, state: "default" });
+    expect(await ref()).toMatchObject({ id: null, state: "default" });
   });
 
   it("drops a hand-set choice that pointed at the deleted Report, keeps a hand-cleared one", async () => {
@@ -563,7 +601,7 @@ describe("DELETE /api/uploads/:id", () => {
     await send(`/uploads/${augId}`, "DELETE");
     expect(
       ((await getJson(`/drive-logs/${logId}`)) as { referenceReport: unknown }).referenceReport,
-    ).toEqual({
+    ).toMatchObject({
       id: octId,
       state: "default",
     });
@@ -571,7 +609,7 @@ describe("DELETE /api/uploads/:id", () => {
     await send(`/uploads/${octId}`, "DELETE");
     expect(
       ((await getJson(`/drive-logs/${logId}`)) as { referenceReport: unknown }).referenceReport,
-    ).toEqual({
+    ).toMatchObject({
       id: null,
       state: "cleared",
     });

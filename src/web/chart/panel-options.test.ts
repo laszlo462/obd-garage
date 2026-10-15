@@ -111,3 +111,24 @@ describe("panelOptions: y ticks", () => {
     expect(splits(740, 2060)).toEqual([1000, 1500, 2000]);
   });
 });
+
+describe("panelOptions: y range with a freeze frame", () => {
+  const range = (freezeValues: number[] | undefined) =>
+    yRange(panelOptions(spec(freezeValues ? { freezeValues } : {})), 0, 100);
+
+  it("stretches up to a freeze-frame value above the data, keeping the usual headroom", () => {
+    expect(range([150])).toEqual([-7.5, 157.5]);
+  });
+
+  it("stretches down to a value below the data", () => {
+    expect(range([-20])).toEqual([-26, 106]);
+  });
+
+  it("ignores a value inside the data, and leaves the range alone without a freeze frame", () => {
+    // The 40 is inside the data, so only the 150 widens the range.
+    expect(range([40, 150])).toEqual([-7.5, 157.5]);
+    expect(range([40])).toEqual([-5, 105]);
+    expect(range([])).toEqual([-5, 105]);
+    expect(range(undefined)).toEqual([-5, 105]);
+  });
+});
