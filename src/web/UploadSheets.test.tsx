@@ -195,6 +195,53 @@ describe("NewVehicleSheet", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("reports the current ticks, and does not close, when Change is tapped with logs on offer", () => {
+    const onChange = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <NewVehicleSheet
+        vehicle={created}
+        onAssign={() => {}}
+        onClose={onClose}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: /a\.csv/ }));
+    fireEvent.click(screen.getByRole("link", { name: "Change" }));
+    expect(onChange).toHaveBeenCalledWith([22]);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("still closes on Change when no Unassigned log shares the day", () => {
+    const onChange = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <NewVehicleSheet
+        vehicle={{ ...created, sameDayUnassigned: [] }}
+        onAssign={() => {}}
+        onClose={onClose}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("link", { name: "Change" }));
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("starts from the given ticks instead of ticking everything", () => {
+    render(
+      <NewVehicleSheet
+        vehicle={created}
+        initialTicked={[22]}
+        onAssign={() => {}}
+        onClose={() => {}}
+      />,
+    );
+    const a = screen.getByRole("checkbox", { name: /a\.csv/ }) as HTMLInputElement;
+    const b = screen.getByRole("checkbox", { name: /b\.csv/ }) as HTMLInputElement;
+    expect([a.checked, b.checked]).toEqual([false, true]);
+  });
+
   it("ticks every same-day Unassigned log and assigns exactly the ticked ids", () => {
     const onAssign = vi.fn();
     render(<NewVehicleSheet vehicle={created} onAssign={onAssign} onClose={() => {}} />);
