@@ -336,13 +336,15 @@ describe("checkSlice on a throwaway repo", { timeout: 60_000 }, () => {
   };
   const snapshot = () => [git("status", "--porcelain"), git("worktree", "list")];
   const TEST_HEAD = 'import { expect, it } from "vitest";\nimport * as m from "./math.ts";\n';
+  // Not the cwd's own: in an agent worktree that holds only vite caches.
+  const nodeModules = realpathSync(findNodeModules(process.cwd()));
 
   beforeEach(() => {
     outer = realpathSync(mkdtempSync(join(tmpdir(), "obd-slice-")));
     repo = join(outer, "repo");
     mkdirSync(repo);
     git("init", "-q", "-b", "main");
-    symlinkSync(realpathSync("node_modules"), join(repo, "node_modules"), "junction");
+    symlinkSync(nodeModules, join(repo, "node_modules"), "junction");
     write(".gitignore", "node_modules\n");
     write("package.json", '{ "type": "module" }\n');
     write("src/math.ts", "export const add = (a: number, b: number) => a + b;\n");
@@ -450,7 +452,7 @@ describe("checkSlice on a throwaway repo", { timeout: 60_000 }, () => {
   it("finds vitest in an ancestor's node_modules when the repo's own has none, as in an agent worktree", () => {
     unlinkSync(join(repo, "node_modules"));
     mkdirSync(join(repo, "node_modules", ".vite"), { recursive: true });
-    symlinkSync(realpathSync("node_modules"), join(outer, "node_modules"), "junction");
+    symlinkSync(nodeModules, join(outer, "node_modules"), "junction");
     write(
       "src/math.ts",
       "export const add = (a: number, b: number) => a + b;\nexport const sub = (a: number, b: number) => a - b;\n",
