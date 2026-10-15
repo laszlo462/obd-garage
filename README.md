@@ -6,7 +6,30 @@ OBD Garage is a self-hosted web app for your phone. It shows the files that an O
 The first target is a 2012 Ford F-250 6.7L Power Stroke with a P0401 (EGR flow insufficient) fault. The
 design lets it grow to other vehicles and other logged PIDs.
 
-<!-- Screenshot: add one here when the first screens exist. -->
+<p align="center">
+  <img src="docs/images/phone-recent.png" width="250" alt="Recent screen on a phone: MIL, code and monitor counts, then the newest uploads">
+  <img src="docs/images/phone-drive-log.png" width="250" alt="Drive Log viewer on a phone: stacked charts of speed, RPM, load and EGR position">
+  <img src="docs/images/phone-report.png" width="250" alt="Diagnostic Report viewer on a phone: trouble codes compared with the previous report">
+</p>
+
+<p align="center">
+  <img src="docs/images/desktop-drive-log.png" width="820" alt="Drive Log viewer on desktop: charts on the left, the Events list on the right">
+</p>
+
+The screenshots use the scrubbed sample files in [test/fixtures/](test/fixtures/).
+
+## What it does
+
+- **Reads OBDLink exports as they are.** Upload a Diagnostic Report or a drive log from the phone. The app
+  keeps the original file and finds the vehicle from the VIN in the report.
+- **Recent status at a glance.** MIL, stored and pending codes and readiness monitors, each with the change
+  since the last report.
+- **Report viewer.** Trouble codes and monitors, compared with any earlier report.
+- **Drive Log viewer.** Stacked, synced charts with a channel picker, touch zoom and a live cursor.
+- **Events.** Rule-based events mark idle, cruise, peaks and vehicle-specific windows (for example the 6.7
+  P0401 entry window). They need no LLM.
+- **Notes.** Add notes to a drive log, pinned to a moment in the log or not.
+- **Export.** Download your files and data as a ZIP.
 
 > **Warning: OBD Garage has no built-in login.** Anyone who can reach the app can read and delete your
 > data. Run it behind a reverse proxy that does the authentication. Do not publish the app port to the
@@ -14,8 +37,10 @@ design lets it grow to other vehicles and other logged PIDs.
 
 ## Project state
 
-The project is early. The current state, the decisions and the next steps are in the
-[wayfinder map](https://github.com/laszlo462/obd-garage/issues/1). This README does not copy them.
+v0.1 is out. See the [releases](https://github.com/laszlo462/obd-garage/releases) and
+[CHANGELOG.md](CHANGELOG.md) for what changed. The planned work is in the
+[open issues](https://github.com/laszlo462/obd-garage/issues). The decisions behind v0.1 are in the closed
+[v0.1 wayfinder map](https://github.com/laszlo462/obd-garage/issues/1) and in [docs/adr/](docs/adr/).
 
 ## About this project
 
@@ -42,7 +67,7 @@ services:
 ```
 
 Then run `docker compose up -d` and open <http://localhost:8080>. The `:develop` tag follows the `main`
-branch. The `:latest` tag follows the newest release. No release image exists until the first release.
+branch. The `:latest` tag follows the newest release.
 
 For a real install, with a reverse proxy and authentication, use the
 [deployment guide](docs/deployment.md) and the example in [deploy/](deploy/).
