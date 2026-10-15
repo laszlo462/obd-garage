@@ -1,5 +1,6 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { lastThirtyDays, summaryLine } from "./export-range.ts";
+import { frameError, goneNote, lastThirtyDays, summaryLine } from "./export-range.ts";
 import { exportSummary } from "./test-support.ts";
 
 describe("lastThirtyDays", () => {
@@ -36,5 +37,48 @@ describe("summaryLine", () => {
     expect(summaryLine(exportSummary({ driveLogs: 2, reports: 1, referenceOnly: 0 }))).toBe(
       "2 Drive Logs · 1 Report",
     );
+  });
+});
+
+/** A document as a browser builds it for a JSON answer: the text sits in a <pre> in the body. */
+const frameDoc = (body: string) => {
+  const doc = document.implementation.createHTMLDocument("");
+  doc.body.innerHTML = "<pre></pre>";
+  (doc.body.firstElementChild as Element).textContent = body;
+  return doc;
+};
+
+describe("goneNote", () => {
+  const log = (id: number, filename: string) => ({ id, filename });
+
+  it("names the logs that are in before but no longer in now", () => {
+    const before = [log(1, "a.csv"), log(2, "b.csv"), log(3, "c.csv")];
+    expect(goneNote(before, [log(2, "b.csv")])).toBe(
+      "No longer Unassigned (deleted or assigned meanwhile), taken out of the export: a.csv, c.csv",
+    );
+  });
+
+  it("gives null when every log in before is still in now", () => {
+    expect(goneNote([log(1, "a.csv")], [log(1, "a.csv"), log(2, "b.csv")])).toBeNull();
+    expect(goneNote([], [])).toBeNull();
+  });
+});
+
+describe("frameError", () => {
+  it("gives the error text of a JSON body", () => {
+    expect(frameError(frameDoc('{"error":"Drive Log 3 not found"}'))).toBe("Drive Log 3 not found");
+  });
+
+  it("gives null for no document and for an empty one, the frame's first load", () => {
+    expect(frameError(null)).toBeNull();
+    expect(frameError(document.implementation.createHTMLDocument(""))).toBeNull();
+    expect(frameError(frameDoc("  \n"))).toBeNull();
+  });
+
+  it("gives a generic message for any other body", () => {
+    expect(frameError(frameDoc("Bad gateway"))).toBe("The export failed.");
+    expect(frameError(frameDoc('{"message":"nope"}'))).toBe("The export failed.");
+    expect(frameError(frameDoc('{"error":42}'))).toBe("The export failed.");
+    expect(frameError(frameDoc("null"))).toBe("The export failed.");
   });
 });

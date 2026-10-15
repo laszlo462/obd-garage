@@ -2,14 +2,20 @@ import { useEffect, useState } from "preact/hooks";
 import { useAppState } from "./AppState.tsx";
 import { useApi } from "./api.tsx";
 import type { ExportSummary } from "./api-types.ts";
-import { lastThirtyDays, summaryLine } from "./export-range.ts";
+import {
+  type ExportLog,
+  frameError,
+  goneNote,
+  lastThirtyDays,
+  summaryLine,
+} from "./export-range.ts";
 import { count } from "./format.ts";
 import { Sheet } from "./Sheet.tsx";
 import { okJson } from "./use-vehicle-load.ts";
 
 export type ExportScope =
   | { kind: "vehicle"; vehicleId: number; day?: string }
-  | { kind: "unassigned"; logIds: number[] };
+  | { kind: "unassigned"; logs: ExportLog[] };
 
 /** A range wide enough to hold any recorded day: All time asks the summary for the real span. */
 const EVERYTHING = { from: "0001-01-01", to: "9999-12-31" };
@@ -21,9 +27,13 @@ type Range = { preset: "day" | "thirty" | "all" | "custom"; from: string; to: st
  * Unassigned scope exports the ticked selection. Either way the browser streams the zip and the page
  * never holds it.
  */
-export function ExportSheet(props: { scope: ExportScope; onClose: () => void }) {
+export function ExportSheet(props: {
+  scope: ExportScope;
+  onRefused?: () => void;
+  onClose: () => void;
+}) {
   return props.scope.kind === "unassigned" ? (
-    <UnassignedExport logIds={props.scope.logIds} onClose={props.onClose} />
+    <UnassignedExport logs={props.scope.logs} onRefused={props.onRefused} onClose={props.onClose} />
   ) : (
     <VehicleExport
       vehicleId={props.scope.vehicleId}
@@ -33,23 +43,58 @@ export function ExportSheet(props: { scope: ExportScope; onClose: () => void }) 
   );
 }
 
-/** Download .zip as a plain form post: the browser saves the streamed answer. */
-function UnassignedExport(props: { logIds: number[]; onClose: () => void }) {
+/** The hidden frame the Unassigned download posts into. */
+const FRAME = "export-frame";
+
+/**
+ * Download .zip as a form post into a hidden frame: the browser saves the streamed answer, and a
+ * refusal (a JSON error) lands in the frame instead of replacing the page.
+ */
+function UnassignedExport(props: {
+  logs: ExportLog[];
+  onRefused?: () => void;
+  onClose: () => void;
+}) {
   const api = useApi();
+  // The server's message and the logs the sheet held when it came, to tell which have dropped out since.
+  const [refused, setRefused] = useState<{ message: string; before: ExportLog[] } | null>(null);
+  const error = refused && (goneNote(refused.before, props.logs) ?? refused.message);
   return (
     <Sheet
-      title={`Export ${count(props.logIds.length, "Drive Log")}`}
+      title={`Export ${count(props.logs.length, "Drive Log")}`}
       actionLabel="Close"
       onClose={props.onClose}
     >
-      <form method="post" action={api.api.export.unassigned.$path()}>
-        {props.logIds.map((id) => (
+      <form
+        method="post"
+        action={api.api.export.unassigned.$path()}
+        target={FRAME}
+        onSubmit={() => setRefused(null)}
+      >
+        {props.logs.map(({ id }) => (
           <input key={id} type="hidden" name="logIds" value={id} />
         ))}
-        <button type="submit" class="btn-primary">
+        <button type="submit" class="btn-primary" disabled={props.logs.length === 0}>
           Download .zip
         </button>
       </form>
+      {error !== null && <p class="sheet-note tone-bad">{error}</p>}
+      <iframe
+        name={FRAME}
+        title="Export download"
+        hidden
+        onLoad={(e) => {
+          let doc: Document | null = null;
+          try {
+            doc = e.currentTarget.contentDocument;
+          } catch {
+            // An unreadable (cross-origin) document counts as empty.
+          }
+          const message = frameError(doc);
+          setRefused(message === null ? null : { message, before: props.logs });
+          if (message !== null) props.onRefused?.();
+        }}
+      />
     </Sheet>
   );
 }

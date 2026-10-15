@@ -184,4 +184,29 @@ describe("Unassigned", () => {
       expect(assignCalls).toEqual([{ logIds: [6], vehicleId: 1 }]);
     },
   );
+
+  it("reloads the list when the export is refused, and the open sheet names the log that dropped out", async () => {
+    const unassigned = [
+      driveLogRow({ id: 5, filename: "a.csv" }),
+      driveLogRow({ id: 6, filename: "b.csv" }),
+    ];
+    renderApp({ vehicles: [vehicleRow()], unassigned });
+    for (const box of await screen.findAllByRole("checkbox")) fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    const sheet = await screen.findByRole("dialog", { name: "Export 2 Drive Logs" });
+    // Log 5 was deleted elsewhere; the refusal comes back from the hidden frame.
+    unassigned.splice(0, 1);
+    const frame = sheet.querySelector("iframe") as HTMLIFrameElement;
+    const doc = document.implementation.createHTMLDocument("");
+    doc.body.textContent = '{"error":"Unknown Drive Log."}';
+    Object.defineProperty(frame, "contentDocument", { value: doc, configurable: true });
+    fireEvent.load(frame);
+    expect(
+      await screen.findByText(
+        "No longer Unassigned (deleted or assigned meanwhile), taken out of the export: a.csv",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Export 1 Drive Log" })).toBeTruthy();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  });
 });

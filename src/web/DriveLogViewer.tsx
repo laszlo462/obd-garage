@@ -310,7 +310,7 @@ function DriveLogBody(props: { detail: DriveLogDetail; onDeleted: () => void }) 
         <ExportSheet
           scope={
             detail.vehicleId === null
-              ? { kind: "unassigned", logIds: [detail.id] }
+              ? { kind: "unassigned", logs: [{ id: detail.id, filename: detail.filename }] }
               : {
                   kind: "vehicle",
                   vehicleId: detail.vehicleId,
