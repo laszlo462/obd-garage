@@ -17,8 +17,7 @@ Rules for working in this repo. Current state and decisions live in the wayfinde
 - **Keep the layers apart:** generic core, vehicle profiles, rule packs. Vehicle-specific logic (e.g. the
   6.7 P0401 entry window, EGR decode rescale) goes in a profile or rule pack, never in the core.
 - **Report text is untrusted.** Parse OBDLink HTML with a DOM parser and insert it as text only, never as
-  markup (the reference report viewer does this).
-- `reference/` is a frozen snapshot of the original viewers and prototype. Don't edit it. Port from it.
+  markup.
 
 ## Subagents
 

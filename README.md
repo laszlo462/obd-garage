@@ -63,11 +63,6 @@ npm run build      # build the web client
 See [CONTRIBUTING.md](CONTRIBUTING.md) before you open a pull request. See [DESIGN.md](DESIGN.md) for the
 UI design and [GLOSSARY.md](GLOSSARY.md) for the domain terms.
 
-## Reference
-
-[reference/](reference/) is a frozen copy of the original single-file viewers and the layout prototype. It
-is the source to port from. Do not edit it.
-
 ## Licence
 
 [MIT](LICENSE)

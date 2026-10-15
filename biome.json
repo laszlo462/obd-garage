@@ -4,7 +4,6 @@
     "includes": [
       "**",
       "!dist",
-      "!reference",
       "!prototypes",
       "!test/fixtures",
       "!.claude",

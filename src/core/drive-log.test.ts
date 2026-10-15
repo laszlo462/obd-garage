@@ -19,7 +19,7 @@ const synthetic = (rows: string[], { bom = BOM, start = START, header = HEADER }
   `${bom}${[start, header, ...rows].filter((l) => l !== "").join("\r\n")}\r\n`;
 
 describe("parseDriveLog on the fixtures", () => {
-  // columns counts Time (sec); collapsed is the reference viewer's count with the standard collapse keys.
+  // columns counts Time (sec); collapsed is the count with the standard collapse keys.
   const cases = [
     {
       file: "CSVLog_20260725_185037.csv",
