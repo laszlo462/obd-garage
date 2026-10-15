@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/laszlo462/obd-garage/compare/obd-garage-v0.1.0...obd-garage-v0.1.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **docker:** Copy every src folder the server imports ([#158](https://github.com/laszlo462/obd-garage/issues/158)) ([71b3f62](https://github.com/laszlo462/obd-garage/commit/71b3f625b7b2e2ea118fb057f407790349f2378d))
+
 ## 0.1.0 (2026-10-15)
 
 
