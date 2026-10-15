@@ -1,4 +1,5 @@
-import type { Dtc, ParsedReport } from "../../core/report.ts";
+import type { Dtc, Numeric, ParsedReport } from "../../core/report.ts";
+import { isOpen } from "./mode06.ts";
 import { delta } from "./numbers.ts";
 
 export type Comparison = {
@@ -14,6 +15,8 @@ export type Comparison = {
   monitorWas: Record<string, string>;
   /** Mode $06 key to the value text the other Report printed. */
   mode06Was: Record<string, string>;
+  /** Mode $06 key to the other Report's limits, where either limit differs. */
+  mode06LimitsWas: Record<string, { min: Numeric; max: Numeric }>;
   /** The change line under each overview tile; null when there is nothing to say. */
   overview: {
     mil: string | null;
@@ -46,6 +49,9 @@ export const monitorKeys = (r: ParsedReport) =>
 
 export const mode06Keys = (r: ParsedReport) => keyed(r.mode06 ?? [], (t) => `${t.mid} ${t.tid}`);
 
+/** Two limits differ unless they are equal or both open (no limit written two ways). */
+const differs = (a: Numeric, b: Numeric) => a !== b && !(isOpen(a) && isOpen(b));
+
 /** Compare the current Report with another one (or none). Every field is empty with none. */
 export function compareReports(current: ParsedReport, other: ParsedReport | null): Comparison {
   const c: Comparison = {
@@ -55,6 +61,7 @@ export function compareReports(current: ParsedReport, other: ParsedReport | null
     statusChanges: {},
     monitorWas: {},
     mode06Was: {},
+    mode06LimitsWas: {},
     overview: { mil: null, codes: null, monitors: null, sinceClear: null },
   };
   if (!other) return c;
@@ -81,9 +88,11 @@ export function compareReports(current: ParsedReport, other: ParsedReport | null
     if (was && was.state !== t.state) c.monitorWas[k] = was.status;
   }
   const mode06Before = new Map(mode06Keys(other));
-  for (const [k] of mode06Keys(current)) {
+  for (const [k, now] of mode06Keys(current)) {
     const was = mode06Before.get(k);
     if (was) c.mode06Was[k] = was.valueText;
+    if (was && (differs(was.min, now.min) || differs(was.max, now.max)))
+      c.mode06LimitsWas[k] = { min: was.min, max: was.max };
   }
   c.overview = {
     mil: milLine(current, other),

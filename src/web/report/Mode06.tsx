@@ -7,6 +7,7 @@ import {
   headroom,
   isMisfire,
   isOpen,
+  limitsWasText,
   scaleFor,
   sortLeastHeadroom,
 } from "./mode06.ts";
@@ -51,8 +52,13 @@ function headroomText(test: Mode06Test): { text: string; tone: string } {
 }
 
 /** The Mode $06 tests, least headroom first or in Report order, then the misfire table. */
-export function Mode06(props: { tests: Mode06Test[]; comparison: Comparison }) {
-  const { tests, comparison } = props;
+export function Mode06(props: {
+  tests: Mode06Test[];
+  comparison: Comparison;
+  /** True when a Report is compared; false with No comparison. */
+  comparing: boolean;
+}) {
+  const { tests, comparison, comparing } = props;
   const [order, setOrder] = useState<Order>("least");
   if (tests.length === 0) return <p class="list-note">No Mode $06 data in this Report.</p>;
   const keys = new Map(
@@ -81,10 +87,16 @@ export function Mode06(props: { tests: Mode06Test[]; comparison: Comparison }) {
           </label>
         ))}
       </div>
+      {comparing && (
+        <p class="list-note">
+          Limits move with operating point. Compare values only where the limits match.
+        </p>
+      )}
       <ul class="m06-list">
         {shown.map((t) => {
           const key = keys.get(t) ?? "";
           const was = comparison.mode06Was[key];
+          const limitsWas = comparison.mode06LimitsWas[key];
           const head = headroomText(t);
           return (
             <li key={key} class="m06-row">
@@ -94,6 +106,7 @@ export function Mode06(props: { tests: Mode06Test[]; comparison: Comparison }) {
                 <span class="m06-value">{fmtNum(t.valueText)}</span>
                 <span class="m06-unit">{t.units}</span>
                 {was !== undefined && <span class="was">{`was ${fmtNum(was)}`}</span>}
+                {limitsWas !== undefined && <span class="was">{limitsWasText(limitsWas)}</span>}
               </span>
               <span class={`m06-headroom tone-${head.tone}`}>{head.text}</span>
               <Gauge test={t} />

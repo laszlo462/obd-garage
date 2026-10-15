@@ -6,9 +6,18 @@ import {
   headroom,
   isMisfire,
   isOpen,
+  limitsWasText,
   scaleFor,
   sortLeastHeadroom,
 } from "./mode06.ts";
+
+describe("limitsWasText", () => {
+  it("writes the other Report's limits as 'limits were a – b', with 'none' for an open one", () => {
+    expect(limitsWasText({ min: 0, max: 12.5 })).toBe("limits were 0 – 12.5");
+    expect(limitsWasText({ min: 1000, max: 65535 })).toBe("limits were 1,000 – none");
+    expect(limitsWasText({ min: null, max: 10 })).toBe("limits were none – 10");
+  });
+});
 
 const t06 = (over: Partial<Mode06Test> = {}): Mode06Test => ({
   mid: "$01",

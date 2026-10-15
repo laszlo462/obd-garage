@@ -273,9 +273,9 @@ opens the Note sheet. The sheet shows the text, the time and when the Note was a
       home-screen app has no find-in-page). EI-AECD timers at 0 in both Reports are hidden, with the line "n EI-AECD
       timers at 0 not shown."
   - **IUMPR:** per ECU, a meta line (ignition cycles, general denominator), then one row per monitor in aligned
-    columns under a header row: **Monitor · Completed · Conditions met · Ratio**. Values are mono, and the ratio has
-    a bar ("off scale" above the bar's maximum). When comparing, the row ends with "+n / +n since 21 Aug".
-    - *#145:* the since line adds the ratio when conditions met rose: "+3 / +4 = 0.75 since 21 Aug".
+    columns under a header row: **Monitor · Completed · Conditions met · Ratio**. Values are mono, the ratio has two
+    decimals and a bar ("off scale" above the bar's maximum). When comparing, the row ends with "+n / +n since 21
+    Aug". The since line has no ratio: a few drives make a noisy one, and no threshold applies to it.
   - **Notes:** whole-Report Notes with **Add Note**.
 
 ## Screen inventory

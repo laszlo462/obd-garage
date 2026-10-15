@@ -39,7 +39,11 @@ export function ReportSections(props: {
         <Monitors monitors={report.monitors ?? []} comparison={comparison} />
       </Section>
       <Section title="Mode $06" count={report.mode06?.length ?? 0} defaultOpen>
-        <Mode06 tests={report.mode06 ?? []} comparison={comparison} />
+        <Mode06
+          tests={report.mode06 ?? []}
+          comparison={comparison}
+          comparing={comparedDate !== null}
+        />
       </Section>
       <Section title="Freeze frame" count={report.freezeFrames?.length ?? 0}>
         <FreezeFrames frames={report.freezeFrames ?? []} />

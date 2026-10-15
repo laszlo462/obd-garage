@@ -496,6 +496,65 @@ describe("Report viewer: Mode $06", () => {
     expect(within(rowOf("Roomy test")).queryByText(/^was/)).toBeNull();
   });
 
+  /** Oct's Tight test is 0 to 100; Aug's was `min` to `max`. Roomy test (Oct only) has no Aug twin. */
+  const withAugLimits = (min: number, max: number) => {
+    const d = data();
+    d.reportDetails[1] = reportDetail({
+      id: 1,
+      recordedAt: "2026-08-21T21:56:40",
+      report: parsedReport({ mode06: [test06("$02", "$91", "Tight test", 90, min, max)] }),
+    });
+    return d;
+  };
+
+  it("shows the compared Report's limits beside 'was' where a limit changed", async () => {
+    renderApp(withAugLimits(0, 80));
+    await screen.findByText("Tight test");
+    const tight = rowOf("Tight test");
+    await waitFor(() => expect(within(tight).getByText("limits were 0 – 80")).toBeTruthy());
+    expect(within(tight).getByText("was 90")).toBeTruthy();
+    expect(within(rowOf("Roomy test")).queryByText(/limits were/)).toBeNull();
+  });
+
+  it("shows 'none', not a number, for a limit the compared Report left open", async () => {
+    renderApp(withAugLimits(0, 65535));
+    await screen.findByText("Tight test");
+    await waitFor(() =>
+      expect(within(rowOf("Tight test")).getByText("limits were 0 – none")).toBeTruthy(),
+    );
+  });
+
+  it("shows no 'limits were' where the limits match, or with No comparison", async () => {
+    renderApp(withAugLimits(0, 100));
+    await waitFor(() => expect(within(rowOf("Tight test")).getByText("was 90")).toBeTruthy());
+    expect(screen.queryByText(/limits were/)).toBeNull();
+    cleanup();
+    renderApp(withAugLimits(0, 80));
+    const select = (await screen.findByLabelText("Compared with")) as HTMLSelectElement;
+    await waitFor(() => expect(screen.getByText(/limits were/)).toBeTruthy());
+    fireEvent.change(select, { target: { value: "none" } });
+    await waitFor(() => expect(screen.queryByText(/limits were/)).toBeNull());
+  });
+
+  const OPERATING_POINT =
+    "Limits move with operating point. Compare values only where the limits match.";
+
+  it("says limits move with operating point above the list when comparing, in either order", async () => {
+    renderApp(data());
+    const line = await screen.findByText(OPERATING_POINT);
+    const list = document.querySelector(".m06-list") as HTMLElement;
+    expect(line.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Report order" }));
+    expect(screen.getByText(OPERATING_POINT)).toBeTruthy();
+  });
+
+  it("has no operating-point line with No comparison", async () => {
+    renderApp(data());
+    await screen.findByText(OPERATING_POINT);
+    fireEvent.change(await screen.findByLabelText("Compared with"), { target: { value: "none" } });
+    await waitFor(() => expect(screen.queryByText(OPERATING_POINT)).toBeNull());
+  });
+
   it("shows 'none' for a limit the Report leaves open", async () => {
     const d = data();
     d.reportDetails[2] = reportDetail({
@@ -654,7 +713,7 @@ describe("Report viewer: IUMPR and vehicle info", () => {
     expect(cells[headers.indexOf("Monitor")]?.textContent).toBe("NMHC Catalyst");
     expect(cells[headers.indexOf("Completed")]?.textContent).toBe("415");
     expect(cells[headers.indexOf("Conditions met")]?.textContent).toBe("500");
-    expect(cells[headers.indexOf("Ratio")]?.textContent).toContain("0.830");
+    expect(cells[headers.indexOf("Ratio")]?.textContent).toContain("0.83");
   });
 
   it("shows each monitor's completions, conditions met and ratio, flagging a low ratio", async () => {
@@ -662,9 +721,9 @@ describe("Report viewer: IUMPR and vehicle info", () => {
     const catalyst = (await screen.findByText("NMHC Catalyst")).closest("tr") as HTMLElement;
     expect(within(catalyst).getByText("415")).toBeTruthy();
     expect(within(catalyst).getByText("500")).toBeTruthy();
-    expect(within(catalyst).getByText("0.830")).toBeTruthy();
+    expect(within(catalyst).getByText("0.83")).toBeTruthy();
     const egr = screen.getByText("EGR").closest("tr") as HTMLElement;
-    expect(within(egr).getByText("0.050").className).toContain("tone-bad");
+    expect(within(egr).getByText("0.05").className).toContain("tone-bad");
     expect(screen.getByText("Ignition cycles 7,492")).toBeTruthy();
     expect(panel("IUMPR").querySelector(".count")?.textContent).toBe("5");
   });

@@ -11,6 +11,7 @@ const empty = {
   statusChanges: {},
   monitorWas: {},
   mode06Was: {},
+  mode06LimitsWas: {},
   overview: { mil: null, codes: null, monitors: null, sinceClear: null },
 };
 
@@ -109,6 +110,42 @@ describe("compareReports: was values", () => {
     const current = report({ mode06: [test("$90", "3"), test("$91", "1")] });
     const other = report({ mode06: [test("$90", "2.4"), test("$92", "7")] });
     expect(compareReports(current, other).mode06Was).toEqual({ "$01 $90#1": "2.4" });
+  });
+});
+
+describe("compareReports: Mode $06 limits that changed", () => {
+  const test = (tid: string, min: number | null, max: number | null) => ({
+    mid: "$01",
+    midName: "Sensor",
+    tid,
+    tidName: "Manufacturer Defined",
+    valueText: "5",
+    minText: String(min),
+    maxText: String(max),
+    value: 5,
+    min,
+    max,
+    units: "sec",
+    result: "Pass",
+  });
+
+  it("gives the other limits of each test both Reports list where either limit differs", () => {
+    const current = report({
+      mode06: [test("$90", 0, 10), test("$91", 0, 10), test("$92", 1, 10), test("$93", 0, 10)],
+    });
+    const other = report({
+      mode06: [test("$90", 0, 10), test("$91", 0, 12), test("$92", 0, 10), test("$94", 0, 99)],
+    });
+    expect(compareReports(current, other).mode06LimitsWas).toEqual({
+      "$01 $91#1": { min: 0, max: 12 },
+      "$01 $92#1": { min: 0, max: 10 },
+    });
+  });
+
+  it("does not count one open limit written two ways as a change", () => {
+    const current = report({ mode06: [test("$90", 0, null)] });
+    const other = report({ mode06: [test("$90", 0, 65535)] });
+    expect(compareReports(current, other).mode06LimitsWas).toEqual({});
   });
 });
 
