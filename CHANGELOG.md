@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.2](https://github.com/laszlo462/obd-garage/compare/obd-garage-v0.1.1...obd-garage-v0.1.2) (2026-10-16)
+
+
+### Documentation
+
+* Add OBDLink dashboard file research ([#164](https://github.com/laszlo462/obd-garage/issues/164)) ([#168](https://github.com/laszlo462/obd-garage/issues/168)) ([5e70685](https://github.com/laszlo462/obd-garage/commit/5e70685f4824d0aaa2b7268e042dc91481dac0a5))
+* Add screenshots and a feature list to the README ([#161](https://github.com/laszlo462/obd-garage/issues/161)) ([9517543](https://github.com/laszlo462/obd-garage/commit/95175434165da1447dcbe25fa4ea7231555719b2))
+* Point prototype links at archive tags ([#163](https://github.com/laszlo462/obd-garage/issues/163)) ([8ea6784](https://github.com/laszlo462/obd-garage/commit/8ea6784880a17ec0889d02f5858b7b98e4e56cb3))
+
 ## [0.1.1](https://github.com/laszlo462/obd-garage/compare/obd-garage-v0.1.0...obd-garage-v0.1.1) (2026-10-15)
 
 
