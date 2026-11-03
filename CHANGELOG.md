@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.2](https://github.com/laszlo462/obd-garage/compare/obd-garage-v0.1.1...obd-garage-v0.1.2) (2026-11-03)
+
+
+### Documentation
+
+* Add OBDLink dashboard file research ([#164](https://github.com/laszlo462/obd-garage/issues/164)) ([#168](https://github.com/laszlo462/obd-garage/issues/168)) ([5e70685](https://github.com/laszlo462/obd-garage/commit/5e70685f4824d0aaa2b7268e042dc91481dac0a5))
+* Add screenshots and a feature list to the README ([#161](https://github.com/laszlo462/obd-garage/issues/161)) ([9517543](https://github.com/laszlo462/obd-garage/commit/95175434165da1447dcbe25fa4ea7231555719b2))
+* Point prototype links at archive tags ([#163](https://github.com/laszlo462/obd-garage/issues/163)) ([8ea6784](https://github.com/laszlo462/obd-garage/commit/8ea6784880a17ec0889d02f5858b7b98e4e56cb3))
+
+
+### Build System
+
+* **deps:** bump the actions-minor-patch group with 2 updates ([#169](https://github.com/laszlo462/obd-garage/issues/169)) ([6efb863](https://github.com/laszlo462/obd-garage/commit/6efb86384e74206cf72204a7e36b22e1375f52dc))
+* **deps:** bump the npm-minor-patch group across 1 directory with 14 updates ([#170](https://github.com/laszlo462/obd-garage/issues/170)) ([7e62d0c](https://github.com/laszlo462/obd-garage/commit/7e62d0cb933d73202e0d2b752803f30a59efb2d4))
+
 ## [0.1.1](https://github.com/laszlo462/obd-garage/compare/obd-garage-v0.1.0...obd-garage-v0.1.1) (2026-10-15)
 
 
