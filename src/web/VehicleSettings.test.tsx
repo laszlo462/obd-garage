@@ -79,7 +79,8 @@ describe("Vehicle settings", () => {
     });
     renderApp({ ...stub, vehicles: vehicles.map((v) => ({ ...v })), vehiclePatchGate: gate });
     fireEvent.click(await screen.findByRole("radio", { name: "Generic" }));
-    const inputs = () => screen.getAllByRole(/radio|switch/) as HTMLInputElement[];
+    const inputs = () =>
+      [...screen.getAllByRole("radio"), ...screen.getAllByRole("switch")] as HTMLInputElement[];
     await waitFor(() => expect(inputs().every((i) => i.disabled)).toBe(true));
     release();
     await waitFor(() => expect(inputs().every((i) => !i.disabled)).toBe(true));
